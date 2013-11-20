@@ -1,0 +1,47 @@
+This is BibTeX, Version 0.99c (TeX Live 2009)
+The top-level auxiliary file: histo.aux
+The style file: alpha.bst
+Database file #1: refs.bib
+Warning--empty booktitle in qdigest
+You've used 5 entries,
+            2543 wiz_defined-function locations,
+            590 strings with 5188 characters,
+and the built_in function-call counts, 2321 in all, are:
+= -- 239
+> -- 80
+< -- 8
++ -- 28
+- -- 27
+* -- 137
+:= -- 350
+add.period$ -- 17
+call.type$ -- 5
+change.case$ -- 30
+chr.to.int$ -- 5
+cite$ -- 6
+duplicate$ -- 110
+empty$ -- 179
+format.name$ -- 35
+if$ -- 510
+int.to.chr$ -- 1
+int.to.str$ -- 0
+missing$ -- 5
+newline$ -- 29
+num.names$ -- 15
+pop$ -- 46
+preamble$ -- 1
+purify$ -- 35
+quote$ -- 0
+skip$ -- 96
+stack$ -- 0
+substring$ -- 138
+swap$ -- 41
+text.length$ -- 8
+text.prefix$ -- 3
+top$ -- 0
+type$ -- 36
+warning$ -- 1
+while$ -- 22
+width$ -- 8
+write$ -- 70
+(There was 1 warning)

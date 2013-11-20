@@ -1,0 +1,34 @@
+\begin{thebibliography}{SBAS04}
+
+\bibitem[CLP00]{Chen2000}
+Fei Chen, Diane Lambert, and José~C. Pinheiro.
+\newblock Incremental quantile estimation for massive tracking.
+\newblock In {\em In Proceedings of KDD}, pages 516--522, 2000.
+
+\bibitem[Knu98]{knuth2welford}
+Donald~E. Knuth.
+\newblock {\em The Art of Computer Programming: Seminumerical Algorithms},
+  volume~2, page 232.
+\newblock Addison-Wesley, Boston, 3rd edition, 1998.
+
+\bibitem[SBAS04]{qdigest}
+Nisheeth Shrivastava, Chiranjeeb Buragohain, Divyakant Agrawal, and Subhash
+  Suri.
+\newblock Medians and beyond: New aggregation techniques for sensor networks.
+\newblock pages 239--249. ACM Press, 2004.
+
+\bibitem[Wel62]{welford62}
+B.~P. Welford.
+\newblock Note on a method for calculating corrected sums of squares and
+  products.
+\newblock {\em Technometrics}, pages 419--420, 1962.
+
+\bibitem[Wik]{wiki:welford}
+Wikipedia.
+\newblock Algorithms for calculating variance, online algorithm.
+\newblock
+  \url{http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online%
+_algorithm}.
+\newblock [Online; accessed 19-October-2013].
+
+\end{thebibliography}
