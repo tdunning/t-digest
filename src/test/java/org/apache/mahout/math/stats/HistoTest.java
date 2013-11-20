@@ -260,7 +260,8 @@ public class HistoTest {
     //@Test()
     // very slow running data generator
     public void testSizeControl() {
-        System.out.printf("k\tsamples\tcompression\tsize1\tsize2\n");
+      RandomWrapper gen = RandomUtils.getRandom();
+      System.out.printf("k\tsamples\tcompression\tsize1\tsize2\n");
         for (int k = 0; k < 40; k++) {
             for (int size : new int[]{10, 100, 1000, 10000}) {
                 for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
@@ -279,7 +280,7 @@ public class HistoTest {
     public void testScaling() {
         RandomWrapper gen = RandomUtils.getRandom();
 
-        System.out.printf("compression\tq\terror\tsize\n");
+        System.out.printf("pass\tcompression\tq\terror\tsize\n");
         for (int k = 0; k < 40; k++) {
             List<Double> data = Lists.newArrayList();
             for (int i = 0; i < 100000; i++) {
@@ -297,7 +298,7 @@ public class HistoTest {
                 for (double q : new double[]{0.001, 0.01, 0.1, 0.5}) {
                     double estimate = dist.quantile(q);
                     double actual = data.get((int) (q * data.size()));
-                    System.out.printf("%.0f\t%.3f\t%.9f\t%d\n", compression, q, estimate - actual, dist.byteSize());
+                    System.out.printf("%d\t%.0f\t%.3f\t%.9f\t%d\n", k, compression, q, estimate - actual, dist.byteSize());
                 }
             }
         }
