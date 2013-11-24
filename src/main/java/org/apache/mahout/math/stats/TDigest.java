@@ -333,14 +333,15 @@ public class TDigest {
      * Returns an upper bound on the number bytes that will be required to represent this histogram.
      */
     public int byteSize() {
-        return 8 + 4 + summary.size() * 12;
+        return 4 + 8 + 4 + summary.size() * 12;
     }
 
     /**
-     * Returns an upper bound on the number bytes that will be required to represent this histogram.
+     * Returns an upper bound on the number of bytes that will be required to represent this histogram in
+     * the tighter representation.
      */
     public int smallByteSize() {
-        int bound = 8 + 4 + summary.size() * 12;
+        int bound = byteSize();
         ByteBuffer buf = ByteBuffer.allocate(bound);
         asSmallBytes(buf);
         return buf.position();

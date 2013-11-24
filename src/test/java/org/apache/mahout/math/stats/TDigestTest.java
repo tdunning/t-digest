@@ -196,6 +196,13 @@ public class TDigestTest {
         ByteBuffer buf = ByteBuffer.allocate(20000);
         dist.asBytes(buf);
         assertTrue(buf.position() < 11000);
+        assertEquals(buf.position(), dist.byteSize());
+        buf.clear();
+
+        dist.asSmallBytes(buf);
+        assertTrue(buf.position() < 6000);
+        assertEquals(buf.position(), dist.smallByteSize());
+
         System.out.printf("# big %d bytes\n", buf.position());
 
         buf.flip();
@@ -205,7 +212,7 @@ public class TDigestTest {
         assertEquals(dist.size(), dist2.size());
 
         for (double q = 0; q < 1; q += 0.01) {
-            assertEquals(dist.quantile(q), dist2.quantile(q), 1e-9);
+            assertEquals(dist.quantile(q), dist2.quantile(q), 1e-8);
         }
 
         Iterator<? extends TDigest.Group> ix = dist2.centroids().iterator();
@@ -283,7 +290,7 @@ public class TDigestTest {
 
         System.out.printf("pass\tcompression\tq\terror\tsize\n");
         // change to 50 passes for better graphs
-        for (int k = 0; k < 10; k++) {
+        for (int k = 0; k < 3; k++) {
             List<Double> data = Lists.newArrayList();
             for (int i = 0; i < 100000; i++) {
                 data.add(gen.nextDouble());
