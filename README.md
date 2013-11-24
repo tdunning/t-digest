@@ -20,3 +20,4 @@ In summary, the particularly interesting characteristics of the t-digest are tha
 * is fast
 * is very simple
 * has a reference implementation that has > 90% test coverage
+* can be used with map-reduce very easily because digests can be merged
