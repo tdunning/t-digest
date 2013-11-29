@@ -17,6 +17,7 @@
 
 package org.apache.mahout.math.stats;
 
+import com.clearspring.analytics.stream.quantile.QDigest;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -29,9 +30,7 @@ import org.apache.mahout.math.jet.random.Normal;
 import org.apache.mahout.math.jet.random.Uniform;
 import org.junit.*;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Iterator;
@@ -39,6 +38,7 @@ import java.util.List;
 import java.util.Random;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 public class TDigestTest {
 
@@ -75,7 +75,7 @@ public class TDigestTest {
     @Test
     public void testUniform() {
         RandomWrapper gen = RandomUtils.getRandom();
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < repeats(); i++) {
             runTest(new Uniform(0, 1, gen), 100,
 //                    new double[]{0.0001, 0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 0.9999},
                     new double[]{0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999},
@@ -90,7 +90,7 @@ public class TDigestTest {
         // this severe skew means that we have to have positional accuracy that
         // varies by over 11 orders of magnitude.
         RandomWrapper gen = RandomUtils.getRandom();
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < repeats(); i++) {
             runTest(new Gamma(0.1, 0.1, gen), 100,
 //                    new double[]{6.0730483624079e-30, 6.0730483624079e-20, 6.0730483627432e-10, 5.9339110446023e-03,
 //                            2.6615455373884e+00, 1.5884778179295e+01, 3.3636770117188e+01},
@@ -120,7 +120,7 @@ public class TDigestTest {
             }
         };
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < repeats(); i++) {
             runTest(mix, 100, new double[]{0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99, 0.999}, "mixture", false);
         }
     }
@@ -169,7 +169,7 @@ public class TDigestTest {
 
     @Test
     public void testSequentialPoints() {
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < repeats(); i++) {
             runTest(new AbstractContinousDistribution() {
                 double base = 0;
 
@@ -265,49 +265,93 @@ public class TDigestTest {
         }
     }
 
-    //@Test()
-    // very slow running data generator
-    public void testSizeControl() {
+    @Test
+    public void compareToQDigest() {
+        Random rand = RandomUtils.getRandom();
+
+        for (int i = 0; i < repeats(); i++) {
+            compare(new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
+            compare(new Uniform(0, 1, rand), "uniform", 1L << 48);
+        }
+    }
+
+    private void compare(AbstractContinousDistribution gen, String tag, long scale) {
+        for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000}) {
+            QDigest qd = new QDigest(compression);
+            TDigest dist = new TDigest(compression);
+            List<Double> data = Lists.newArrayList();
+            for (int i = 0; i < 100000; i++) {
+                double x = gen.nextDouble();
+                dist.add(x);
+                qd.offer((long) (x * scale));
+                data.add(x);
+            }
+            dist.compress();
+            Collections.sort(data);
+
+            for (double q : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99, 0.999}) {
+                double x1 = dist.quantile(q);
+                double x2 = (double) qd.getQuantile(q) / scale;
+                double e1 = cdf(x1, data) - q;
+                System.out.printf("%s\t%.0f\t%.8f\t%.10g\t%.10g\t%d\t%d\n", tag, compression, q, e1, cdf(x2, data) - q, dist.smallByteSize(), QDigest.serialize(qd).length);
+
+            }
+        }
+    }
+
+    @Test()
+    public void testSizeControl() throws IOException {
+        // very slow running data generator.  Don't want to run this normally.  To run slow tests use
+        // mvn test -DrunSlowTests=true
+        assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
+
         RandomWrapper gen = RandomUtils.getRandom();
-        System.out.printf("k\tsamples\tcompression\tsize1\tsize2\n");
-        for (int k = 0; k < 40; k++) {
+        PrintWriter out = new PrintWriter(new FileOutputStream("scaling.tsv"));
+        out.printf("k\tsamples\tcompression\tsize1\tsize2\n");
+        for (int k = 0; k < 20; k++) {
             for (int size : new int[]{10, 100, 1000, 10000}) {
                 for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
                     TDigest dist = new TDigest(compression);
                     for (int i = 0; i < size * 1000; i++) {
                         dist.add(gen.nextDouble());
                     }
-                    System.out.printf("%d\t%d\t%.0f\t%d\t%d\n", k, size, compression, dist.smallByteSize(), dist.byteSize());
+                    out.printf("%d\t%d\t%.0f\t%d\t%d\n", k, size, compression, dist.smallByteSize(), dist.byteSize());
+                    out.flush();
                 }
             }
         }
-        System.out.printf("\n");
+        out.printf("\n");
+        out.close();
     }
 
     @Test
-    public void testScaling() {
+    public void testScaling() throws FileNotFoundException {
         RandomWrapper gen = RandomUtils.getRandom();
-
-        System.out.printf("pass\tcompression\tq\terror\tsize\n");
-        // change to 50 passes for better graphs
-        for (int k = 0; k < 3; k++) {
-            List<Double> data = Lists.newArrayList();
-            for (int i = 0; i < 100000; i++) {
-                data.add(gen.nextDouble());
-            }
-            Collections.sort(data);
-
-            for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
-                TDigest dist = new TDigest(compression);
-                for (Double x : data) {
-                    dist.add(x);
+        try (PrintWriter out = new PrintWriter(new FileOutputStream("error-scaling.tsv"))) {
+            out.printf("pass\tcompression\tq\terror\tsize\n");
+            // change to 50 passes for better graphs
+            int n = repeats() * repeats();
+            System.out.printf("repeats = %d, n = %d\n", repeats(), n);
+            for (int k = 0; k < n; k++) {
+                List<Double> data = Lists.newArrayList();
+                for (int i = 0; i < 100000; i++) {
+                    data.add(gen.nextDouble());
                 }
-                dist.compress();
+                Collections.sort(data);
 
-                for (double q : new double[]{0.001, 0.01, 0.1, 0.5}) {
-                    double estimate = dist.quantile(q);
-                    double actual = data.get((int) (q * data.size()));
-                    System.out.printf("%d\t%.0f\t%.3f\t%.9f\t%d\n", k, compression, q, estimate - actual, dist.byteSize());
+                for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
+                    TDigest dist = new TDigest(compression);
+                    for (Double x : data) {
+                        dist.add(x);
+                    }
+                    dist.compress();
+
+                    for (double q : new double[]{0.001, 0.01, 0.1, 0.5}) {
+                        double estimate = dist.quantile(q);
+                        double actual = data.get((int) (q * data.size()));
+                        out.printf("%d\t%.0f\t%.3f\t%.9f\t%d\n", k, compression, q, estimate - actual, dist.byteSize());
+                        out.flush();
+                    }
                 }
             }
         }
@@ -474,6 +518,10 @@ public class TDigestTest {
 
     private double quantile(final double q, List<Double> data) {
         return data.get((int) Math.floor(data.size() * q));
+    }
+
+    private int repeats() {
+        return Boolean.parseBoolean(System.getProperty("runSlowTests")) ? 10 : 1;
     }
 
     @Before
