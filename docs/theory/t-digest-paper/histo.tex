@@ -233,23 +233,42 @@ This size can be substantially decreased, however.  One simple option is to stor
 \subsection{Space/Accuracy Trade-off}
 Not surprisingly, there is a strong trade-off between the size of the $t$-digest as controlled by the compression parameter $1/\delta$ and the accuracy which which quantiles are estimated.  Quantiles at $0.999$ and above or $0.001$ or below were estimated to within a small fraction of 1\% regardless of digest size.  Accurate estimates of the median require substantially larger digests.  Figure \ref{fig:accuracy-1} shows this basic trade-off.
 
+\begin{figure}[htb] %  figure placement: here, top, bottom, or page
+   \centering
+   \includegraphics[width=6in]{error-scaling.png} 
+   \caption{Accuracy is good for extreme quantiles regardless of digest size.  For mid quantiles such as the median, moderate digest sizes suffice to get better than 1\% accuracy, but a digest must be 10kB or more to achieve 0.1\% accuracy.  Note that errors for $q=0.5$ and digests smaller than 1 kB are nearly 10\%.  All panels were computed using 100 runs with 100,000 samples.  Compression parameter ($1/\delta$) was varied from 2 to 1000 in order to vary the size of the resulting digest.  Sizes shown were encoded using 4 byte floating point delta encoding for the centroid means and variable byte length integer encoding.}
+   \label{fig:accuracy-1}
+\end{figure}
 The size of the resulting digest depends strongly on the compression parameter $1/\delta$ as shown in the left panel of Figure \ref{fig:accuracy-2}.  Size of the digest also grows roughly with the log of the number of samples observed, at least in the range of 10,000 to 10,000,000 samples shown in the right panel of Figure \ref{fig:accuracy-2}.
 
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=6in]{accuracy-1.png} 
-   \caption{Accuracy is good for extreme quantiles regardless of digest size.  For mid quantiles such as the median, moderate digest sizes suffice to get better than 1\% accuracy, but a digest must be 10kB or more to achieve 0.1\% accuracy.  All panels were computed using 40 runs with 100,000 samples.  Compression parameter ($1/\delta$) was varied from 2 to 1000 in order to vary the size of the resulting digest.  Sizes shown were encoded using 4 byte floating point delta encoding for the centroid means and variable byte length integer encoding.}
-   \label{fig:accuracy-1}
-\end{figure}
-\begin{figure}[htb] %  figure placement: here, top, bottom, or page
-   \centering
-   \includegraphics[width=6in]{accuracy-2.png} 
-   \caption{Size of the digest scales sub-linearly with compression parameter ($\alpha \approx 0.9$) for fixed number of points.  Size scales approximately logarithmically with number of points for fixed compression parameter.  }
+   \includegraphics[width=6in]{scaling.png} 
+   \caption{Size of the digest scales sub-linearly with compression parameter ($\alpha \approx 0.7 \ldots 0.9$) for fixed number of points.  Size scales approximately logarithmically with number of points for fixed compression parameter.  The graph shown here is for $1/\delta = 100$.  The dashed lines show best-fit log-linear models.}
    \label{fig:accuracy-2}
 \end{figure}
 
+\subsection{Comparison with Q-digest}
+The prototype implementation of the $t$-digest completely dominates the implementation of the Q-digest from the popular stream-lib package \cite{github:stream} when size of the resulting digest is controlled.  This is shown in Figure \ref{fig:qd-comparison}.  In the left panel, the relationship between the effect of the compression parameter for Q-digest is compared to the similar parameter $1/\delta$ for the $t$-digest.  For the same value of compression parameter, the sizes of the two digests is always within a factor of 2 for practical uses.  The middle and right panel show accuracies for uniform and $\Gamma$ distributions.  
+\begin{figure}[htb] %  figure placement: here, top, bottom, or page
+   \centering
+   \includegraphics[width=6in]{qd-sizes.png} 
+   \caption{The left panel shows the size of a serialized Q-digest versus the size of a serialized t-digest for various values of $1/\delta$ from 2 to 100,000.  The sizes for the two kinds of digest are within a factor of 2 for all compression levels.  The middle and right panels show the accuracy for a particular setting of $1/\delta$ for Q-digest and t-digest.  For each quantile, the Q-digest accuracy is shown as the left bar in a pair and the t-digest accuracy is shown as the right bar in a pair.  Note that the vertical scale in these diagrams are one or two orders of magnitude larger than in the previous accuracy graphs and that in all cases, the accuracy of the t-digest is dramatically better than that of the Q-digest even though the serialized size of the each is within 10\% of the other.   Note that the errors in the right hand panel are systematic quantization errors introduced by the use of integers in the Q-digest algorithm.  Any distribution with very large dynamic range will show the same problems.}
+   \label{fig:qd-comparison}
+\end{figure}
+
+As expected, the $t$-digest has very good accuracy for extreme quantiles while the Q-digest has constant error across the range.  Interestingly, the accuracy of the Q-digest is at best roughly an order of magnitude worse than the accuracy of the $t$-digest even.  At worse, with extreme values of $q$, accuracy is several orders of magnitude worse.  This situation is even worse with a highly skewed distribution such as with the $\Gamma(0.1, 0.1)$ shown in the right panel.  Here, the very high dynamic range introduces severe quantization errors into the results.  This quantization is inherent in the use of integers in the Q-digest.
+
+For higher compression parameter values, the size of the Q-digest becomes up to two times smaller than the $t$-digest, but no improvement in the error rates is observed.
+
 \subsection{Speed}
-The current implementation has been primarily optimized for ease of development, not execution speed.  As it is, running on a single core of a 2.3 GHz Intel Core i5, it typically takes 2-3 microseconds to process each point
+The current implementation has been primarily optimized for ease of development, not execution speed.  As it is, running on a single core of a 2.3 GHz Intel Core i5, it typically takes 2-3 microseconds to process each point after JIT optimization has come into effect.  It is to be expected that a substantial improvement in speed could be had by profiling and cleaning up the prototype code.
+
+\section{Conclusion}
+The $t$-digest is a novel algorithm that dominates the previously state-of-the-art Q-digest in terms of accuracy and size.  The $t$-digest provides accurate on-line estimates of a variety of of rank-based statistics including quantiles and trimmed mean.  The algorithm is simple and empirically demonstrated to exhibit accuracy as predicted on theoretical grounds.  Moreover, the $t$-digest algorithm is inherently on-line while the Q-digest is an on-line adaptation of an off-line algorithm.
+
+The $t$-digest algorithm is available in the form of an open source, well-tested implementation from the author.  It has already been adopted by the Apache Mahout project and is likely to be adopted by other projects as well.
+
 %\subsection{}
 \bibliographystyle{alpha}
 \bibliography{refs}{}
