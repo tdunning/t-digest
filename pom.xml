@@ -165,7 +165,7 @@
                         <version>1.4</version>
                         <configuration>
                             <passphrase>${gpg.passphrase}</passphrase>
-                            <keyname>A6B16D00</keyname>
+                            <keyname>${gpg.keyname}</keyname>
                         </configuration>
                         <executions>
                             <execution>
