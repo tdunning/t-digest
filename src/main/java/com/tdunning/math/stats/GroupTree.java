@@ -1,4 +1,4 @@
-package org.apache.mahout.math.stats;
+package com.tdunning.math.stats;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.AbstractIterator;

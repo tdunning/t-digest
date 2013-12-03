@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.mahout.math.stats;
+package com.tdunning.math.stats;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -159,7 +159,8 @@ public class TDigest {
 
     public void add(TDigest other) {
         List<Group> tmp = Lists.newArrayList(other.summary);
-        Collections.shuffle(tmp);
+
+        Collections.shuffle(tmp, gen);
         for (Group group : tmp) {
             add(group.mean(), group.count(), group);
         }
@@ -192,7 +193,7 @@ public class TDigest {
             reduced.recordAllData();
         }
         List<Group> tmp = Lists.newArrayList(other);
-        Collections.shuffle(tmp);
+        Collections.shuffle(tmp, gen);
         for (Group group : tmp) {
             reduced.add(group.mean(), group.count(), group);
         }

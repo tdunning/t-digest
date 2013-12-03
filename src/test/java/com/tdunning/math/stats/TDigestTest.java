@@ -15,15 +15,12 @@
  * limitations under the License.
  */
 
-package org.apache.mahout.math.stats;
+package com.tdunning.math.stats;
 
 import com.clearspring.analytics.stream.quantile.QDigest;
-import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multiset;
 import org.apache.mahout.common.RandomUtils;
-import org.apache.mahout.common.RandomWrapper;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
 import org.apache.mahout.math.jet.random.Normal;
@@ -45,6 +42,11 @@ public class TDigestTest {
     private static PrintWriter sizeDump;
     private static PrintWriter errorDump;
     private static PrintWriter deviationDump;
+
+    @Before
+    public void testSetUp() {
+        RandomUtils.useTestSeed();
+    }
 
     @BeforeClass
     public static void setup() throws IOException {
@@ -74,10 +76,9 @@ public class TDigestTest {
 
     @Test
     public void testUniform() {
-        RandomWrapper gen = RandomUtils.getRandom();
+        Random gen = RandomUtils.getRandom();
         for (int i = 0; i < repeats(); i++) {
             runTest(new Uniform(0, 1, gen), 100,
-//                    new double[]{0.0001, 0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 0.9999},
                     new double[]{0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999},
                     "uniform", true);
         }
@@ -89,7 +90,7 @@ public class TDigestTest {
         // the median is 0.006 and the 99.9th %-ile is 33.6 while the mean is 1.
         // this severe skew means that we have to have positional accuracy that
         // varies by over 11 orders of magnitude.
-        RandomWrapper gen = RandomUtils.getRandom();
+        Random gen = RandomUtils.getRandom();
         for (int i = 0; i < repeats(); i++) {
             runTest(new Gamma(0.1, 0.1, gen), 100,
 //                    new double[]{6.0730483624079e-30, 6.0730483624079e-20, 6.0730483627432e-10, 5.9339110446023e-03,
@@ -103,7 +104,7 @@ public class TDigestTest {
     public void testNarrowNormal() {
         // this mixture of a uniform and normal distribution has a very narrow peak which is centered
         // near the median.  Our system should be scale invariant and work well regardless.
-        final RandomWrapper gen = RandomUtils.getRandom();
+        final Random gen = RandomUtils.getRandom();
         AbstractContinousDistribution mix = new AbstractContinousDistribution() {
             AbstractContinousDistribution normal = new Normal(0, 1e-5, gen);
             AbstractContinousDistribution uniform = new Uniform(-1, 1, gen);
@@ -127,7 +128,7 @@ public class TDigestTest {
 
     @Test
     public void testRepeatedValues() {
-        final RandomWrapper gen = RandomUtils.getRandom();
+        final Random gen = RandomUtils.getRandom();
 
         // 5% of samples will be 0 or 1.0.  10% for each of the values 0.1 through 0.9
         AbstractContinousDistribution mix = new AbstractContinousDistribution() {
@@ -139,7 +140,7 @@ public class TDigestTest {
 
         TDigest dist = new TDigest((double) 1000);
         long t0 = System.nanoTime();
-        Multiset<Double> data = HashMultiset.create();
+        List<Double> data = Lists.newArrayList();
         for (int i1 = 0; i1 < 100000; i1++) {
             double x = mix.nextDouble();
             data.add(x);
@@ -155,8 +156,9 @@ public class TDigestTest {
         // all quantiles should round to nearest actual value
         for (int i = 0; i < 10; i++) {
             double z = i / 10.0;
-            // we skip over troublesome points that are exactly halfway between
-            for (double q = z + 0.002; q < z + 0.09; q += 0.005) {
+            // we skip over troublesome points that are nearly halfway between
+            for (double delta : new double[] {0.01, 0.02, 0.03, 0.07, 0.08, 0.09}) {
+                double q = z + delta;
                 double cdf = dist.cdf(q);
                 // we also relax the tolerances for repeated values
                 assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f", z, q, cdf), z + 0.05, cdf, 0.005);
@@ -169,6 +171,7 @@ public class TDigestTest {
 
     @Test
     public void testSequentialPoints() {
+        Random gen = RandomUtils.getRandom();
         for (int i = 0; i < repeats(); i++) {
             runTest(new AbstractContinousDistribution() {
                 double base = 0;
@@ -305,7 +308,7 @@ public class TDigestTest {
         // mvn test -DrunSlowTests=true
         assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
 
-        RandomWrapper gen = RandomUtils.getRandom();
+        Random gen = RandomUtils.getRandom();
         PrintWriter out = new PrintWriter(new FileOutputStream("scaling.tsv"));
         out.printf("k\tsamples\tcompression\tsize1\tsize2\n");
         for (int k = 0; k < 20; k++) {
@@ -326,12 +329,11 @@ public class TDigestTest {
 
     @Test
     public void testScaling() throws FileNotFoundException {
-        RandomWrapper gen = RandomUtils.getRandom();
+        Random gen = RandomUtils.getRandom();
         try (PrintWriter out = new PrintWriter(new FileOutputStream("error-scaling.tsv"))) {
             out.printf("pass\tcompression\tq\terror\tsize\n");
             // change to 50 passes for better graphs
             int n = repeats() * repeats();
-            System.out.printf("repeats = %d, n = %d\n", repeats(), n);
             for (int k = 0; k < n; k++) {
                 List<Double> data = Lists.newArrayList();
                 for (int i = 0; i < 100000; i++) {
@@ -366,7 +368,6 @@ public class TDigestTest {
      * @param sizeGuide     Control for size of the histogram.
      * @param tag           Label for the output lines
      * @param recordAllData True if the internal histogrammer should be set up to record all data it sees for
-     *                      diagnostic purposes.
      */
     private void runTest(AbstractContinousDistribution gen, double sizeGuide, double[] qValues, String tag, boolean recordAllData) {
         TDigest dist = new TDigest(sizeGuide);
@@ -405,6 +406,7 @@ public class TDigestTest {
         System.out.printf("# %d centroids\n", dist.centroidCount());
 
         assertTrue("Summary is too large", dist.centroidCount() < 10 * sizeGuide);
+        int softErrors = 0;
         for (int i = 0; i < xValues.length; i++) {
             double x = xValues[i];
             double q = qValues[i];
@@ -414,8 +416,12 @@ public class TDigestTest {
 
             estimate = cdf(dist.quantile(q), data);
             errorDump.printf("%s\t%s\t%.8g\t%.8f\t%.8f\n", tag, "quantile", x, q, estimate - q);
-            assertEquals(q, estimate, 0.005);
+            if (Math.abs(q - estimate) > 0.005) {
+                softErrors++;
+            }
+            assertEquals(q, estimate, 0.012);
         }
+        assertTrue(softErrors < 3);
 
         if (recordAllData) {
             Iterator<? extends TDigest.Group> ix = dist.centroids().iterator();
@@ -440,7 +446,7 @@ public class TDigestTest {
 
     @Test
     public void testMerge() {
-        RandomWrapper gen = RandomUtils.getRandom();
+        Random gen = RandomUtils.getRandom();
 
         for (int parts : new int[]{2, 5, 10, 20, 50, 100}) {
             List<Double> data = Lists.newArrayList();
@@ -492,7 +498,8 @@ public class TDigestTest {
                 double e1 = dist.quantile(q) - z;
                 double e2 = dist2.quantile(q) - z;
                 System.out.printf("quantile\t%d\t%.6f\t%.6f\t%.6f\t%.6f\t%.6f\n", parts, q, z - q, e1, e2, Math.abs(e2) / q);
-                assertTrue(String.format("parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f", parts, q, e1, e2, Math.abs(e2) / q), Math.abs(e2) / q < 0.1 && Math.abs(e2) < 0.01);
+                assertTrue(String.format("parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f", parts, q, e1, e2, Math.abs(e2) / q), Math.abs(e2) / q < 0.1);
+                assertTrue(String.format("parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f", parts, q, e1, e2, Math.abs(e2) / q), Math.abs(e2) < 0.015);
             }
 
             for (double x : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5}) {
@@ -501,7 +508,8 @@ public class TDigestTest {
                 double e2 = dist2.cdf(x) - z;
 
                 System.out.printf("cdf\t%d\t%.6f\t%.6f\t%.6f\t%.6f\t%.6f\n", parts, x, z - x, e1, e2, Math.abs(e2) / x);
-                assertTrue(String.format("parts=%d, x=%.4f, e1=%.5f, e2=%.5f", parts, x, e1, e2), Math.abs(e2) / x < 0.1 && Math.abs(e2) < 0.01);
+                assertTrue(String.format("parts=%d, x=%.4f, e1=%.5f, e2=%.5f", parts, x, e1, e2), Math.abs(e2) < 0.015);
+                assertTrue(String.format("parts=%d, x=%.4f, e1=%.5f, e2=%.5f", parts, x, e1, e2), Math.abs(e2) / x < 0.1);
             }
         }
     }
@@ -522,10 +530,5 @@ public class TDigestTest {
 
     private int repeats() {
         return Boolean.parseBoolean(System.getProperty("runSlowTests")) ? 10 : 1;
-    }
-
-    @Before
-    public void setUp() {
-        RandomUtils.useTestSeed();
     }
 }

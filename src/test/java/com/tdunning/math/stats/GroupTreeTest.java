@@ -1,7 +1,8 @@
-package org.apache.mahout.math.stats;
+package com.tdunning.math.stats;
 
 import com.google.common.collect.Lists;
 import org.apache.mahout.common.RandomUtils;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -157,9 +158,13 @@ public class GroupTreeTest {
         assertEquals(102, x.headSum(new TDigest.Group(200)));
     }
 
+    @Before
+    public void setUp() {
+        RandomUtils.useTestSeed();
+    }
+
     @Test
     public void testRandomRebalance() {
-        RandomUtils.useTestSeed();
         Random gen = RandomUtils.getRandom();
         GroupTree x = new GroupTree();
         List<Double> y = Lists.newArrayList();
