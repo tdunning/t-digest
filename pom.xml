@@ -130,7 +130,7 @@
                 <artifactId>maven-release-plugin</artifactId>
                 <version>2.4.2</version>
                 <configuration>
-                    <arguments>-Dgpg.key=${gpg.passphrase}</arguments>
+                    <arguments>-Dgpg.keyname=${gpg.keyname}</arguments>
                     <arguments>-Dgpg.passphrase=${gpg.passphrase}</arguments>
                 </configuration>
             </plugin>
