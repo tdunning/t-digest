@@ -248,6 +248,22 @@ The size of the resulting digest depends strongly on the compression parameter $
    \label{fig:accuracy-2}
 \end{figure}
 
+\subsection{Computing $t$-digests in parallel}
+With large scale computations, it is important to be able to compute aggregates like the $t$-digest on portions of the input and then combine those aggregates.  
+
+For example, in a map-reduce framework such as Hadoop, a combiner function can compute the $t$-digest for the output of each mapper and a single reducer can be used to compute the $t$-digest for the entire data set.  
+
+Another example can be found in certain databases such as Couchbase or Druid which maintain tree structured indices and allow the programmer to specify that particular aggregates of the data being stored can be kept at interior nodes of the index.  The benefit of this is that aggregation can be done almost instantaneously over any contiguous sub-range of the index.  The cost is quite modest with only a $O(\log(N))$ total increase in effort over keeping a running aggregate of all data.  In many practical cases, the tree can contain only two or three levels and still provide fast enough response.  For instance, if it is desired to be able to compute quantiles for any period up to years in 30 second increments, simply keeping higher level $t$-digests at the level of 30 seconds and days is likely to be satisfactory because at most about 10,000 digests are likely to need merging even for particularly odd intervals.  If almost all queries over intervals longer than a few weeks are day aligned, the number of digests that must be merged drops to a few thousand.
+\begin{figure}[htb] %  figure placement: here, top, bottom, or page
+   \centering
+   \includegraphics[width=6in]{merge.png} 
+   \caption{Accuracy of a $t$-digest accumulated directly is essentially the same as when the digest is computed by combining digests from 5, 20 or 100 equal sized portions of the data.  This allows efficient use of the $t$digest in map-reduce and database applications.  Of particular interest is the fact that accuracy actually improves when the input data is broken in to many parts as is shown in the right hand panel.  All panels were computed by 40 repetitions of aggregating 100,000 values. Accuracy for directly accumulated digests is shown on the left of each pair with the white bar and the digest of digest accuracy is shown on the right of each pair by the dark gray bar.}
+   \label{fig:merge}
+\end{figure}
+
+Merging $t$-digests can be done many ways.  The algorithm whose results are shown here consisted of simply making a list of all centroids from the $t$-digests being merged, shuffling that list, and then adding these centroids, preserving their weights, to a new $t$-digest.
+
+
 \subsection{Comparison with Q-digest}
 The prototype implementation of the $t$-digest completely dominates the implementation of the Q-digest from the popular stream-lib package \cite{github:stream} when size of the resulting digest is controlled.  This is shown in Figure \ref{fig:qd-comparison}.  In the left panel, the relationship between the effect of the compression parameter for Q-digest is compared to the similar parameter $1/\delta$ for the $t$-digest.  For the same value of compression parameter, the sizes of the two digests is always within a factor of 2 for practical uses.  The middle and right panel show accuracies for uniform and $\Gamma$ distributions.  
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
