@@ -18,6 +18,7 @@
 package com.tdunning.math.stats;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.mahout.common.RandomUtils;
 
@@ -166,19 +167,15 @@ public class TDigest {
         }
     }
 
-    public static TDigest merge(double compression, Iterable<TDigest> subData) {
-        List<TDigest> elements = Lists.newArrayList(subData);
-        int n = Math.max(1, elements.size() / 4);
-        TDigest r = new TDigest(compression);
-        if (elements.size() > 0 && elements.get(0).recordAllData) {
-            r.recordAllData();
+    public static TDigest merge(double compression, Iterable<TDigest> subData, Random gen) {
+        List<Group> centroids = Lists.newArrayList();
+        for (TDigest digest : subData) {
+            Iterables.addAll(centroids, digest.centroids());
         }
-        for (int i = 0; i < elements.size(); i += n) {
-            if (n > 1) {
-                r.add(merge(compression, elements.subList(i, Math.min(i + n, elements.size()))));
-            } else {
-                r.add(elements.get(i));
-            }
+        Collections.shuffle(centroids, gen);
+        TDigest r = new TDigest(compression);
+        for (Group c : centroids) {
+            r.add(c.centroid, c.count);
         }
         return r;
     }

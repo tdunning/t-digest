@@ -171,7 +171,6 @@ public class TDigestTest {
 
     @Test
     public void testSequentialPoints() {
-        Random gen = RandomUtils.getRandom();
         for (int i = 0; i < repeats(); i++) {
             runTest(new AbstractContinousDistribution() {
                 double base = 0;
@@ -445,73 +444,75 @@ public class TDigestTest {
     }
 
     @Test
-    public void testMerge() {
+    public void testMerge() throws FileNotFoundException {
         Random gen = RandomUtils.getRandom();
 
-        for (int parts : new int[]{2, 5, 10, 20, 50, 100}) {
-            List<Double> data = Lists.newArrayList();
+        PrintWriter out = new PrintWriter(new File("merge.tsv"));
+        out.printf("type\tparts\tq\te0\te1\te2\te2.rel\n");
+        for (int k = 0; k < 10; k++) {
+            for (int parts : new int[]{2, 5, 10, 20, 50, 100}) {
+                List<Double> data = Lists.newArrayList();
 
-            TDigest dist = new TDigest(100);
-            dist.recordAllData();
+                TDigest dist = new TDigest(50);
+                dist.recordAllData();
 
-            List<TDigest> many = Lists.newArrayList();
-            for (int i = 0; i < 100; i++) {
-                many.add(new TDigest(100).recordAllData());
-            }
-
-            // we accumulate the data into multiple sub-digests
-            List<TDigest> subs = Lists.newArrayList();
-            for (int i = 0; i < parts; i++) {
-                subs.add(new TDigest(50).recordAllData());
-            }
-
-            for (int i = 0; i < 100000; i++) {
-                double x = gen.nextDouble();
-                data.add(x);
-                dist.add(x);
-                subs.get(i % parts).add(x);
-            }
-            dist.compress();
-            Collections.sort(data);
-
-            // collect the raw data from the sub-digests
-            List<Double> data2 = Lists.newArrayList();
-            for (TDigest digest : subs) {
-                for (TDigest.Group group : digest.centroids()) {
-                    Iterables.addAll(data2, group.data());
+                // we accumulate the data into multiple sub-digests
+                List<TDigest> subs = Lists.newArrayList();
+                for (int i = 0; i < parts; i++) {
+                    subs.add(new TDigest(50).recordAllData());
                 }
+
+                for (int i = 0; i < 100000; i++) {
+                    double x = gen.nextDouble();
+                    data.add(x);
+                    dist.add(x);
+                    subs.get(i % parts).add(x);
+                }
+                dist.compress();
+                Collections.sort(data);
+
+                // collect the raw data from the sub-digests
+                List<Double> data2 = Lists.newArrayList();
+                for (TDigest digest : subs) {
+                    for (TDigest.Group group : digest.centroids()) {
+                        Iterables.addAll(data2, group.data());
+                    }
+                }
+                Collections.sort(data2);
+
+                // verify that the raw data all got recorded
+                assertEquals(data.size(), data2.size());
+                Iterator<Double> ix = data.iterator();
+                for (Double x : data2) {
+                    assertEquals(ix.next(), x);
+                }
+
+                // now merge the sub-digests
+                TDigest dist2 = TDigest.merge(50, subs, gen);
+
+                for (double q : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5}) {
+                    double z = quantile(q, data);
+                    double e1 = dist.quantile(q) - z;
+                    double e2 = dist2.quantile(q) - z;
+                    out.printf("quantile\t%d\t%.6f\t%.6f\t%.6f\t%.6f\t%.6f\n", parts, q, z - q, e1, e2, Math.abs(e2) / q);
+                    assertTrue(String.format("parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f", parts, q, e1, e2, Math.abs(e2) / q), Math.abs(e2) / q < 0.1);
+                    assertTrue(String.format("parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f", parts, q, e1, e2, Math.abs(e2) / q), Math.abs(e2) < 0.015);
+                }
+
+                for (double x : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5}) {
+                    double z = cdf(x, data);
+                    double e1 = dist.cdf(x) - z;
+                    double e2 = dist2.cdf(x) - z;
+
+                    out.printf("cdf\t%d\t%.6f\t%.6f\t%.6f\t%.6f\t%.6f\n", parts, x, z - x, e1, e2, Math.abs(e2) / x);
+                    assertTrue(String.format("parts=%d, x=%.4f, e1=%.5f, e2=%.5f", parts, x, e1, e2), Math.abs(e2) < 0.015);
+                    assertTrue(String.format("parts=%d, x=%.4f, e1=%.5f, e2=%.5f", parts, x, e1, e2), Math.abs(e2) / x < 0.1);
+                }
+                out.flush();
             }
-            Collections.sort(data2);
-
-            // verify that the raw data all got recorded
-            assertEquals(data.size(), data2.size());
-            Iterator<Double> ix = data.iterator();
-            for (Double x : data2) {
-                assertEquals(ix.next(), x);
-            }
-
-            // now merge the sub-digests
-            TDigest dist2 = TDigest.merge(50, subs);
-
-            for (double q : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5}) {
-                double z = quantile(q, data);
-                double e1 = dist.quantile(q) - z;
-                double e2 = dist2.quantile(q) - z;
-                System.out.printf("quantile\t%d\t%.6f\t%.6f\t%.6f\t%.6f\t%.6f\n", parts, q, z - q, e1, e2, Math.abs(e2) / q);
-                assertTrue(String.format("parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f", parts, q, e1, e2, Math.abs(e2) / q), Math.abs(e2) / q < 0.1);
-                assertTrue(String.format("parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f", parts, q, e1, e2, Math.abs(e2) / q), Math.abs(e2) < 0.015);
-            }
-
-            for (double x : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5}) {
-                double z = cdf(x, data);
-                double e1 = dist.cdf(x) - z;
-                double e2 = dist2.cdf(x) - z;
-
-                System.out.printf("cdf\t%d\t%.6f\t%.6f\t%.6f\t%.6f\t%.6f\n", parts, x, z - x, e1, e2, Math.abs(e2) / x);
-                assertTrue(String.format("parts=%d, x=%.4f, e1=%.5f, e2=%.5f", parts, x, e1, e2), Math.abs(e2) < 0.015);
-                assertTrue(String.format("parts=%d, x=%.4f, e1=%.5f, e2=%.5f", parts, x, e1, e2), Math.abs(e2) / x < 0.1);
-            }
+            System.out.printf("Iteration %d\n", k + 1);
         }
+        out.close();
     }
 
     private double cdf(final double x, List<Double> data) {
