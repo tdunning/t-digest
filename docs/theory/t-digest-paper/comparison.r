@@ -3,7 +3,7 @@ keep = function(data, tag) {
   data[data$dist == tag & data$compression == 50 & data$q !=0.3 & data$q != 0.7 & data$q != 0.2 & data$q != 0.8, ]
 }
 
-png("qd-sizes.png", width=1800, height=700, pointsize=28)
+png("qd-sizes.png", width=1800, height=600, pointsize=28)
 layout(matrix(c(1,2,3), 1, 3, byrow=T), widths=c(1,1))
 
 gray = rgb(0,0,0,0.05)
