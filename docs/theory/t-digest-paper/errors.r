@@ -9,7 +9,7 @@ plotError = function(dist, ylim=c(-2000, 2000), yaxt='s', ylab) {
 }
 
   png("error.png", width=2400, height=1200, pointsize=36)
-layout(matrix(c(1,2), 1, 2, byrow=T), heights=c(1200, 1200), widths=c(1300,1100))
+layout(matrix(c(1,2), 1, 2, byrow=T), heights=c(1200, 1200), widths=c(1285,1100))
 #plotError('mixture', 'mixture-error.png')
 plotError('gamma', ylab="Error (ppm)")
 old = par(mar=c(5.1,0,4.1,2))
