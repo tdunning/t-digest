@@ -3,7 +3,7 @@ errors = read.delim("error-scaling.tsv")
 errors$kb = errors$size/1000
 
 png("scaling.png", width=1800, height=700, pointsize=28)
-layout(matrix(c(1,2), 1, 2, byrow=T), widths=c(1,1))
+layout(matrix(c(1,2), 1, 2, byrow=T), widths=c(1,1.1))
 
 old = par(mar=c(5.1,2,2.1,2))
 plot(size1 ~ compression, data[data$samples==10000,], log='xy',
@@ -52,7 +52,7 @@ par(old)
 
 dev.off()
 
-png("error-scaling.png", width=1800, height=700, pointsize=28)
+png("error-scaling.png", width=1800, height=600, pointsize=28)
 
 layout(matrix(c(1,2,3), 1, 3, byrow=T), widths=c(1.18,1,1))
 

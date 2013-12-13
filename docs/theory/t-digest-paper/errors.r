@@ -1,7 +1,8 @@
 errorData = read.delim("errors.csv")
 
 plotError = function(dist, ylim=c(-2000, 2000), yaxt='s', ylab) {
-  boxplot(1e6*error ~ Q, errorData[errorData$dist==dist,], ylim=ylim, lwd=4, xlab="Cumulative Distribution", ylab=ylab, pars=list(lwd.ticks=4), yaxt=yaxt)
+  boxplot(1e6*error ~ Q, errorData[errorData$dist==dist,], ylim=ylim, lwd=4,
+          xlab="Cumulative Distribution (q)", ylab=ylab, pars=list(lwd.ticks=4), yaxt=yaxt)
   box(lwd=8)
   abline(h=1000, lty=2, lwd=4)
   abline(h=-1000, lty=2, lwd=4)

@@ -100,7 +100,7 @@ The key property of this algorithm is that the final list of centroids $C$ is ve
 That this algorithm does produce such an approximation is more difficult to prove rigorously, but an empirical examination is enlightening.  Figure \ref{fig:deviation} shows the deviation of samples assigned to centroids for uniform and highly skewed distributions.  These deviations are normalized by the half the distance between the adjacent two centroids.
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=4.5in]{deviation.png} 
+   \includegraphics[width=6in]{deviation.png} 
    \caption{The deviation of samples assigned to a single centroid.  The horizontal axis is scaled to the distance to the adjacent centroid so a value of 0.5 is half-way between the two centroids. There are two significant observations to be had here.  The first is that relatively few points are assigned to a centroid that are beyond the midpoint to the next cluster.  This bears on the accuracy of this algorithm.  The second observation is that samples are distributed relatively uniformly between the boundaries of the cell.  This affects the interpolation method to be chosen when working with quantiles. The three graphs show, respectively, centroids from $q \in [0.3, 0.7]$ from a uniform distribution, centroids from the same range of a highly skewed $\Gamma(0.1, 0.1)$ and centroids from $q \in [0.01, 0.015]$ in a $\Gamma(0.1, 0.1)$ distribution.  This last range is in a region where skew on the order of $10^{22}$ is found. }
    \label{fig:deviation}
 \end{figure}
