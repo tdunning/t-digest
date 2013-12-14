@@ -449,7 +449,7 @@ public class TDigestTest {
 
         PrintWriter out = new PrintWriter(new File("merge.tsv"));
         out.printf("type\tparts\tq\te0\te1\te2\te2.rel\n");
-        for (int k = 0; k < 10; k++) {
+        for (int k = 0; k < repeats() * 10; k++) {
             for (int parts : new int[]{2, 5, 10, 20, 50, 100}) {
                 List<Double> data = Lists.newArrayList();
 
