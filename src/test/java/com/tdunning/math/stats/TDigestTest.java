@@ -20,6 +20,8 @@ package com.tdunning.math.stats;
 import com.clearspring.analytics.stream.quantile.QDigest;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Callables;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.mahout.common.RandomUtils;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
@@ -29,10 +31,8 @@ import org.junit.*;
 
 import java.io.*;
 import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
+import java.util.concurrent.*;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
@@ -327,33 +327,54 @@ public class TDigestTest {
     }
 
     @Test
-    public void testScaling() throws FileNotFoundException {
-        Random gen = RandomUtils.getRandom();
+    public void testScaling() throws FileNotFoundException, InterruptedException, ExecutionException {
         try (PrintWriter out = new PrintWriter(new FileOutputStream("error-scaling.tsv"))) {
             out.printf("pass\tcompression\tq\terror\tsize\n");
-            // change to 50 passes for better graphs
-            int n = repeats() * repeats();
+
+            Collection<Callable<String>> tasks=Lists.newArrayList();
+            int n = Math.min(3, repeats() * repeats());
             for (int k = 0; k < n; k++) {
-                List<Double> data = Lists.newArrayList();
-                for (int i = 0; i < 100000; i++) {
-                    data.add(gen.nextDouble());
-                }
-                Collections.sort(data);
+                final int currentK = k;
+                tasks.add(new Callable<String>() {
+                    final Random gen = RandomUtils.getRandom();
 
-                for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
-                    TDigest dist = new TDigest(compression);
-                    for (Double x : data) {
-                        dist.add(x);
-                    }
-                    dist.compress();
+                    @Override
+                    public String call() throws Exception {
+                        System.out.printf("Start %d\n", currentK);
+                        StringWriter s = new StringWriter();
+                        PrintWriter out = new PrintWriter(s);
 
-                    for (double q : new double[]{0.001, 0.01, 0.1, 0.5}) {
-                        double estimate = dist.quantile(q);
-                        double actual = data.get((int) (q * data.size()));
-                        out.printf("%d\t%.0f\t%.3f\t%.9f\t%d\n", k, compression, q, estimate - actual, dist.byteSize());
-                        out.flush();
+                        List<Double> data = Lists.newArrayList();
+                        for (int i = 0; i < 100000; i++) {
+                            data.add(gen.nextDouble());
+                        }
+                        Collections.sort(data);
+
+                        for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
+                            TDigest dist = new TDigest(compression);
+                            for (Double x : data) {
+                                dist.add(x);
+                            }
+                            dist.compress();
+
+                            for (double q : new double[]{0.001, 0.01, 0.1, 0.5}) {
+                                double estimate = dist.quantile(q);
+                                double actual = data.get((int) (q * data.size()));
+                                out.printf("%d\t%.0f\t%.3f\t%.9f\t%d\n", currentK, compression, q, estimate - actual, dist.byteSize());
+                                out.flush();
+                            }
+                        }
+                        out.close();
+                        System.out.printf("Finish %d\n", currentK);
+
+                        return s.toString();
                     }
-                }
+                });
+            }
+
+            ExecutorService exec = Executors.newFixedThreadPool(16);
+            for (Future<String> result : exec.invokeAll(tasks)) {
+                out.write(result.get());
             }
         }
     }
