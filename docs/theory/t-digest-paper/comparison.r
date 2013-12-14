@@ -44,8 +44,8 @@ for (i in 1:7) {
   abline(v=i, lwd=1, col='lightgray', lty=2)
 }
 legend(5.5, 20000, c("Q-digest", "t-digest"), fill = c(rgb(0.95, 0.95, 0.95), rgb(0.4, 0.4, 0.4)))
-text(6.5, 14000, "Uniform", cex=1.5)
-text(6.5, 12000, expression(1/delta == 50), cex=1.5)
+text(6.5, 14000, "Uniform", cex=1)
+text(6.5, 12000, expression(1/delta == 50), cex=1)
 box(lwd=3)
 par(old)
 
@@ -60,8 +60,8 @@ for (i in 1:7) {
   abline(v=i, lwd=1, col='lightgray', lty=2)
 }
 legend(5.5, 88000, c("Q-digest", "t-digest"), fill = c(rgb(0.95, 0.95, 0.95), rgb(0.4, 0.4, 0.4)))
-text(6.5, 68000, expression(Gamma(0.1, 0.1)), cex=1.5)
-text(6.5, 62000, expression(1/delta == 50), cex=1.5)
+text(6.5, 68000, expression(Gamma(0.1, 0.1)), cex=1)
+text(6.5, 62000, expression(1/delta == 50), cex=1)
 box(lwd=3)
 par(old)
 
