@@ -2,7 +2,8 @@ t-digest
 ========
 
 A new data structure for accurate on-line accumulation of rank-based statistics such as quantiles
-and trimmed means.
+and trimmed means.  The t-digest algorithm is also very parallel friendly making it useful in
+map-reduce and parallel streaming applications.
 
 The t-digest construction algorithm uses a variant of 1-dimensional k-means clustering to product a
 data structure that is related to the Q-digest.  This t-digest data structure can be used to estimate
@@ -21,3 +22,51 @@ In summary, the particularly interesting characteristics of the t-digest are tha
 * is very simple
 * has a reference implementation that has > 90% test coverage
 * can be used with map-reduce very easily because digests can be merged
+
+Compile and Test
+================
+
+You have to have java 1.7 to compile and run this code.  The special features of Java 1.7 are only lightly used
+so you should be able to adapt it to use with Java6 relatively easily.  You will also need maven (3+ preferred)
+to compile and test this software.  In order to build the images that go into the theory paper, you will need R.
+In order to format the paper, you will need latex.  A pre-built pdf version of the paper is provided.
+
+On ubuntu, you can get the necessary pre-requisites with the following:
+
+    sudo apt-get install  openjdk-7-jdk git maven
+
+Once you have these installed, use this to build and test the software:
+
+    mvn test
+
+Testing Accuracy and Comparing to Q-digest
+================
+
+The normal test suite produces a number of diagnostics that describe the scaling and accuracy characteristics of
+t-digests.  In order to produce nice visualizations of these properties, you need to have more samples.  To get
+this enhanced view, use this command:
+
+    mvn test -DrunSlowTests=true
+
+This will enable a slow scaling test and extend the number of iterations on a number of other tests.  Threading
+is used extensively in these tests and all tests run in parallel so running this on a multi-core machine is
+indicated. On an 8-core EC2 instance, these tests take about 20 minutes to complete.
+
+The data from these tests are stored in a variety of data files in the root directly.  Some of these files are
+quite large.  To visualize the contents of these files, copy all of them into the t-digest-paper directory so
+that they are accessible to the R scripts there:
+
+    cp *.?sv docs/theory/t-digest-paper/
+
+At this point you can run the R analysis scripts:
+
+    cd docs/theory/t-digest-paper/
+    for i in *.r; do (R --slave -f $i; echo $i complete) & echo $i started; done
+
+Most of these scripts will complete almost instantaneously; one or two will take a few tens of seconds.
+
+The output of these scripts are a collection of PNG image files that can be viewed with any suitable viewer
+such as Preview on a Mac.  Many of these images are used as figures in the paper in the same directory with
+the R scripts.
+
+

@@ -350,7 +350,7 @@ public class TDigestTest {
             out.printf("pass\tcompression\tq\terror\tsize\n");
 
             Collection<Callable<String>> tasks = Lists.newArrayList();
-            int n = Math.min(3, repeats() * repeats());
+            int n = Math.max(3, repeats() * repeats());
             for (int k = 0; k < n; k++) {
                 final int currentK = k;
                 tasks.add(new Callable<String>() {
