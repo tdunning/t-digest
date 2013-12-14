@@ -159,7 +159,7 @@ public class TDigestTest {
                 double q = z + delta;
                 double cdf = dist.cdf(q);
                 // we also relax the tolerances for repeated values
-                assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f", z, q, cdf), z + 0.05, cdf, 0.005);
+                assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f", z, q, cdf), z + 0.05, cdf, 0.01);
 
                 double estimate = dist.quantile(q);
                 assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f, estimate = %.3f", z, q, cdf, estimate), Math.rint(q * 10) / 10.0, estimate, 0.001);
