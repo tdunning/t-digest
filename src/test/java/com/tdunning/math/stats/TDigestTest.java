@@ -20,8 +20,6 @@ package com.tdunning.math.stats;
 import com.clearspring.analytics.stream.quantile.QDigest;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.Callables;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.mahout.common.RandomUtils;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
@@ -302,27 +300,44 @@ public class TDigestTest {
     }
 
     @Test()
-    public void testSizeControl() throws IOException {
+    public void testSizeControl() throws IOException, InterruptedException, ExecutionException {
         // very slow running data generator.  Don't want to run this normally.  To run slow tests use
         // mvn test -DrunSlowTests=true
         assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
 
-        Random gen = RandomUtils.getRandom();
-        PrintWriter out = new PrintWriter(new FileOutputStream("scaling.tsv"));
+        final Random gen = RandomUtils.getRandom();
+        final PrintWriter out = new PrintWriter(new FileOutputStream("scaling.tsv"));
         out.printf("k\tsamples\tcompression\tsize1\tsize2\n");
+
+        List<Callable<String>> tasks = Lists.newArrayList();
         for (int k = 0; k < 20; k++) {
-            for (int size : new int[]{10, 100, 1000, 10000}) {
-                for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
-                    TDigest dist = new TDigest(compression);
-                    for (int i = 0; i < size * 1000; i++) {
-                        dist.add(gen.nextDouble());
+            for (final int size : new int[]{10, 100, 1000, 10000}) {
+                final int currentK = k;
+                tasks.add(new Callable<String>() {
+                    @Override
+                    public String call() throws Exception {
+                        System.out.printf("Starting %d,%d\n", currentK, size);
+                        StringWriter s = new StringWriter();
+                        PrintWriter out = new PrintWriter(s);
+                        for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
+                            TDigest dist = new TDigest(compression);
+                            for (int i = 0; i < size * 1000; i++) {
+                                dist.add(gen.nextDouble());
+                            }
+                            out.printf("%d\t%d\t%.0f\t%d\t%d\n", currentK, size, compression, dist.smallByteSize(), dist.byteSize());
+                            out.flush();
+                        }
+                        out.close();
+                        return s.toString();
                     }
-                    out.printf("%d\t%d\t%.0f\t%d\t%d\n", k, size, compression, dist.smallByteSize(), dist.byteSize());
-                    out.flush();
-                }
+                });
             }
         }
-        out.printf("\n");
+
+        for (Future<String> result : Executors.newFixedThreadPool(20).invokeAll(tasks)) {
+            out.write(result.get());
+        }
+
         out.close();
     }
 
