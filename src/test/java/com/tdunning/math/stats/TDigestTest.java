@@ -305,7 +305,7 @@ public class TDigestTest {
         // mvn test -DrunSlowTests=true
         assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
 
-        final Random gen = RandomUtils.getRandom();
+        final Random gen0 = RandomUtils.getRandom();
         final PrintWriter out = new PrintWriter(new FileOutputStream("scaling.tsv"));
         out.printf("k\tsamples\tcompression\tsize1\tsize2\n");
 
@@ -314,6 +314,7 @@ public class TDigestTest {
             for (final int size : new int[]{10, 100, 1000, 10000}) {
                 final int currentK = k;
                 tasks.add(new Callable<String>() {
+                    Random gen = new Random(gen0.nextLong());
                     @Override
                     public String call() throws Exception {
                         System.out.printf("Starting %d,%d\n", currentK, size);
@@ -343,15 +344,17 @@ public class TDigestTest {
 
     @Test
     public void testScaling() throws FileNotFoundException, InterruptedException, ExecutionException {
+        final Random gen0 = RandomUtils.getRandom();
+
         try (PrintWriter out = new PrintWriter(new FileOutputStream("error-scaling.tsv"))) {
             out.printf("pass\tcompression\tq\terror\tsize\n");
 
-            Collection<Callable<String>> tasks=Lists.newArrayList();
+            Collection<Callable<String>> tasks = Lists.newArrayList();
             int n = Math.min(3, repeats() * repeats());
             for (int k = 0; k < n; k++) {
                 final int currentK = k;
                 tasks.add(new Callable<String>() {
-                    final Random gen = RandomUtils.getRandom();
+                    Random gen = new Random(gen0.nextLong());
 
                     @Override
                     public String call() throws Exception {
@@ -481,6 +484,7 @@ public class TDigestTest {
 
     @Test
     public void testMerge() throws FileNotFoundException, InterruptedException, ExecutionException {
+        final Random gen0 = RandomUtils.getRandom();
 
         PrintWriter out = new PrintWriter(new File("merge.tsv"));
         out.printf("type\tparts\tq\te0\te1\te2\te2.rel\n");
@@ -489,7 +493,7 @@ public class TDigestTest {
         for (int k = 0; k < repeats() * 10; k++) {
             final int currentK = k;
             tasks.add(new Callable<String>() {
-                Random gen = RandomUtils.getRandom();
+                Random gen = new Random(gen0.nextLong());
 
                 @Override
                 public String call() throws Exception {
