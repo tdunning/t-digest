@@ -20,6 +20,8 @@ package com.tdunning.math.stats;
 import com.clearspring.analytics.stream.quantile.QDigest;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.tdunning.math.stats.TDigest.Group;
+
 import org.apache.mahout.common.RandomUtils;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
@@ -573,6 +575,79 @@ public class TDigestTest {
         out.close();
     }
 
+    @Test
+    public void testEmpty() {
+        TDigest digest = new TDigest(100);
+        final double q = RandomUtils.getRandom().nextDouble();
+        assertTrue(Double.isNaN(digest.quantile(q)));
+    }
+
+    @Test
+    public void testSingleValue() {
+        TDigest digest = new TDigest(100);
+        final double value = RandomUtils.getRandom().nextDouble() * 1000;
+        digest.add(value);
+        final double q = RandomUtils.getRandom().nextDouble();
+        for (double qValue : new double[] {0, q, 1}) {
+            assertEquals(value, digest.quantile(qValue), 0.001f);
+        }
+    }
+
+    @Test
+    public void testFewValues() {
+        // When there are few values in the tree, quantiles should be exact
+        final Random r = RandomUtils.getRandom();
+        final int length = r.nextInt(10);
+        final List<Double> values = new ArrayList<Double>();
+        final TDigest digest = new TDigest(100);
+        for (int i = 0; i < length; ++i) {
+            final double value;
+            if (i == 0 || r.nextBoolean()) {
+                value = r.nextDouble() * 100;
+            } else {
+                // introduce duplicates
+                value = values.get(i - 1);
+            }
+            digest.add(value);
+            values.add(value);
+        }
+        Collections.sort(values);
+
+        // for this value of the compression, the tree shouldn't have merged any node
+        assertEquals(digest.centroidCount(), values.size());
+        for (double q : new double [] {0, 1e-10, r.nextDouble(), 0.5, 1-1e-10, 1}) {
+            assertEquals(quantile(q, values), digest.quantile(q), 0.01);
+        }
+    }
+
+    @Test
+    public void testExtremeQuantiles() {
+        // t-digest shouldn't merge extreme nodes, but let's still test how it would
+        // answer to extreme quantiles in that case ('extreme' in the sense that the
+        // quantile is either before the first node or after the last one)
+        TDigest digest = new TDigest(100);
+        // we need to create the GroupTree manually
+        GroupTree tree = (GroupTree) digest.centroids();
+        Group g = new Group(10);
+        g.add(10, 2); // 10 has a weight of 3 (1+2)
+        tree.add(g);
+        g = new Group(20); // 20 has a weight of 1
+        tree.add(g);
+        g = new Group(40);
+        g.add(40, 4); // 40 has a weight of 5 (1+4)
+        tree.add(g);
+        digest.count = 3 + 1 + 5;
+        // this group tree is roughly equivalent to the following sorted array:
+        // [ ?, 10, ?, 20, ?, ?, 50, ?, ? ]
+        // and we expect it to compute approximate missing values:
+        // [ 5, 10, 15, 20, 30, 40, 50, 60, 70]
+        List<Double> values = Arrays.asList(5., 10., 15., 20., 30., 40., 50., 60., 70.);
+        for (int i = 0; i < digest.size(); ++i) {
+            final double q = 1.0 / (digest.size() - 1); // a quantile that matches an array index
+            assertEquals(quantile(q, values), digest.quantile(q), 0.01);
+        }
+    }
+
     private double cdf(final double x, List<Double> data) {
         int n1 = 0;
         int n2 = 0;
@@ -584,7 +659,15 @@ public class TDigestTest {
     }
 
     private double quantile(final double q, List<Double> data) {
-        return data.get((int) Math.floor(data.size() * q));
+        if (data.size() == 0) {
+            return Double.NaN;
+        }
+        if (q == 1 || data.size() == 1) {
+            return data.get(data.size() - 1);
+        }
+        final double index = q * (data.size() - 1);
+        final int intIndex = (int) index;
+        return data.get(intIndex + 1) * (index - intIndex) + data.get(intIndex) * (intIndex + 1 - index);
     }
 
     private int repeats() {
