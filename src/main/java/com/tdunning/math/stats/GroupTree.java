@@ -8,14 +8,14 @@ import java.util.Deque;
 import java.util.Iterator;
 
 /**
- * A tree containing TDigest.Group.  This adds to the normal NavigableSet the
+ * A tree containing TDigest.Centroid.  This adds to the normal NavigableSet the
  * ability to sum up the size of elements to the left of a particular group.
  */
-public class GroupTree implements Iterable<TDigest.Group> {
+public class GroupTree implements Iterable<Centroid> {
     private int count;
     private int size;
     private int depth;
-    private TDigest.Group leaf;
+    private Centroid leaf;
     private GroupTree left, right;
 
     public GroupTree() {
@@ -24,7 +24,7 @@ public class GroupTree implements Iterable<TDigest.Group> {
         left = right = null;
     }
 
-    public GroupTree(TDigest.Group leaf) {
+    public GroupTree(Centroid leaf) {
         size = depth = 1;
         this.leaf = leaf;
         count = leaf.count();
@@ -40,33 +40,54 @@ public class GroupTree implements Iterable<TDigest.Group> {
         leaf = this.right.first();
     }
 
-    public void add(TDigest.Group group) {
+    public void add(Centroid centroid) {
         if (size == 0) {
-            leaf = group;
+            leaf = centroid;
             depth = 1;
-            count = group.count();
+            count = centroid.count();
             size = 1;
             return;
         } else if (size == 1) {
-            int order = group.compareTo(leaf);
+            int order = centroid.compareTo(leaf);
             if (order < 0) {
-                left = new GroupTree(group);
+                left = new GroupTree(centroid);
                 right = new GroupTree(leaf);
             } else if (order > 0) {
                 left = new GroupTree(leaf);
-                right = new GroupTree(group);
-                leaf = group;
+                right = new GroupTree(centroid);
+                leaf = centroid;
             }
-        } else if (group.compareTo(leaf) < 0) {
-            left.add(group);
+        } else if (centroid.compareTo(leaf) < 0) {
+            left.add(centroid);
         } else {
-            right.add(group);
+            right.add(centroid);
         }
-        count += group.count();
+        count += centroid.count();
         size++;
         depth = Math.max(left.depth, right.depth) + 1;
 
         rebalance();
+    }
+
+    /**
+     * Modify an existing value in the tree subject to the constraint that the change will not alter the
+     * ordering of the tree.
+     * @param x         New value to add to Centroid
+     * @param count     Weight of new value
+     * @param v         The value to modify
+     * @param data      The recorded data
+     */
+    public void move(double x, int count, Centroid v, Iterable<? extends Double> data) {
+        Preconditions.checkState(size > 0, "Cannot move element of empty tree");
+        if (size == 1) {
+            Preconditions.checkState(leaf == v, "Cannot move element that is not in tree");
+            leaf.add(x, count, data);
+        } else if (v.compareTo(leaf) < 0) {
+            left.move(x, count, v, data);
+        } else {
+            right.move(x, count, v, data);
+        }
+        this.count += count;
     }
 
     private void rebalance() {
@@ -109,7 +130,7 @@ public class GroupTree implements Iterable<TDigest.Group> {
     /**
      * @return the number of items strictly before the current element
      */
-    public int headCount(TDigest.Group base) {
+    public int headCount(Centroid base) {
         if (size == 0) {
             return 0;
         } else if (left == null) {
@@ -126,7 +147,7 @@ public class GroupTree implements Iterable<TDigest.Group> {
     /**
      * @return the sum of the size() function for all elements strictly before the current element.
      */
-    public int headSum(TDigest.Group base) {
+    public int headSum(Centroid base) {
         if (size == 0) {
             return 0;
         } else if (left == null) {
@@ -141,9 +162,9 @@ public class GroupTree implements Iterable<TDigest.Group> {
     }
 
     /**
-     * @return the first Group in this set
+     * @return the first Centroid in this set
      */
-    public TDigest.Group first() {
+    public Centroid first() {
         Preconditions.checkState(size > 0, "No first element of empty set");
         if (left == null) {
             return leaf;
@@ -155,7 +176,7 @@ public class GroupTree implements Iterable<TDigest.Group> {
     /**
      * Iteratres through all groups in the tree.
      */
-    public Iterator<TDigest.Group> iterator() {
+    public Iterator<Centroid> iterator() {
         return iterator(null);
     }
 
@@ -163,10 +184,10 @@ public class GroupTree implements Iterable<TDigest.Group> {
      * Iterates through all of the Groups in this tree in ascending order of means
      * @param start  The place to start this subset.  Remember that Groups are ordered by mean *and* id.
      * @return An iterator that goes through the groups in order of mean and id starting at or after the
-     * specified Group.
+     * specified Centroid.
      */
-    private Iterator<TDigest.Group> iterator(final TDigest.Group start) {
-        return new AbstractIterator<TDigest.Group>() {
+    private Iterator<Centroid> iterator(final Centroid start) {
+        return new AbstractIterator<Centroid>() {
             {
                 stack = Queues.newArrayDeque();
                 push(GroupTree.this, start);
@@ -176,7 +197,7 @@ public class GroupTree implements Iterable<TDigest.Group> {
 
             // recurses down to the leaf that is >= start
             // pending right hand branches on the way are put on the stack
-            private void push(GroupTree z, TDigest.Group start) {
+            private void push(GroupTree z, Centroid start) {
                 while (z.left != null) {
                     if (start == null || start.compareTo(z.leaf) < 0) {
                         // remember we will have to process the right hand branch later
@@ -195,7 +216,7 @@ public class GroupTree implements Iterable<TDigest.Group> {
             }
 
             @Override
-            protected TDigest.Group computeNext() {
+            protected Centroid computeNext() {
                 GroupTree r = stack.poll();
                 while (r != null && r.left != null) {
                     // unpack r onto the stack
@@ -214,7 +235,7 @@ public class GroupTree implements Iterable<TDigest.Group> {
         };
     }
 
-    public void remove(TDigest.Group base) {
+    public void remove(Centroid base) {
         Preconditions.checkState(size > 0, "Cannot remove from empty set");
         if (size == 1) {
             Preconditions.checkArgument(base.compareTo(leaf) == 0, "Element %s not found", base);
@@ -257,7 +278,7 @@ public class GroupTree implements Iterable<TDigest.Group> {
     /**
      * @return the largest element less than or equal to base
      */
-    public TDigest.Group floor(TDigest.Group base) {
+    public Centroid floor(Centroid base) {
         if (size == 0) {
             return null;
         } else {
@@ -267,7 +288,7 @@ public class GroupTree implements Iterable<TDigest.Group> {
                 if (base.compareTo(leaf) < 0) {
                     return left.floor(base);
                 } else {
-                    TDigest.Group floor = right.floor(base);
+                    Centroid floor = right.floor(base);
                     if (floor == null) {
                         floor = left.last();
                     }
@@ -277,7 +298,7 @@ public class GroupTree implements Iterable<TDigest.Group> {
         }
     }
 
-    public TDigest.Group last() {
+    public Centroid last() {
         Preconditions.checkState(size > 0, "Cannot find last element of empty set");
         if (size == 1) {
             return leaf;
@@ -289,14 +310,14 @@ public class GroupTree implements Iterable<TDigest.Group> {
     /**
      * @return the smallest element greater than or equal to base.
      */
-    public TDigest.Group ceiling(TDigest.Group base) {
+    public Centroid ceiling(Centroid base) {
         if (size == 0) {
             return null;
         } else if (size == 1) {
             return base.compareTo(leaf) <= 0 ? leaf : null;
         } else {
             if (base.compareTo(leaf) < 0) {
-                TDigest.Group r = left.ceiling(base);
+                Centroid r = left.ceiling(base);
                 if (r == null) {
                     r = right.first();
                 }
@@ -310,10 +331,10 @@ public class GroupTree implements Iterable<TDigest.Group> {
     /**
      * @return the subset of elements equal to or greater than base.
      */
-    public Iterable<TDigest.Group> tailSet(final TDigest.Group start) {
-        return new Iterable<TDigest.Group>() {
+    public Iterable<Centroid> tailSet(final Centroid start) {
+        return new Iterable<Centroid>() {
             @Override
-            public Iterator<TDigest.Group> iterator() {
+            public Iterator<Centroid> iterator() {
                 return GroupTree.this.iterator(start);
             }
         };

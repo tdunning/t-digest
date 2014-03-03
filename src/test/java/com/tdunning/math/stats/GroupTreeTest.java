@@ -16,16 +16,16 @@ public class GroupTreeTest {
     @Test
     public void testSimpleAdds() {
         GroupTree x = new GroupTree();
-        assertNull(x.floor(new TDigest.Group(34)));
-        assertNull(x.ceiling(new TDigest.Group(34)));
+        assertNull(x.floor(new Centroid(34)));
+        assertNull(x.ceiling(new Centroid(34)));
         assertEquals(0, x.size());
         assertEquals(0, x.sum());
 
-        x.add(new TDigest.Group(1));
-        TDigest.Group group = new TDigest.Group(2);
-        group.add(3, 1);
-        group.add(4, 1);
-        x.add(group);
+        x.add(new Centroid(1));
+        Centroid centroid = new Centroid(2);
+        centroid.add(3, 1);
+        centroid.add(4, 1);
+        x.add(centroid);
 
         assertEquals(2, x.size());
         assertEquals(4, x.sum());
@@ -35,7 +35,7 @@ public class GroupTreeTest {
     public void testBalancing() {
         GroupTree x = new GroupTree();
         for (int i = 0; i < 101; i++) {
-            x.add(new TDigest.Group(i));
+            x.add(new Centroid(i));
         }
 
         assertEquals(101, x.sum());
@@ -48,59 +48,59 @@ public class GroupTreeTest {
     public void testIterators() {
         GroupTree x = new GroupTree();
         for (int i = 0; i < 101; i++) {
-            x.add(new TDigest.Group(i / 2));
+            x.add(new Centroid(i / 2));
         }
 
         assertEquals(0, x.first().mean(), 0);
         assertEquals(50, x.last().mean(), 0);
 
-        Iterator<TDigest.Group> ix = x.iterator();
+        Iterator<Centroid> ix = x.iterator();
         for (int i = 0; i < 101; i++) {
             assertTrue(ix.hasNext());
-            TDigest.Group z = ix.next();
+            Centroid z = ix.next();
             assertEquals(i / 2, z.mean(), 0);
         }
         assertFalse(ix.hasNext());
 
         // 34 is special since it is the smallest element of the right hand sub-tree
-        Iterable<TDigest.Group> z = x.tailSet(new TDigest.Group(34, 0));
+        Iterable<Centroid> z = x.tailSet(new Centroid(34, 1, 0));
         ix = z.iterator();
         for (int i = 68; i < 101; i++) {
             assertTrue(ix.hasNext());
-            TDigest.Group v = ix.next();
+            Centroid v = ix.next();
             assertEquals(i / 2, v.mean(), 0);
         }
         assertFalse(ix.hasNext());
 
         ix = z.iterator();
         for (int i = 68; i < 101; i++) {
-            TDigest.Group v = ix.next();
+            Centroid v = ix.next();
             assertEquals(i / 2, v.mean(), 0);
         }
 
-        z = x.tailSet(new TDigest.Group(33, 0));
+        z = x.tailSet(new Centroid(33, 1, 0));
         ix = z.iterator();
         for (int i = 66; i < 101; i++) {
             assertTrue(ix.hasNext());
-            TDigest.Group v = ix.next();
+            Centroid v = ix.next();
             assertEquals(i / 2, v.mean(), 0);
         }
         assertFalse(ix.hasNext());
 
-        z = x.tailSet(x.ceiling(new TDigest.Group(34, 0)));
+        z = x.tailSet(x.ceiling(new Centroid(34, 1, 0)));
         ix = z.iterator();
         for (int i = 68; i < 101; i++) {
             assertTrue(ix.hasNext());
-            TDigest.Group v = ix.next();
+            Centroid v = ix.next();
             assertEquals(i / 2, v.mean(), 0);
         }
         assertFalse(ix.hasNext());
 
-        z = x.tailSet(x.floor(new TDigest.Group(34, 0)));
+        z = x.tailSet(x.floor(new Centroid(34, 1, 0)));
         ix = z.iterator();
         for (int i = 67; i < 101; i++) {
             assertTrue(ix.hasNext());
-            TDigest.Group v = ix.next();
+            Centroid v = ix.next();
             assertEquals(i / 2, v.mean(), 0);
         }
         assertFalse(ix.hasNext());
@@ -111,10 +111,10 @@ public class GroupTreeTest {
         // mostly tested in other tests
         GroupTree x = new GroupTree();
         for (int i = 0; i < 101; i++) {
-            x.add(new TDigest.Group(i / 2));
+            x.add(new Centroid(i / 2));
         }
 
-        assertNull(x.floor(new TDigest.Group(-30)));
+        assertNull(x.floor(new Centroid(-30)));
     }
 
 
@@ -122,40 +122,40 @@ public class GroupTreeTest {
     public void testRemoveAndSums() {
         GroupTree x = new GroupTree();
         for (int i = 0; i < 101; i++) {
-            x.add(new TDigest.Group(i / 2));
+            x.add(new Centroid(i / 2));
         }
-        TDigest.Group g = x.ceiling(new TDigest.Group(2, 0));
+        Centroid g = x.ceiling(new Centroid(2, 1, 0));
         x.remove(g);
         g.add(3, 1);
         x.add(g);
 
-        assertEquals(0, x.headCount(new TDigest.Group(-1)));
-        assertEquals(0, x.headSum(new TDigest.Group(-1)));
-        assertEquals(0, x.headCount(new TDigest.Group(0, 0)));
-        assertEquals(0, x.headSum(new TDigest.Group(0, 0)));
-        assertEquals(0, x.headCount(x.ceiling(new TDigest.Group(0, 0))));
-        assertEquals(0, x.headSum(x.ceiling(new TDigest.Group(0, 0))));
-        assertEquals(2, x.headCount(new TDigest.Group(1, 0)));
-        assertEquals(2, x.headSum(new TDigest.Group(1, 0)));
+        assertEquals(0, x.headCount(new Centroid(-1)));
+        assertEquals(0, x.headSum(new Centroid(-1)));
+        assertEquals(0, x.headCount(new Centroid(0, 1, 0)));
+        assertEquals(0, x.headSum(new Centroid(0, 1, 0)));
+        assertEquals(0, x.headCount(x.ceiling(new Centroid(0, 1, 0))));
+        assertEquals(0, x.headSum(x.ceiling(new Centroid(0, 1, 0))));
+        assertEquals(2, x.headCount(new Centroid(1, 1, 0)));
+        assertEquals(2, x.headSum(new Centroid(1, 1, 0)));
 
-        g = x.tailSet(new TDigest.Group(2.1)).iterator().next();
+        g = x.tailSet(new Centroid(2.1)).iterator().next();
         assertEquals(2.5, g.mean(), 1e-9);
 
         int i = 0;
-        for (TDigest.Group gx : x) {
+        for (Centroid gx : x) {
             if (i > 10) {
                 break;
             }
             System.out.printf("%d:%.1f(%d)\t", i++, gx.mean(), gx.count());
         }
-        assertEquals(5, x.headCount(new TDigest.Group(2.1, 0)));
-        assertEquals(5, x.headSum(new TDigest.Group(2.1, 0)));
+        assertEquals(5, x.headCount(new Centroid(2.1, 1, 0)));
+        assertEquals(5, x.headSum(new Centroid(2.1, 1, 0)));
 
-        assertEquals(6, x.headCount(new TDigest.Group(2.7, 0)));
-        assertEquals(7, x.headSum(new TDigest.Group(2.7, 0)));
+        assertEquals(6, x.headCount(new Centroid(2.7, 1, 0)));
+        assertEquals(7, x.headSum(new Centroid(2.7, 1, 0)));
 
-        assertEquals(101, x.headCount(new TDigest.Group(200)));
-        assertEquals(102, x.headSum(new TDigest.Group(200)));
+        assertEquals(101, x.headCount(new Centroid(200)));
+        assertEquals(102, x.headSum(new Centroid(200)));
     }
 
     @Before
@@ -170,7 +170,7 @@ public class GroupTreeTest {
         List<Double> y = Lists.newArrayList();
         for (int i = 0; i < 1000; i++) {
             double v = gen.nextDouble();
-            x.add(new TDigest.Group(v));
+            x.add(new Centroid(v));
             y.add(v);
             x.checkBalance();
         }
@@ -178,26 +178,26 @@ public class GroupTreeTest {
         Collections.sort(y);
 
         Iterator<Double> i = y.iterator();
-        for (TDigest.Group group : x) {
-            assertEquals(i.next(), group.mean(), 0.0);
+        for (Centroid centroid : x) {
+            assertEquals(i.next(), centroid.mean(), 0.0);
         }
 
         for (int j = 0; j < 100; j++) {
             double v = y.get(gen.nextInt(y.size()));
             y.remove(v);
-            x.remove(x.floor(new TDigest.Group(v)));
+            x.remove(x.floor(new Centroid(v)));
         }
 
         Collections.sort(y);
         i = y.iterator();
-        for (TDigest.Group group : x) {
-            assertEquals(i.next(), group.mean(), 0.0);
+        for (Centroid centroid : x) {
+            assertEquals(i.next(), centroid.mean(), 0.0);
         }
 
         for (int j = 0; j < y.size(); j++) {
             double v = y.get(j);
             y.set(j, v + 10);
-            TDigest.Group g = x.floor(new TDigest.Group(v));
+            Centroid g = x.floor(new Centroid(v));
             x.remove(g);
             x.checkBalance();
             g.add(g.mean() + 20, 1);
@@ -206,8 +206,8 @@ public class GroupTreeTest {
         }
 
         i = y.iterator();
-        for (TDigest.Group group : x) {
-            assertEquals(i.next(), group.mean(), 0.0);
+        for (Centroid centroid : x) {
+            assertEquals(i.next(), centroid.mean(), 0.0);
         }
     }
 }

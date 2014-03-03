@@ -20,7 +20,6 @@ package com.tdunning.math.stats;
 import com.clearspring.analytics.stream.quantile.QDigest;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.tdunning.math.stats.TDigest.Group;
 
 import org.apache.mahout.common.RandomUtils;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
@@ -138,7 +137,7 @@ public class TDigestTest {
             }
         };
 
-        TDigest dist = new TDigest((double) 1000);
+        TreeDigest dist = new TreeDigest((double) 1000);
         long t0 = System.nanoTime();
         List<Double> data = Lists.newArrayList();
         for (int i1 = 0; i1 < 100000; i1++) {
@@ -188,7 +187,7 @@ public class TDigestTest {
     @Test
     public void testSerialization() {
         Random gen = RandomUtils.getRandom();
-        TDigest dist = new TDigest(100);
+        TreeDigest dist = new TreeDigest(100);
         for (int i = 0; i < 100000; i++) {
             double x = gen.nextDouble();
             dist.add(x);
@@ -208,7 +207,7 @@ public class TDigestTest {
         System.out.printf("# big %d bytes\n", buf.position());
 
         buf.flip();
-        TDigest dist2 = TDigest.fromBytes(buf);
+        TreeDigest dist2 = TreeDigest.fromBytes(buf);
         assertEquals(dist.centroidCount(), dist2.centroidCount());
         assertEquals(dist.compression(), dist2.compression(), 0);
         assertEquals(dist.size(), dist2.size());
@@ -217,10 +216,10 @@ public class TDigestTest {
             assertEquals(dist.quantile(q), dist2.quantile(q), 1e-8);
         }
 
-        Iterator<? extends TDigest.Group> ix = dist2.centroids().iterator();
-        for (TDigest.Group group : dist.centroids()) {
+        Iterator<? extends Centroid> ix = dist2.centroids().iterator();
+        for (Centroid centroid : dist.centroids()) {
             assertTrue(ix.hasNext());
-            assertEquals(group.count(), ix.next().count());
+            assertEquals(centroid.count(), ix.next().count());
         }
         assertFalse(ix.hasNext());
 
@@ -230,7 +229,7 @@ public class TDigestTest {
         System.out.printf("# small %d bytes\n", buf.position());
 
         buf.flip();
-        dist2 = TDigest.fromBytes(buf);
+        dist2 = TreeDigest.fromBytes(buf);
         assertEquals(dist.centroidCount(), dist2.centroidCount());
         assertEquals(dist.compression(), dist2.compression(), 0);
         assertEquals(dist.size(), dist2.size());
@@ -240,9 +239,9 @@ public class TDigestTest {
         }
 
         ix = dist2.centroids().iterator();
-        for (TDigest.Group group : dist.centroids()) {
+        for (Centroid centroid : dist.centroids()) {
             assertTrue(ix.hasNext());
-            assertEquals(group.count(), ix.next().count());
+            assertEquals(centroid.count(), ix.next().count());
         }
         assertFalse(ix.hasNext());
     }
@@ -256,13 +255,13 @@ public class TDigestTest {
             int n = gen.nextInt();
             n = n >>> (i / 100);
             ref.add(n);
-            TDigest.encode(buf, n);
+            TreeDigest.encode(buf, n);
         }
 
         buf.flip();
 
         for (int i = 0; i < 3000; i++) {
-            int n = TDigest.decode(buf);
+            int n = TreeDigest.decode(buf);
             assertEquals(String.format("%d:", i), ref.get(i).intValue(), n);
         }
     }
@@ -272,15 +271,15 @@ public class TDigestTest {
         Random rand = RandomUtils.getRandom();
 
         for (int i = 0; i < repeats(); i++) {
-            compare(new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
-            compare(new Uniform(0, 1, rand), "uniform", 1L << 48);
+            compareQD(new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
+            compareQD(new Uniform(0, 1, rand), "uniform", 1L << 48);
         }
     }
 
-    private void compare(AbstractContinousDistribution gen, String tag, long scale) {
+    private void compareQD(AbstractContinousDistribution gen, String tag, long scale) {
         for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000}) {
             QDigest qd = new QDigest(compression);
-            TDigest dist = new TDigest(compression);
+            TreeDigest dist = new TreeDigest(compression);
             List<Double> data = Lists.newArrayList();
             for (int i = 0; i < 100000; i++) {
                 double x = gen.nextDouble();
@@ -296,6 +295,45 @@ public class TDigestTest {
                 double x2 = (double) qd.getQuantile(q) / scale;
                 double e1 = cdf(x1, data) - q;
                 System.out.printf("%s\t%.0f\t%.8f\t%.10g\t%.10g\t%d\t%d\n", tag, compression, q, e1, cdf(x2, data) - q, dist.smallByteSize(), QDigest.serialize(qd).length);
+
+            }
+        }
+    }
+
+    @Test
+    public void compareToStreamingQuantile() {
+        Random rand = RandomUtils.getRandom();
+
+        for (int i = 0; i < repeats(); i++) {
+            compareSQ(new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
+            compareSQ(new Uniform(0, 1, rand), "uniform", 1L << 48);
+        }
+
+    }
+
+    private void compareSQ(AbstractContinousDistribution gen, String tag, long scale) {
+        double[] quantiles = {0.001, 0.01, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99, 0.999};
+        for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000}) {
+            QuantileEstimator sq = new QuantileEstimator(1001);
+            TreeDigest dist = new TreeDigest(compression);
+            List<Double> data = Lists.newArrayList();
+            for (int i = 0; i < 100000; i++) {
+                double x = gen.nextDouble();
+                dist.add(x);
+                sq.add(x);
+                data.add(x);
+            }
+            dist.compress();
+            Collections.sort(data);
+
+            List<Double> qz = sq.getQuantiles();
+            for (double q : quantiles) {
+                double x1 = dist.quantile(q);
+                double x2 = qz.get((int) (q * 1000 + 0.5));
+                double e1 = cdf(x1, data) - q;
+                double e2 = cdf(x2, data) - q;
+                System.out.printf("%s\t%.0f\t%.8f\t%.10g\t%.10g\t%d\t%d\n",
+                        tag, compression, q, e1, e2, dist.smallByteSize(), sq.serializedSize());
 
             }
         }
@@ -323,7 +361,7 @@ public class TDigestTest {
                         StringWriter s = new StringWriter();
                         PrintWriter out = new PrintWriter(s);
                         for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
-                            TDigest dist = new TDigest(compression);
+                            TreeDigest dist = new TreeDigest(compression);
                             for (int i = 0; i < size * 1000; i++) {
                                 dist.add(gen.nextDouble());
                             }
@@ -371,7 +409,7 @@ public class TDigestTest {
                         Collections.sort(data);
 
                         for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
-                            TDigest dist = new TDigest(compression);
+                            TreeDigest dist = new TreeDigest(compression);
                             for (Double x : data) {
                                 dist.add(x);
                             }
@@ -410,7 +448,7 @@ public class TDigestTest {
      * @param recordAllData True if the internal histogrammer should be set up to record all data it sees for
      */
     private void runTest(AbstractContinousDistribution gen, double sizeGuide, double[] qValues, String tag, boolean recordAllData) {
-        TDigest dist = new TDigest(sizeGuide);
+        TDigest dist = new TreeDigest(sizeGuide);
         if (recordAllData) {
             dist.recordAllData();
         }
@@ -435,10 +473,10 @@ public class TDigestTest {
 
         double qz = 0;
         int iz = 0;
-        for (TDigest.Group group : dist.centroids()) {
-            double q = (qz + group.count() / 2.0) / dist.size();
-            sizeDump.printf("%s\t%d\t%.6f\t%.3f\t%d\n", tag, iz, q, 4 * q * (1 - q) * dist.size() / dist.compression(), group.count());
-            qz += group.count();
+        for (Centroid centroid : dist.centroids()) {
+            double q = (qz + centroid.count() / 2.0) / dist.size();
+            sizeDump.printf("%s\t%d\t%.6f\t%.3f\t%d\n", tag, iz, q, 4 * q * (1 - q) * dist.size() / dist.compression(), centroid.count());
+            qz += centroid.count();
             iz++;
         }
 
@@ -464,12 +502,12 @@ public class TDigestTest {
         assertTrue(softErrors < 3);
 
         if (recordAllData) {
-            Iterator<? extends TDigest.Group> ix = dist.centroids().iterator();
-            TDigest.Group b = ix.next();
-            TDigest.Group c = ix.next();
+            Iterator<? extends Centroid> ix = dist.centroids().iterator();
+            Centroid b = ix.next();
+            Centroid c = ix.next();
             qz = b.count();
             while (ix.hasNext()) {
-                TDigest.Group a = b;
+                Centroid a = b;
                 b = c;
                 c = ix.next();
                 double left = (b.mean() - a.mean()) / 2;
@@ -505,13 +543,13 @@ public class TDigestTest {
                     for (int parts : new int[]{2, 5, 10, 20, 50, 100}) {
                         List<Double> data = Lists.newArrayList();
 
-                        TDigest dist = new TDigest(50);
+                        TreeDigest dist = new TreeDigest(50);
                         dist.recordAllData();
 
                         // we accumulate the data into multiple sub-digests
                         List<TDigest> subs = Lists.newArrayList();
                         for (int i = 0; i < parts; i++) {
-                            subs.add(new TDigest(50).recordAllData());
+                            subs.add(new TreeDigest(50).recordAllData());
                         }
 
                         for (int i = 0; i < 100000; i++) {
@@ -526,8 +564,8 @@ public class TDigestTest {
                         // collect the raw data from the sub-digests
                         List<Double> data2 = Lists.newArrayList();
                         for (TDigest digest : subs) {
-                            for (TDigest.Group group : digest.centroids()) {
-                                Iterables.addAll(data2, group.data());
+                            for (Centroid centroid : digest.centroids()) {
+                                Iterables.addAll(data2, centroid.data());
                             }
                         }
                         Collections.sort(data2);
@@ -540,7 +578,19 @@ public class TDigestTest {
                         }
 
                         // now merge the sub-digests
-                        TDigest dist2 = TDigest.merge(50, subs, gen);
+                        TreeDigest dist2 = TreeDigest.merge(50, subs, gen);
+
+                        // verify the merged result has the right data
+                        List<Double> data3 = Lists.newArrayList();
+                        for (Centroid centroid : dist2.centroids()) {
+                            Iterables.addAll(data3, centroid.data());
+                        }
+                        Collections.sort(data3);
+                        assertEquals(data.size(), data3.size());
+                        ix = data.iterator();
+                        for (Double x : data3) {
+                            assertEquals(ix.next(), x);
+                        }
 
                         for (double q : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5}) {
                             double z = quantile(q, data);
@@ -577,14 +627,14 @@ public class TDigestTest {
 
     @Test
     public void testEmpty() {
-        TDigest digest = new TDigest(100);
+        TDigest digest = new TreeDigest(100);
         final double q = RandomUtils.getRandom().nextDouble();
         assertTrue(Double.isNaN(digest.quantile(q)));
     }
 
     @Test
     public void testSingleValue() {
-        TDigest digest = new TDigest(100);
+        TDigest digest = new TreeDigest(100);
         final double value = RandomUtils.getRandom().nextDouble() * 1000;
         digest.add(value);
         final double q = RandomUtils.getRandom().nextDouble();
@@ -599,7 +649,7 @@ public class TDigestTest {
         final Random r = RandomUtils.getRandom();
         final int length = r.nextInt(10);
         final List<Double> values = new ArrayList<Double>();
-        final TDigest digest = new TDigest(100);
+        final TDigest digest = new TreeDigest(100);
         for (int i = 0; i < length; ++i) {
             final double value;
             if (i == 0 || r.nextBoolean()) {
@@ -625,15 +675,15 @@ public class TDigestTest {
         // t-digest shouldn't merge extreme nodes, but let's still test how it would
         // answer to extreme quantiles in that case ('extreme' in the sense that the
         // quantile is either before the first node or after the last one)
-        TDigest digest = new TDigest(100);
+        TreeDigest digest = new TreeDigest(100);
         // we need to create the GroupTree manually
         GroupTree tree = (GroupTree) digest.centroids();
-        Group g = new Group(10);
+        Centroid g = new Centroid(10);
         g.add(10, 2); // 10 has a weight of 3 (1+2)
         tree.add(g);
-        g = new Group(20); // 20 has a weight of 1
+        g = new Centroid(20); // 20 has a weight of 1
         tree.add(g);
-        g = new Group(40);
+        g = new Centroid(40);
         g.add(40, 4); // 40 has a weight of 5 (1+4)
         tree.add(g);
         digest.count = 3 + 1 + 5;
