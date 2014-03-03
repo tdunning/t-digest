@@ -20,7 +20,6 @@ package com.tdunning.math.stats;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.mahout.common.RandomUtils;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -51,7 +50,7 @@ public class TreeDigest extends TDigest {
 
     private double compression = 100;
     private GroupTree summary = new GroupTree();
-    private int count = 0;
+    int count = 0; // package private for testing
 
     /**
      * A histogram structure that will record a sketch of a distribution.
@@ -124,16 +123,11 @@ public class TreeDigest extends TDigest {
             if (closest == null) {
                 summary.add(Centroid.createWeighted(x, w, base.data()));
             } else {
-                if (n == -1) {
-                    // if the nearest point was unique, centroid ordering cannot change
-                    summary.move(x, w, closest, base.data());
-                } else {
-                    // if the nearest point was not unique, then we may not be modifying the first copy
-                    // which means that ordering can change
-                    summary.remove(closest);
-                    closest.add(x, w, base.data());
-                    summary.add(closest);
-                }
+                // if the nearest point was not unique, then we may not be modifying the first copy
+                // which means that ordering can change
+                summary.remove(closest);
+                closest.add(x, w, base.data());
+                summary.add(closest);
             }
             count += w;
 

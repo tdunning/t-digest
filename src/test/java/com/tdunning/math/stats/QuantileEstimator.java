@@ -44,7 +44,7 @@ public class QuantileEstimator {
 
     private void collapse(List<Double> a, List<Double> b, List<Double> out) {
         int indexA = 0, indexB = 0, count = 0;
-        Double smaller = null;
+        Double smaller;
         while (indexA < maxElementsPerBuffer || indexB < maxElementsPerBuffer) {
             if (indexA >= maxElementsPerBuffer ||
                     (indexB < maxElementsPerBuffer && a.get(indexA) >= b.get(indexB))) {
@@ -149,9 +149,7 @@ public class QuantileEstimator {
     public int serializedSize() {
         int r = 4 + 4 + 4 + 4 + 4;
         for (List<Double> b1 : buffer) {
-            for (Double x : b1) {
-                r += 4;
-            }
+            r += b1.size();
         }
         return r;
     }

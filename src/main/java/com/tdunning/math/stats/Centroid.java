@@ -44,12 +44,6 @@ public class Centroid implements Comparable<Centroid> {
         start(x, 1, id);
     }
 
-    public Centroid(double x, int id, int w, boolean record) {
-        this(record);
-        start(x, 1, id);
-        count = w;
-    }
-
     private void start(double x, int w, int id) {
         this.id = id;
         add(x, w);

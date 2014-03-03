@@ -14,13 +14,17 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class ArrayDigestTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class ArrayDigestTest {
     public void testBadPage() {
         try {
             new ArrayDigest(3, 100);
             fail("Should have caught bad page size");
         } catch (IllegalArgumentException e) {
-            Assert.assertTrue(e.getMessage().startsWith("Must have page size"));
+            assertTrue(e.getMessage().startsWith("Must have page size"));
         }
     }
 
@@ -59,11 +63,11 @@ public class ArrayDigestTest extends TestCase {
     public void testAddIterate() {
         final ArrayDigest ad = new ArrayDigest(32, 100);
 
-        Assert.assertEquals("[]", Lists.newArrayList(ad.centroids()).toString());
+        assertEquals("[]", Lists.newArrayList(ad.centroids()).toString());
 
         List<XW> ref = Lists.newArrayList(new XW(0.5, 1));
         ad.addRaw(0.5, 1);
-        Assert.assertEquals("[Centroid{centroid=0.5, count=1}]", Lists.newArrayList(ad.centroids()).toString());
+        assertEquals("[Centroid{centroid=0.5, count=1}]", Lists.newArrayList(ad.centroids()).toString());
 
         Random random = new Random();
         int totalWeight = 1;
@@ -74,8 +78,8 @@ public class ArrayDigestTest extends TestCase {
             ref.add(new XW(x, 1));
         }
 
-        Assert.assertEquals(totalWeight, ad.size());
-        Assert.assertEquals(1001, ad.centroidCount());
+        assertEquals(totalWeight, ad.size());
+        assertEquals(1001, ad.centroidCount());
 
         for (int i = 0; i < 1000; i++) {
             int w = random.nextInt(5) + 2;
@@ -85,8 +89,8 @@ public class ArrayDigestTest extends TestCase {
             ref.add(new XW(x, w));
         }
 
-        Assert.assertEquals(totalWeight, ad.size());
-        Assert.assertEquals(2001, ad.centroidCount());
+        assertEquals(totalWeight, ad.size());
+        assertEquals(2001, ad.centroidCount());
 
 
         Collections.sort(ref);
@@ -94,8 +98,8 @@ public class ArrayDigestTest extends TestCase {
         int i = 0;
         for (Centroid c : ad.centroids()) {
             XW expected = ix.next();
-            Assert.assertEquals("mean " + i, expected.x, c.mean(), 1e-15);
-            Assert.assertEquals("weight " + i, expected.w, c.count());
+            assertEquals("mean " + i, expected.x, c.mean(), 1e-15);
+            assertEquals("weight " + i, expected.w, c.count());
             i++;
         }
 
@@ -110,18 +114,18 @@ public class ArrayDigestTest extends TestCase {
             List<ArrayDigest.Index> z1 = Lists.newArrayList(ad.before(split));
             i = 0;
             for (ArrayDigest.Index index : z1) {
-                Assert.assertTrue("Check value before split " + i + " " + ad.mean(index), ad.mean(index) < split);
+                assertTrue("Check value before split " + i + " " + ad.mean(index), ad.mean(index) < split);
                 i++;
             }
 
             List<ArrayDigest.Index> z2 = Lists.newArrayList(ad.after(split));
             i = 0;
             for (ArrayDigest.Index index : z2) {
-                Assert.assertTrue("Check value after split " + i + " " + ad.mean(index), ad.mean(index) > split);
+                assertTrue("Check value after split " + i + " " + ad.mean(index), ad.mean(index) > split);
                 i++;
             }
 
-            Assert.assertEquals("Bad counts for split " + split, ad.centroidCount(), z1.size() + z2.size());
+            assertEquals("Bad counts for split " + split, ad.centroidCount(), z1.size() + z2.size());
         }
     }
 
