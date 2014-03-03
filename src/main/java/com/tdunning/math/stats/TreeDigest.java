@@ -252,49 +252,60 @@ public class TreeDigest extends TDigest {
      */
     @Override
     public double quantile(double q) {
-        GroupTree values = summary;
-        Preconditions.checkArgument(values.size() > 1);
-
-        Iterator<Centroid> it = values.iterator();
-        Centroid a = it.next();
-        Centroid b = it.next();
-        if (!it.hasNext()) {
-            // both a and b have to have just a single element
-            double diff = (b.mean() - a.mean()) / 2;
-            if (q > 0.75) {
-                return b.mean() + diff * (4 * q - 3);
-            } else {
-                return a.mean() + diff * (4 * q - 1);
-            }
-        } else {
-            q *= count;
-            double right = (b.mean() - a.mean()) / 2;
-            // we have nothing else to go on so make left hanging width same as right to start
-            double left = right;
-
-            if (q <= a.count()) {
-                return a.mean() + left * (2 * q - a.count()) / a.count();
-            } else {
-                double t = a.count();
-                while (it.hasNext()) {
-                    if (t + b.count() / 2 >= q) {
-                        // left of b
-                        return b.mean() - left * 2 * (q - t) / b.count();
-                    } else if (t + b.count() >= q) {
-                        // right of b but left of the left-most thing beyond
-                        return b.mean() + right * 2 * (q - t - b.count() / 2.0) / b.count();
-                    }
-                    t += b.count();
-
-                    a = b;
-                    b = it.next();
-                    left = right;
-                    right = (b.mean() - a.mean()) / 2;
-                }
-                // shouldn't be possible but we have an answer anyway
-                return b.mean() + right;
-            }
+        if (q < 0 || q > 1) {
+            throw new IllegalArgumentException("q should be in [0,1], got " + q);
         }
+
+        GroupTree values = summary;
+        if (values.size() == 0) {
+            return Double.NaN;
+        } else if (values.size() == 1) {
+            return values.iterator().next().mean();
+        }
+
+        // if values were stored in a sorted array, index would be the offset we are interested in
+        final double index = q * (count - 1);
+
+        double previousMean = Double.NaN, previousIndex = 0;
+        long total = 0;
+        Centroid next;
+        Iterator<? extends Centroid> it = centroids().iterator();
+        while (true) {
+            next = it.next();
+            final double nextIndex = total + (next.count() - 1.0) / 2;
+            if (nextIndex >= index) {
+                if (Double.isNaN(previousMean)) {
+                    // special case 1: the index we are interested in is before the 1st centroid
+                    if (nextIndex == previousIndex) {
+                        return next.mean();
+                    }
+                    // assume values grow linearly between index previousIndex=0 and nextIndex2
+                    Centroid next2 = it.next();
+                    final double nextIndex2 = total + next.count() + (next2.count() - 1.0) / 2;
+                    previousMean = (nextIndex2 * next.mean() - nextIndex * next2.mean()) / (nextIndex2 - nextIndex);
+                }
+                // common case: we found two centroids previous and next so that the desired quantile is
+                // after 'previous' but before 'next'
+                return quantile(previousIndex, index, nextIndex, previousMean, next.mean());
+            } else if (!it.hasNext()) {
+                // special case 2: the index we are interested in is beyond the last centroid
+                // again, assume values grow linearly between index previousIndex and (count - 1)
+                // which is the highest possible index
+                final double nextIndex2 = count - 1;
+                final double nextMean2 = (next.mean() * (nextIndex2 - previousIndex) - previousMean * (nextIndex2 - nextIndex)) / (nextIndex - previousIndex);
+                return quantile(nextIndex, index, nextIndex2, next.mean(), nextMean2);
+            }
+            total += next.count();
+            previousMean = next.mean();
+            previousIndex = nextIndex;
+        }
+    }
+
+    private static double quantile(double previousIndex, double index, double nextIndex, double previousMean, double nextMean) {
+        final double delta = nextIndex - previousIndex;
+        final double previousWeight = (nextIndex - index) / delta;
+        final double nextWeight = (index - previousIndex) / delta;
+        return previousMean * previousWeight + nextMean * nextWeight;
     }
 
     @Override
