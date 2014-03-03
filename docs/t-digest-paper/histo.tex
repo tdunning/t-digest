@@ -18,19 +18,22 @@
 
 \title{Computing Accurate Quantiles Using $t$-Digests}
 \author{Ted Dunning}
+\address{Ted Dunning \\ MapR Technologies, Inc \\ San Jose, CA}
 \email{ted.dunning@gmail.com}
 \date{}                                           % Activate to display a given date or no date
 \begin{document}
 \begin{abstract}
 An on-line algorithm for computing approximations of rank-based statistics is presented that allows controllable accuracy.  Moreover, this new algorithm can be used to compute hybrid statistics such as trimmed means in additional to computing arbitrary quantiles.  An unusual property of the method is that it allows a quantile $q$ to be computed with an accuracy relative to $q (1-q)$ rather than with an absolute accuracy as with most methods.  This new algorithm is robust with respect to highly skewed distributions or highly ordered datasets and allows separately computed summaries to be combined with no loss in accuracy.
 
-An open-source implementation of this algorithm from the author.
+An open-source implementation of this algorithm is available from the author.
 \end{abstract}
 \maketitle
 \section{Introduction}
 Given a sequence of numbers, it is often desirable to compute rank-based statistics such as the median, 95-th percentile or trimmed means in an on-line fashion, keeping only a small data structure in memory.  Traditionally, such statistics were often computed by sorting all of the data and then either finding the quantile of interest by interpolation or by processing all samples within particular quantiles.  This sorting approach is infeasible for very large datasets which has led to interest in on-line approximate algorithms.
 
 One early algorithm for computing on-line quantiles is described in \cite{Chen2000}.  In that work specific quantiles were computed by incrementing or decrementing an estimate by a value proportional to the simultaneously estimated probability density at the desired quantile.  This method is plagued by a circularity in that estimating density is only possible by estimating yet more quantiles.  Moreover, this work did not allow the computation of hybrid quantities such as trimmed means.
+
+\cite{Greenwald-space-efficient-online-quantiles}Munro and Paterson provided an alternative algorithm to get an accurate estimate of any particular quantile.  This is done by keeping $s$ samples from the $N$ samples seen so far where $s << N$ by the time the entire data set has been seen.  If the data are presented in random order and if $s = \theta(N^{1/2})$, then Munro and Paterson's algorithm has a high probability being able to retain a set of samples that contains the median.  This algorithm can be adapted to find a number of pre-specified quantiles at the same time at proportional cost in memory.  The memory consumption of Munro-Paterson algorithm is excessive if precise results are desired.  Approximate results can be had with less memory, however.  A more subtle problem is that the implementation in Sawzall\cite{sawzall} and the Datafu library\cite{datafu} uses a number of buckets computed from the GCD of the desired quantiles.  This means that if you want to compute the $99$-th, $99.9$-th and $99.99$-th percentiles, a thousand buckets are required.
 
 An alternative approach is described in \cite{qdigest}.  In this work, incoming values are assumed to be integers of fixed size. Such integers can trivially be arranged in a perfectly balanced binary tree where the leaves correspond to the integers and the interior nodes correspond to bit-wise prefixes. This tree forms the basis of the data structure known as a Q-digest.  The idea behind a Q-digest is that in the uncompressed case, counts for various values are assigned to leaves of the tree.  To compress this tree, sub-trees are collapsed and counts from the leaves are aggregated into a single node representing the sub-tree such that the maximum count for any collapsed sub-tree is less than a threshold that is a small fraction of the total number of integers seen so far.  Any quantile can be computed by traversing the tree in left prefix order, adding up counts until the desired fraction of the total is reached.  At that point, count for the last sub-tree traversed can be used to interpolate to the desired quantile within a small and controllable error.  The error is bounded because the count for each collapsed sub-tree is bounded.
 
@@ -89,9 +92,8 @@ In all cases, after passing through all of the data points, the centroids are re
 Initial versions of this algorithm tried to use the centroid index $i$ as a surrogate for $q$, applying a correction to account for the fact that extreme centroids have less weight.  Unfortunately, it was difficult to account for the fact that the distribution of centroid weights changes during the course of running the algorithm.  Initially all weights are $1$.  Later, some weights become substantially larger.  This means that the relationship between $i$ and $q$ changes from completely linear to highly non-linear in a stochastic way.  This made it difficult to avoid too large or too small cutoff for centroids resulting in either too many centroids or poor accuracy.
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=6in]{sizes.png} 
-   \caption{The accuracy of the size limit approximation used in the $t$-digest algorithm.  The solid grey line indicates the size limit.  These diagrams also shows actual centroid weights for 5 test runs on $100,000$ samples from a uniform, $\Gamma(0.1, 0.1)$ and sequential uniform distribution.  In spite of the underlying distribution being skewed by roughly $30$ orders of magnitude of difference in probability density for the $\Gamma$ distribution, the centroid weight distribution is bounded and symmetric 
- as intended.  For the sequential uniform case, values are produced in sequential order with three passes through the $[0,1]$ interval with no repeated values.  As can be seen, this sequential presentation results in only a small asymmetry in the resulting size distribution.}
+   \includegraphics[width=6in]{sizes.pdf} 
+   \caption{The $t$-digest algorithm respects the size limit for centroids.  The solid grey line indicates the size limit.  These diagrams also shows actual centroid weights for 5 test runs on $100,000$ samples from a uniform, $\Gamma(0.1, 0.1)$ and sequential uniform distribution.  In spite of the underlying distribution being skewed by roughly $30$ orders of magnitude of difference in probability density for the $\Gamma$ distribution, the centroid weight distribution is bounded and symmetric as intended.  For the sequential uniform case, values are produced in sequential order with three passes through the $[0,1]$ interval with no repeated values.  In spite of the lack of repeats, successive passes result in many centroids at the quantiles with the same sizes.  In spite of this, sequential presentation of data results in only a small asymmetry in the resulting size distribution and no violation of the intended size limit.}
    \label{fig:gamma-sizes}
 \end{figure}
 
@@ -100,7 +102,7 @@ The key property of this algorithm is that the final list of centroids $C$ is ve
 That this algorithm does produce such an approximation is more difficult to prove rigorously, but an empirical examination is enlightening.  Figure \ref{fig:deviation} shows the deviation of samples assigned to centroids for uniform and highly skewed distributions.  These deviations are normalized by the half the distance between the adjacent two centroids.
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=6in]{deviation.png} 
+   \includegraphics[width=6in]{deviation.pdf} 
    \caption{The deviation of samples assigned to a single centroid.  The horizontal axis is scaled to the distance to the adjacent centroid so a value of 0.5 is half-way between the two centroids. There are two significant observations to be had here.  The first is that relatively few points are assigned to a centroid that are beyond the midpoint to the next cluster.  This bears on the accuracy of this algorithm.  The second observation is that samples are distributed relatively uniformly between the boundaries of the cell.  This affects the interpolation method to be chosen when working with quantiles. The three graphs show, respectively, centroids from $q \in [0.3, 0.7]$ from a uniform distribution, centroids from the same range of a highly skewed $\Gamma(0.1, 0.1)$ and centroids from $q \in [0.01, 0.015]$ in a $\Gamma(0.1, 0.1)$ distribution.  This last range is in a region where skew on the order of $10^{22}$ is found. }
    \label{fig:deviation}
 \end{figure}
@@ -218,8 +220,8 @@ $t = 0$, $q_1 \gets q_1 \sum k_i$, $q_1 \gets q_1 \sum k_i$\;
 \subsection{Accuracy of estimation for uniform and skewed distributions}
 Figure \ref{fig:uniform-error} shows the error levels achieved with $t$-digest in estimating quantiles of 100,000 samples from a uniform and from a skewed distribution.  In these experiments $\delta=0.01$ was used since it provides a good compromise between accuracy and space.  There is no visible difference in accuracy between the two underlying distributions in spite of the fact that the underlying densities differ by more roughly 30 orders of magnitude.  The accuracy shown here is computed by comparing the computed quantiles to the actual empirical quantiles for the sample used for testing and is shown in terms of $q$ rather than the underlying sample value.  At extreme values of $q$, the actual samples are preserved as centroids with weight $1$ so the observed for these extreme values is zero relative to the original data.  For the data shown here, at $q=0.001$, the maximum weight on a centroid is just above $4$ and centroids in this range have all possible weights from $1$ to $4$.  Errors are limited to, not surprisingly, just a few parts per million or less.  For more extreme quantiles, the centroids will have fewer samples and the results will typically be exact.
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
-   \includegraphics[width=6in]{error.png} 
-   \caption{The absolute error of the estimate of the cumulative distribution function $q = \int_{-\infty}^x p(\alpha) \, d\alpha$ for the uniform distribution for 5 runs, each with 100,000 data points.  As can be seen, the error is dramatically decreased for very high or very low quantiles (to a few parts per million).  The precision setting used here, $1/\delta = 100$, would result in uniform error of 10,000 ppm without adaptive bin sizing and interpolation.}
+   \includegraphics[width=6in]{error.pdf} 
+   \caption{The absolute error of the estimate of the cumulative distribution function $q = \int_{-\infty}^x p(\alpha) \, d\alpha$ for the uniform and $\Gamma$ distribution for 5 runs, each with 100,000 data points.  As can be seen, the error is dramatically decreased for very high or very low quantiles (to a few parts per million).  The precision setting used here, $1/\delta = 100$, would result in uniform error of 10,000 ppm without adaptive bin sizing and interpolation.}
    \label{fig:uniform-error}
 \end{figure}
 
@@ -235,7 +237,7 @@ Not surprisingly, there is a strong trade-off between the size of the $t$-digest
 
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=6in]{error-scaling.png} 
+   \includegraphics[width=6in]{error-scaling.pdf} 
    \caption{Accuracy is good for extreme quantiles regardless of digest size.  From left to right, these panels show accuracy of estimates for $q=0.5, 0.01$ and $0.001$ as a function the serialized size of the $t$-digest.  Due to symmetry, these are equivalent to accuracy for $q=0.5, 0.99$, and $0.999$ as well. For mid quantiles such as the median ($q=0.5$), moderate digest sizes of a few kilobytes suffice to get better than 1\% accuracy, but a digest must be 20kB or more to reliably achieve 0.1\% accuracy.  In contrast, accuracy for the $0.1\%$-ile (or $99.9\%$-ile) reaches a few parts per million for digests larger than about 5 kB.  Note that errors for $q=0.5$ and digests smaller than 1 kB are off the scale shown here at nearly 10\%.  All panels were computed using 100 runs with 100,000 samples.  Compression parameter ($1/\delta$) was varied from 2 to 1000 in order to vary the size of the resulting digest.  Sizes shown were encoded using 4 byte floating point delta encoding for the centroid means and variable byte length integer encoding.}
    \label{fig:accuracy-1}
 \end{figure}
@@ -243,8 +245,8 @@ The size of the resulting digest depends strongly on the compression parameter $
 
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=6in]{scaling.png} 
-   \caption{Size of the digest scales sub-linearly with compression parameter ($\alpha \approx 0.7 \ldots 0.9$) for fixed number of points.  Size scales approximately logarithmically with number of points for fixed compression parameter.  The graph shown here is for $1/\delta = 100$.  The dashed lines show best-fit log-linear models.}
+   \includegraphics[width=6in]{scaling.pdf} 
+   \caption{Size of the digest scales sub-linearly with compression parameter ($\alpha \approx 0.7 \ldots 0.9$) for fixed number of points.  Size scales approximately logarithmically with number of points for fixed compression parameter.  The panel on the right is for $1/\delta = 100$.  The dashed lines show best-fit log-linear models.  In addition, the right panel shows the memory size required for the Munro-Paterson algorithm if 6 specific quantiles are desired.}
    \label{fig:accuracy-2}
 \end{figure}
 
@@ -256,7 +258,7 @@ For example, in a map-reduce framework such as Hadoop, a combiner function can c
 Another example can be found in certain databases such as Couchbase or Druid which maintain tree structured indices and allow the programmer to specify that particular aggregates of the data being stored can be kept at interior nodes of the index.  The benefit of this is that aggregation can be done almost instantaneously over any contiguous sub-range of the index.  The cost is quite modest with only a $O(\log(N))$ total increase in effort over keeping a running aggregate of all data.  In many practical cases, the tree can contain only two or three levels and still provide fast enough response.  For instance, if it is desired to be able to compute quantiles for any period up to years in 30 second increments, simply keeping higher level $t$-digests at the level of 30 seconds and days is likely to be satisfactory because at most about 10,000 digests are likely to need merging even for particularly odd intervals.  If almost all queries over intervals longer than a few weeks are day aligned, the number of digests that must be merged drops to a few thousand.
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=6in]{merge.png} 
+   \includegraphics[width=6in]{merge.eps} 
    \caption{Accuracy of a $t$-digest accumulated directly is nearly the same as when the digest is computed by combining digests from 20 or 100 equal sized portions of the data.  Repeated runs of this test occasionally show the situation seen in the left panel where the accuracy for digests formed from 5 partial digests show slightly worse accuracy than the non-subdivided case.  This sub-aggregation property allows efficient use of the $t$digest in map-reduce and database applications.  Of particular interest is the fact that accuracy actually improves when the input data is broken in to many parts as is shown in the right hand panel.  All panels were computed by 40 repetitions of aggregating 100,000 values. Accuracy for directly accumulated digests is shown on the left of each pair with the white bar and the digest of digest accuracy is shown on the right of each pair by the dark gray bar.}
    \label{fig:merge}
 \end{figure}
@@ -268,7 +270,7 @@ Merging $t$-digests can be done many ways.  The algorithm whose results are show
 The prototype implementation of the $t$-digest completely dominates the implementation of the Q-digest from the popular stream-lib package \cite{github:stream} when size of the resulting digest is controlled.  This is shown in Figure \ref{fig:qd-comparison}.  In the left panel, the relationship between the effect of the compression parameter for Q-digest is compared to the similar parameter $1/\delta$ for the $t$-digest.  For the same value of compression parameter, the sizes of the two digests is always within a factor of 2 for practical uses.  The middle and right panel show accuracies for uniform and $\Gamma$ distributions.  
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=6in]{qd-sizes.png} 
+   \includegraphics[width=6in]{qd-sizes.pdf} 
    \caption{The left panel shows the size of a serialized Q-digest versus the size of a serialized t-digest for various values of $1/\delta$ from 2 to 100,000.  The sizes for the two kinds of digest are within a factor of 2 for all compression levels.  The middle and right panels show the accuracy for a particular setting of $1/\delta$ for Q-digest and t-digest.  For each quantile, the Q-digest accuracy is shown as the left bar in a pair and the t-digest accuracy is shown as the right bar in a pair.  Note that the vertical scale in these diagrams are one or two orders of magnitude larger than in the previous accuracy graphs and that in all cases, the accuracy of the t-digest is dramatically better than that of the Q-digest even though the serialized size of the each is within 10\% of the other.   Note that the errors in the right hand panel are systematic quantization errors introduced by the use of integers in the Q-digest algorithm.  Any distribution with very large dynamic range will show the same problems.}
    \label{fig:qd-comparison}
 \end{figure}
