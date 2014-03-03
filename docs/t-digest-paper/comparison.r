@@ -38,7 +38,7 @@ boxplot(1e6*e2 ~ q, keep(data, 'uniform'), at=1:7 - 0.13, boxwex=0.3, xaxt='n', 
         ylim=c(-10000, 20000), cex.lab=1.5, col=rgb(0.95, 0.95, 0.95))
 boxplot(1e6*e1 ~ q, keep(data, 'uniform'), col=rgb(0.4, 0.4, 0.4), at=1:7 + 0.13, add=T, boxwex=0.3, xaxt='n', yaxt='n')
 axis(at=1:7, labels=c(0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999), side=1)
-axis(side=2, cex.label=2)
+axis(side=2, cex=2)
 abline(h=0, lwd=2, col='gray')
 for (i in 1:7) {
   abline(v=i, lwd=1, col='lightgray', lty=2)
