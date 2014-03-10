@@ -22,8 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-
-import org.apache.mahout.common.RandomUtils;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Adaptive histogram based on something like streaming k-means crossed with Q-digest.
@@ -45,7 +44,7 @@ import org.apache.mahout.common.RandomUtils;
  * g) easy to adapt for use with map-reduce
  */
 public abstract class TDigest {
-    protected Random gen = RandomUtils.getRandom();
+    protected Random gen = ThreadLocalRandom.current();
     protected boolean recordAllData = false;
 
     /**
