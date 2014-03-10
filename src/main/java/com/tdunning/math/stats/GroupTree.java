@@ -17,12 +17,12 @@
 
 package com.tdunning.math.stats;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.Queues;
-
+import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
+
+import com.tdunning.common.AbstractIterator;
+import com.tdunning.common.Preconditions;
 
 /**
  * A tree containing TDigest.Centroid.  This adds to the normal NavigableSet the
@@ -193,6 +193,7 @@ public class GroupTree implements Iterable<Centroid> {
     /**
      * Iteratres through all groups in the tree.
      */
+    @Override
     public Iterator<Centroid> iterator() {
         return iterator(null);
     }
@@ -206,7 +207,7 @@ public class GroupTree implements Iterable<Centroid> {
     private Iterator<Centroid> iterator(final Centroid start) {
         return new AbstractIterator<Centroid>() {
             {
-                stack = Queues.newArrayDeque();
+                stack = new ArrayDeque<>();
                 push(GroupTree.this, start);
             }
 
@@ -255,7 +256,7 @@ public class GroupTree implements Iterable<Centroid> {
     public void remove(Centroid base) {
         Preconditions.checkState(size > 0, "Cannot remove from empty set");
         if (size == 1) {
-            Preconditions.checkArgument(base.compareTo(leaf) == 0, "Element %s not found", base);
+            Preconditions.checkArgument(base.compareTo(leaf) == 0, String.format("Element %s not found", base));
             count = size = 0;
             leaf = null;
         } else {
@@ -369,7 +370,10 @@ public class GroupTree implements Iterable<Centroid> {
             Preconditions.checkState(depth == Math.max(l, r) + 1, "Depth doesn't match children");
             Preconditions.checkState(size == left.size + right.size, "Sizes don't match children");
             Preconditions.checkState(count == left.count + right.count, "Counts don't match children");
-            Preconditions.checkState(leaf.compareTo(right.first()) == 0, "Split is wrong %.5d != %.5d or %d != %d", leaf.mean(), right.first().mean(), leaf.id(), right.first().id());
+            Preconditions.checkState(
+                    leaf.compareTo(right.first()) == 0,
+                    String.format("Split is wrong %.5f != %.5f or %d != %d", leaf.mean(), right.first().mean(),
+                            leaf.id(), right.first().id()));
             left.checkBalance();
             right.checkBalance();
         }
@@ -380,7 +384,9 @@ public class GroupTree implements Iterable<Centroid> {
             System.out.printf("| ");
         }
         int imbalance = Math.abs((left != null ? left.depth : 1) - (right != null ? right.depth : 1));
-        System.out.printf("%s%s, %d, %d, %d\n", (imbalance > 1 ? "* " : "") + (right != null && leaf.compareTo(right.first()) != 0 ? "+ " : ""), leaf, size, count, this.depth);
+        System.out.printf("%s%s, %d, %d, %d\n",
+                (imbalance > 1 ? "* " : "") + (right != null && leaf.compareTo(right.first()) != 0 ? "+ " : ""), leaf,
+                size, count, this.depth);
         if (left != null) {
             left.print(depth + 1);
             right.print(depth + 1);

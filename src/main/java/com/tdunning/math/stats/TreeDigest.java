@@ -17,15 +17,14 @@
 
 package com.tdunning.math.stats;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+
+import com.tdunning.common.Preconditions;
 
 /**
  * Adaptive histogram based on something like streaming k-means crossed with Q-digest.
@@ -144,10 +143,13 @@ public class TreeDigest extends TDigest {
     }
 
     public static TreeDigest merge(double compression, Iterable<TDigest> subData, Random gen) {
-        List<Centroid> centroids = Lists.newArrayList();
+        List<Centroid> centroids = new ArrayList<>();
         boolean recordAll = false;
         for (TDigest digest : subData) {
-            Iterables.addAll(centroids, digest.centroids());
+            Iterator<? extends Centroid> it = digest.centroids().iterator();
+            while (it.hasNext()) {
+                centroids.add(it.next());
+            }
             recordAll |= digest.isRecording();
         }
         Collections.shuffle(centroids, gen);
@@ -176,7 +178,12 @@ public class TreeDigest extends TDigest {
         if (recordAllData) {
             reduced.recordAllData();
         }
-        List<Centroid> tmp = Lists.newArrayList(other);
+
+        final List<Centroid> tmp = new ArrayList<>();
+        for (Centroid c : other) {
+            tmp.add(c);
+        }
+
         Collections.shuffle(tmp, gen);
         for (Centroid centroid : tmp) {
             reduced.add(centroid.mean(), centroid.count(), centroid);
