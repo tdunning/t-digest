@@ -17,17 +17,14 @@
 
 package com.tdunning.math.stats;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+
+import com.tdunning.common.AbstractIterator;
+import com.tdunning.common.Preconditions;
 
 /**
  * Array based implementation of a TDigest.
@@ -38,7 +35,7 @@ import java.util.List;
 public class ArrayDigest extends TDigest {
     private final int pageSize;
 
-    private List<Page> data = Lists.newArrayList();
+    private List<Page> data = new ArrayList<>();
     private int totalWeight = 0;
     private int centroidCount = 0;
     private double compression = 100;
@@ -261,7 +258,12 @@ public class ArrayDigest extends TDigest {
         if (recordAllData) {
             reduced.recordAllData();
         }
-        List<Index> tmp = Lists.newArrayList(this.iterator(0, 0));
+        List<Index> tmp = new ArrayList<>();
+        Iterator<Index> it = this.iterator(0, 0);
+        while (it.hasNext()) {
+            tmp.add(it.next());
+        }
+
         Collections.shuffle(tmp, gen);
         for (Index index : tmp) {
             reduced.add(mean(index), count(index));
@@ -301,14 +303,28 @@ public class ArrayDigest extends TDigest {
         return new Iterable<Centroid>() {
             @Override
             public Iterator<Centroid> iterator() {
-                return Iterators.transform(ArrayDigest.this.iterator(0, 0),
-                        new Function<Index, Centroid>() {
-                            @Override
-                            public Centroid apply(Index index) {
-                                Page current = data.get(index.page);
-                                return new Centroid(current.centroids[index.subPage], current.counts[index.subPage]);
-                            }
-                        });
+                return new Iterator<Centroid>() {
+
+                    private Iterator<Index> index = ArrayDigest.this.iterator(0, 0);
+
+                    @Override
+                    public boolean hasNext() {
+                        return index.hasNext();
+                    }
+
+                    @Override
+                    public Centroid next() {
+                        Index currentIndex = index.next();
+                        Page currentPage = data.get(currentIndex.page);
+                        return new Centroid(currentPage.centroids[currentIndex.subPage],
+                                currentPage.counts[currentIndex.subPage]);
+                    }
+
+                    @Override
+                    public void remove() {
+                        index.remove();
+                    }
+                };
             }
         };
     }
@@ -533,8 +549,8 @@ public class ArrayDigest extends TDigest {
             System.arraycopy(centroids, 16, newPage.centroids, 0, pageSize / 2);
             System.arraycopy(counts, 16, newPage.counts, 0, pageSize / 2);
             if (history != null) {
-                newPage.history = Lists.newArrayList(history.subList(pageSize / 2, pageSize));
-                history = Lists.newArrayList(history.subList(0, pageSize / 2));
+                newPage.history = new ArrayList<>(history.subList(pageSize / 2, pageSize));
+                history = new ArrayList<>(history.subList(0, pageSize / 2));
             }
             active = 16;
             newPage.active = 16;

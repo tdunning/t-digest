@@ -17,13 +17,12 @@
 
 package com.tdunning.math.stats;
 
-import com.google.common.collect.Lists;
-import org.apache.mahout.common.RandomUtils;
-
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Adaptive histogram based on something like streaming k-means crossed with Q-digest.
@@ -45,7 +44,7 @@ import java.util.Random;
  * g) easy to adapt for use with map-reduce
  */
 public abstract class TDigest {
-    protected Random gen = RandomUtils.getRandom();
+    protected Random gen = ThreadLocalRandom.current();
     protected boolean recordAllData = false;
 
     /**
@@ -104,7 +103,10 @@ public abstract class TDigest {
     }
 
     public void add(TreeDigest other) {
-        List<Centroid> tmp = Lists.newArrayList(other.centroids());
+        final List<Centroid> tmp = new ArrayList<>();
+        for (final Centroid c : other.centroids()) {
+            tmp.add(c);
+        }
 
         Collections.shuffle(tmp, gen);
         for (Centroid centroid : tmp) {
