@@ -7,6 +7,7 @@ import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.Ignore;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -142,6 +143,7 @@ public class ArrayDigestTest {
         }
     }
 
+    @Ignore
     @Test
     public void testGamma() {
         // this Gamma distribution is very heavily skewed.  The 0.1%-ile is 6.07e-30 while
