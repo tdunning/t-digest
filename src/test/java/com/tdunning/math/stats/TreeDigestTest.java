@@ -253,16 +253,18 @@ public class TreeDigestTest extends TDigestTest {
     }
 
     @Test
-    public void compareToQDigest() {
+    public void compareToQDigest() throws FileNotFoundException {
         Random rand = RandomUtils.getRandom();
+        try (PrintWriter out = new PrintWriter(new FileOutputStream("qd-tree-comparison.csv"))) {
 
-        for (int i = 0; i < repeats(); i++) {
-            compareQD(new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
-            compareQD(new Uniform(0, 1, rand), "uniform", 1L << 48);
+            for (int i = 0; i < repeats(); i++) {
+                compareQD(out, new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
+                compareQD(out, new Uniform(0, 1, rand), "uniform", 1L << 48);
+            }
         }
     }
 
-    private void compareQD(AbstractContinousDistribution gen, String tag, long scale) {
+    private void compareQD(PrintWriter out, AbstractContinousDistribution gen, String tag, long scale) {
         for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000}) {
             QDigest qd = new QDigest(compression);
             TreeDigest dist = new TreeDigest(compression);
@@ -280,24 +282,27 @@ public class TreeDigestTest extends TDigestTest {
                 double x1 = dist.quantile(q);
                 double x2 = (double) qd.getQuantile(q) / scale;
                 double e1 = cdf(x1, data) - q;
-                System.out.printf("%s\t%.0f\t%.8f\t%.10g\t%.10g\t%d\t%d\n", tag, compression, q, e1, cdf(x2, data) - q, dist.smallByteSize(), QDigest.serialize(qd).length);
+                out.printf("%s\t%.0f\t%.8f\t%.10g\t%.10g\t%d\t%d\n", tag, compression, q, e1, cdf(x2, data) - q, dist.smallByteSize(), QDigest.serialize(qd).length);
 
             }
         }
     }
 
     @Test
-    public void compareToStreamingQuantile() {
+    public void compareToStreamingQuantile() throws FileNotFoundException {
         Random rand = RandomUtils.getRandom();
 
-        for (int i = 0; i < repeats(); i++) {
-            compareSQ(new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
-            compareSQ(new Uniform(0, 1, rand), "uniform", 1L << 48);
+        try (PrintWriter out = new PrintWriter(new FileOutputStream("sq-tree-comparison.csv"))) {
+
+            for (int i = 0; i < repeats(); i++) {
+                compareSQ(out, new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
+                compareSQ(out, new Uniform(0, 1, rand), "uniform", 1L << 48);
+            }
         }
 
     }
 
-    private void compareSQ(AbstractContinousDistribution gen, String tag, long scale) {
+    private void compareSQ(PrintWriter out, AbstractContinousDistribution gen, String tag, long scale) {
         double[] quantiles = {0.001, 0.01, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99, 0.999};
         for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000}) {
             QuantileEstimator sq = new QuantileEstimator(1001);
@@ -318,7 +323,7 @@ public class TreeDigestTest extends TDigestTest {
                 double x2 = qz.get((int) (q * 1000 + 0.5));
                 double e1 = cdf(x1, data) - q;
                 double e2 = cdf(x2, data) - q;
-                System.out.printf("%s\t%.0f\t%.8f\t%.10g\t%.10g\t%d\t%d\n",
+                out.printf("%s\t%.0f\t%.8f\t%.10g\t%.10g\t%d\t%d\n",
                         tag, compression, q, e1, e2, dist.smallByteSize(), sq.serializedSize());
 
             }
