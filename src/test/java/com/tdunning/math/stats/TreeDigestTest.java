@@ -1,168 +1,59 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.tdunning.math.stats;
 
 import com.clearspring.analytics.stream.quantile.QDigest;
 import com.google.common.collect.Lists;
+
 import org.apache.mahout.common.RandomUtils;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
 import org.apache.mahout.math.jet.random.Normal;
 import org.apache.mahout.math.jet.random.Uniform;
-import org.junit.Test;
+import org.junit.*;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.*;
+import java.util.concurrent.*;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
-public class ArrayDigestTest extends TDigestTest {
-    private DigestFactory<ArrayDigest> factory = new DigestFactory<ArrayDigest>() {
+public class TreeDigestTest extends TDigestTest {
+
+    private DigestFactory<TDigest> factory = new DigestFactory<TDigest>() {
         @Override
-        public ArrayDigest create() {
-            return new ArrayDigest(32, 100);
+        public TDigest create() {
+            return new TreeDigest(100);
         }
     };
 
-    @Test
-    public void testBadPage() {
-        try {
-            new ArrayDigest(3, 100);
-            fail("Should have caught bad page size");
-        } catch (IllegalArgumentException e) {
-            assertTrue(e.getMessage().startsWith("Must have page size"));
-        }
+    @Before
+    public void testSetUp() {
+        RandomUtils.useTestSeed();
     }
 
-    public static class XW implements Comparable<XW> {
-        private static AtomicInteger idCount = new AtomicInteger();
-
-        int id = idCount.incrementAndGet();
-        double x;
-        int w;
-
-        public XW(double x, int w) {
-            this.x = x;
-            this.w = w;
-        }
-
-        @Override
-        public int compareTo(XW o) {
-            int r = Double.compare(x, o.x);
-            if (r == 0) {
-                return id - o.id;
-            } else {
-                return r;
-            }
-        }
-
-        @Override
-        public String toString() {
-            return "XW{" +
-                    "x=" + x +
-                    ", w=" + w +
-                    '}';
-        }
-    }
-
-    // verifies that the data that we add is preserved
-    @Test
-    public void testAddIterate() {
-        final ArrayDigest ad = new ArrayDigest(32, 100);
-
-        assertEquals("[]", Lists.newArrayList(ad.centroids()).toString());
-
-        List<XW> ref = Lists.newArrayList(new XW(0.5, 1));
-        ad.addRaw(0.5, 1);
-        assertEquals("[Centroid{centroid=0.5, count=1}]", Lists.newArrayList(ad.centroids()).toString());
-
-        Random random = new Random();
-        int totalWeight = 1;
-        for (int i = 0; i < 1000; i++) {
-            double x = random.nextDouble();
-            ad.addRaw(x, 1);
-            totalWeight++;
-            ref.add(new XW(x, 1));
-        }
-
-        assertEquals(totalWeight, ad.size());
-        assertEquals(1001, ad.centroidCount());
-
-        for (int i = 0; i < 1000; i++) {
-            int w = random.nextInt(5) + 2;
-            double x = random.nextDouble();
-            ad.addRaw(x, w);
-            totalWeight += w;
-            ref.add(new XW(x, w));
-        }
-
-        assertEquals(totalWeight, ad.size());
-        assertEquals(2001, ad.centroidCount());
-
-
-        Collections.sort(ref);
-        Iterator<XW> ix = ref.iterator();
-        int i = 0;
-        for (Centroid c : ad.centroids()) {
-            XW expected = ix.next();
-            assertEquals("mean " + i, expected.x, c.mean(), 1e-15);
-            assertEquals("weight " + i, expected.w, c.count());
-            i++;
-        }
-
-        assertEquals(0, Lists.newArrayList(ad.before(0)).size());
-        assertEquals(ad.centroidCount(), Lists.newArrayList(ad.before(1)).size());
-
-        assertEquals(0, Lists.newArrayList(ad.after(1)).size());
-        assertEquals(ad.centroidCount(), Lists.newArrayList(ad.after(0)).size());
-
-        for (int k = 0; k < 1000; k++) {
-            final double split = random.nextDouble();
-            List<ArrayDigest.Index> z1 = Lists.newArrayList(ad.before(split));
-            i = 0;
-            for (ArrayDigest.Index index : z1) {
-                assertTrue("Check value before split " + i + " " + ad.mean(index), ad.mean(index) < split);
-                i++;
-            }
-
-            List<ArrayDigest.Index> z2 = Lists.newArrayList(ad.after(split));
-            i = 0;
-            for (ArrayDigest.Index index : z2) {
-                assertTrue("Check value after split " + i + " " + ad.mean(index), ad.mean(index) > split);
-                i++;
-            }
-
-            assertEquals("Bad counts for split " + split, ad.centroidCount(), z1.size() + z2.size());
-        }
-    }
-
-    @Test
-    public void testInternalSums() {
-        Random random = new Random();
-        ArrayDigest ad = new ArrayDigest(32, 100);
-        for (int i = 0; i < 1000; i++) {
-            ad.add(random.nextDouble(), 7);
-        }
-
-        for (int i = 0; i < 11; i++) {
-            ArrayDigest.Index floor = ad.floor(i / 10.0);
-            System.out.printf("%3.1f\t%.3f\n", i / 10.0, (double) ad.headSum(floor) / ad.size());
-            assertEquals(i / 10.0, (double) ad.headSum(floor) / ad.size(), 0.15);
-        }
+    @After
+    public void flush() {
+        sizeDump.flush();
+        errorDump.flush();
+        deviationDump.flush();
     }
 
     @Test
@@ -182,40 +73,14 @@ public class ArrayDigestTest extends TDigestTest {
         // this severe skew means that we have to have positional accuracy that
         // varies by over 11 orders of magnitude.
         Random gen = RandomUtils.getRandom();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < repeats(); i++) {
             runTest(factory, new Gamma(0.1, 0.1, gen), 100,
 //                    new double[]{6.0730483624079e-30, 6.0730483624079e-20, 6.0730483627432e-10, 5.9339110446023e-03,
 //                            2.6615455373884e+00, 1.5884778179295e+01, 3.3636770117188e+01},
                     new double[]{0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999},
-                    "gamma", false);
+                    "gamma", true);
         }
     }
-
-    @Test
-    public void testMerge() throws FileNotFoundException, InterruptedException, ExecutionException {
-        merge(new DigestFactory<ArrayDigest>() {
-            @Override
-            public ArrayDigest create() {
-                return new ArrayDigest(32, 50);
-            }
-        });
-    }
-
-    @Test
-    public void testEmpty() {
-        empty(new ArrayDigest(32, 100));
-    }
-
-    @Test
-    public void testSingleValue() {
-        singleValue(new ArrayDigest(32, 100));
-    }
-
-    @Test
-    public void testFewValues() {
-        fewValues(new ArrayDigest(32, 100));
-    }
-
 
     @Test
     public void testNarrowNormal() {
@@ -255,7 +120,7 @@ public class ArrayDigestTest extends TDigestTest {
             }
         };
 
-        TDigest dist = new ArrayDigest(32, (double) 1000);
+        TreeDigest dist = new TreeDigest((double) 1000);
         List<Double> data = Lists.newArrayList();
         for (int i1 = 0; i1 < 100000; i1++) {
             double x = mix.nextDouble();
@@ -263,16 +128,15 @@ public class ArrayDigestTest extends TDigestTest {
         }
 
         long t0 = System.nanoTime();
-        for (double x: data) {
+        for (double x : data) {
             dist.add(x);
         }
-        dist.compress();
 
         System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 100000);
         System.out.printf("# %d centroids\n", dist.centroidCount());
 
         // I would be happier with 5x compression, but repeated values make things kind of weird
-        assertTrue(String.format("Summary is too large, got %d, wanted < %.1f", dist.centroidCount(), 10 * 1000.0), dist.centroidCount() < 10 * (double) 1000);
+        assertTrue("Summary is too large", dist.centroidCount() < 10 * (double) 1000);
 
         // all quantiles should round to nearest actual value
         for (int i = 0; i < 10; i++) {
@@ -309,7 +173,7 @@ public class ArrayDigestTest extends TDigestTest {
     @Test
     public void testSerialization() {
         Random gen = RandomUtils.getRandom();
-        TDigest dist = new ArrayDigest(32, 100);
+        TreeDigest dist = new TreeDigest(100);
         for (int i = 0; i < 100000; i++) {
             double x = gen.nextDouble();
             dist.add(x);
@@ -320,13 +184,6 @@ public class ArrayDigestTest extends TDigestTest {
         dist.asBytes(buf);
         assertTrue(buf.position() < 11000);
         assertEquals(buf.position(), dist.byteSize());
-
-        buf.flip();
-        TDigest dist2 = ArrayDigest.fromBytes(buf);
-        assertEquals(dist.centroidCount(), dist2.centroidCount());
-        assertEquals(dist.compression(), dist2.compression(), 0);
-        assertEquals(dist.size(), dist2.size());
-
         buf.clear();
 
         dist.asSmallBytes(buf);
@@ -336,16 +193,16 @@ public class ArrayDigestTest extends TDigestTest {
         System.out.printf("# big %d bytes\n", buf.position());
 
         buf.flip();
-        TDigest dist3 = ArrayDigest.fromBytes(buf);
-        assertEquals(dist.centroidCount(), dist3.centroidCount());
-        assertEquals(dist.compression(), dist3.compression(), 0);
-        assertEquals(dist.size(), dist3.size());
+        TreeDigest dist2 = TreeDigest.fromBytes(buf);
+        assertEquals(dist.centroidCount(), dist2.centroidCount());
+        assertEquals(dist.compression(), dist2.compression(), 0);
+        assertEquals(dist.size(), dist2.size());
 
         for (double q = 0; q < 1; q += 0.01) {
-            assertEquals(dist.quantile(q), dist3.quantile(q), 1e-8);
+            assertEquals(dist.quantile(q), dist2.quantile(q), 1e-8);
         }
 
-        Iterator<? extends Centroid> ix = dist3.centroids().iterator();
+        Iterator<? extends Centroid> ix = dist2.centroids().iterator();
         for (Centroid centroid : dist.centroids()) {
             assertTrue(ix.hasNext());
             assertEquals(centroid.count(), ix.next().count());
@@ -358,16 +215,16 @@ public class ArrayDigestTest extends TDigestTest {
         System.out.printf("# small %d bytes\n", buf.position());
 
         buf.flip();
-        dist3 = ArrayDigest.fromBytes(buf);
-        assertEquals(dist.centroidCount(), dist3.centroidCount());
-        assertEquals(dist.compression(), dist3.compression(), 0);
-        assertEquals(dist.size(), dist3.size());
+        dist2 = TreeDigest.fromBytes(buf);
+        assertEquals(dist.centroidCount(), dist2.centroidCount());
+        assertEquals(dist.compression(), dist2.compression(), 0);
+        assertEquals(dist.size(), dist2.size());
 
         for (double q = 0; q < 1; q += 0.01) {
-            assertEquals(dist.quantile(q), dist3.quantile(q), 1e-6);
+            assertEquals(dist.quantile(q), dist2.quantile(q), 1e-6);
         }
 
-        ix = dist3.centroids().iterator();
+        ix = dist2.centroids().iterator();
         for (Centroid centroid : dist.centroids()) {
             assertTrue(ix.hasNext());
             assertEquals(centroid.count(), ix.next().count());
@@ -396,38 +253,36 @@ public class ArrayDigestTest extends TDigestTest {
     }
 
     @Test
-    public void compareToQDigest() throws FileNotFoundException {
+    public void compareToQDigest() {
         Random rand = RandomUtils.getRandom();
-        try (PrintWriter out = new PrintWriter(new FileOutputStream("qd-comparison.csv"))) {
-            out.printf("tag\tcompression\tq\te1\tcdf.vs.q\tsize\tqd.size\n");
 
-            for (int i = 0; i < repeats(); i++) {
-                compareQD(out, new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
-                compareQD(out, new Uniform(0, 1, rand), "uniform", 1L << 48);
-            }
+        for (int i = 0; i < repeats(); i++) {
+            compareQD(new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
+            compareQD(new Uniform(0, 1, rand), "uniform", 1L << 48);
         }
     }
 
-    private void compareQD(PrintWriter out, AbstractContinousDistribution gen, String tag, long scale) throws FileNotFoundException {
-            for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000}) {
-                QDigest qd = new QDigest(compression);
-                TDigest dist = new ArrayDigest(32, compression);
-                List<Double> data = Lists.newArrayList();
-                for (int i = 0; i < 100000; i++) {
-                    double x = gen.nextDouble();
-                    dist.add(x);
-                    qd.offer((long) (x * scale));
-                    data.add(x);
-                }
-                dist.compress();
-                Collections.sort(data);
+    private void compareQD(AbstractContinousDistribution gen, String tag, long scale) {
+        for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000}) {
+            QDigest qd = new QDigest(compression);
+            TreeDigest dist = new TreeDigest(compression);
+            List<Double> data = Lists.newArrayList();
+            for (int i = 0; i < 100000; i++) {
+                double x = gen.nextDouble();
+                dist.add(x);
+                qd.offer((long) (x * scale));
+                data.add(x);
+            }
+            dist.compress();
+            Collections.sort(data);
 
-                for (double q : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99, 0.999}) {
-                    double x1 = dist.quantile(q);
-                    double x2 = (double) qd.getQuantile(q) / scale;
-                    double e1 = cdf(x1, data) - q;
-                    out.printf("%s\t%.0f\t%.8f\t%.10g\t%.10g\t%d\t%d\n", tag, compression, q, e1, cdf(x2, data) - q, dist.smallByteSize(), QDigest.serialize(qd).length);
-                }
+            for (double q : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99, 0.999}) {
+                double x1 = dist.quantile(q);
+                double x2 = (double) qd.getQuantile(q) / scale;
+                double e1 = cdf(x1, data) - q;
+                System.out.printf("%s\t%.0f\t%.8f\t%.10g\t%.10g\t%d\t%d\n", tag, compression, q, e1, cdf(x2, data) - q, dist.smallByteSize(), QDigest.serialize(qd).length);
+
+            }
         }
     }
 
@@ -446,7 +301,7 @@ public class ArrayDigestTest extends TDigestTest {
         double[] quantiles = {0.001, 0.01, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99, 0.999};
         for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000}) {
             QuantileEstimator sq = new QuantileEstimator(1001);
-            TDigest dist = new ArrayDigest(32, compression);
+            TreeDigest dist = new TreeDigest(compression);
             List<Double> data = Lists.newArrayList();
             for (int i = 0; i < 100000; i++) {
                 double x = gen.nextDouble();
@@ -493,7 +348,7 @@ public class ArrayDigestTest extends TDigestTest {
                         StringWriter s = new StringWriter();
                         PrintWriter out = new PrintWriter(s);
                         for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
-                            TDigest dist = new ArrayDigest(32, compression);
+                            TreeDigest dist = new TreeDigest(compression);
                             for (int i = 0; i < size * 1000; i++) {
                                 dist.add(gen.nextDouble());
                             }
@@ -541,7 +396,7 @@ public class ArrayDigestTest extends TDigestTest {
                         Collections.sort(data);
 
                         for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
-                            TDigest dist = new ArrayDigest(32, compression);
+                            TreeDigest dist = new TreeDigest(compression);
                             for (Double x : data) {
                                 dist.add(x);
                             }
@@ -569,5 +424,58 @@ public class ArrayDigestTest extends TDigestTest {
         }
     }
 
+    @Test
+    public void testMerge() throws FileNotFoundException, InterruptedException, ExecutionException {
+        merge(new DigestFactory<TreeDigest>() {
+            @Override
+            public TreeDigest create() {
+                return new TreeDigest(50);
+            }
+        });
+    }
+
+    @Test
+    public void testEmpty() {
+        empty(new TreeDigest(100));
+    }
+
+    @Test
+    public void testSingleValue() {
+        singleValue(new TreeDigest(100));
+    }
+
+    @Test
+    public void testFewValues() {
+        final TDigest digest = new TreeDigest(100);
+        fewValues(digest);
+    }
+
+    @Test
+    public void testExtremeQuantiles() {
+        // t-digest shouldn't merge extreme nodes, but let's still test how it would
+        // answer to extreme quantiles in that case ('extreme' in the sense that the
+        // quantile is either before the first node or after the last one)
+        TreeDigest digest = new TreeDigest(100);
+        // we need to create the GroupTree manually
+        GroupTree tree = (GroupTree) digest.centroids();
+        Centroid g = new Centroid(10);
+        g.add(10, 2); // 10 has a weight of 3 (1+2)
+        tree.add(g);
+        g = new Centroid(20); // 20 has a weight of 1
+        tree.add(g);
+        g = new Centroid(40);
+        g.add(40, 4); // 40 has a weight of 5 (1+4)
+        tree.add(g);
+        digest.count = 3 + 1 + 5;
+        // this group tree is roughly equivalent to the following sorted array:
+        // [ ?, 10, ?, 20, ?, ?, 50, ?, ? ]
+        // and we expect it to compute approximate missing values:
+        // [ 5, 10, 15, 20, 30, 40, 50, 60, 70]
+        List<Double> values = Arrays.asList(5., 10., 15., 20., 30., 40., 50., 60., 70.);
+        for (int i = 0; i < digest.size(); ++i) {
+            final double q = 1.0 / (digest.size() - 1); // a quantile that matches an array index
+            assertEquals(quantile(q, values), digest.quantile(q), 0.01);
+        }
+    }
 
 }

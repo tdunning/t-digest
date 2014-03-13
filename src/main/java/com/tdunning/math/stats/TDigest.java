@@ -17,10 +17,8 @@
 
 package com.tdunning.math.stats;
 
-import com.google.common.collect.Lists;
-import org.apache.mahout.common.RandomUtils;
-
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -45,8 +43,41 @@ import java.util.Random;
  * g) easy to adapt for use with map-reduce
  */
 public abstract class TDigest {
-    protected Random gen = RandomUtils.getRandom();
+    protected Random gen = new Random();
     protected boolean recordAllData = false;
+
+    public static double interpolate(double x, double x0, double x1) {
+        return (x - x0) / (x1 - x0);
+    }
+
+    public static void encode(ByteBuffer buf, int n) {
+        int k = 0;
+        while (n < 0 || n > 0x7f) {
+            byte b = (byte) (0x80 | (0x7f & n));
+            buf.put(b);
+            n = n >>> 7;
+            k++;
+            if (k >= 6) {
+                throw new IllegalStateException("Size is implausibly large");
+            }
+        }
+        buf.put((byte) n);
+    }
+
+    public static int decode(ByteBuffer buf) {
+        int v = buf.get();
+        int z = 0x7f & v;
+        int shift = 7;
+        while ((v & 0x80) != 0) {
+            if (shift > 28) {
+                throw new IllegalStateException("Shift too large in decode");
+            }
+            v = buf.get();
+            z += (v & 0x7f) << shift;
+            shift += 7;
+        }
+        return z;
+    }
 
     /**
      * Adds a sample to a histogram.
@@ -58,6 +89,29 @@ public abstract class TDigest {
 
     abstract void add(double x, int w, Centroid base);
 
+    protected static TDigest merge(Iterable<TDigest> subData, Random gen, TDigest r) {
+        List<Centroid> centroids = new ArrayList<>();
+        boolean recordAll = false;
+        for (TDigest digest : subData) {
+            for (Centroid centroid : digest.centroids()) {
+                centroids.add(centroid);
+            }
+            recordAll |= digest.isRecording();
+        }
+        Collections.shuffle(centroids, gen);
+        if (recordAll) {
+            r.recordAllData();
+        }
+
+        for (Centroid c : centroids) {
+            if (r.recordAllData) {
+                // TODO should do something better here.
+            }
+            r.add(c.mean(), c.count(), c);
+        }
+        return r;
+    }
+
     abstract void compress();
 
     abstract void compress(GroupTree other);
@@ -67,6 +121,13 @@ public abstract class TDigest {
     abstract double cdf(double x);
 
     abstract double quantile(double q);
+
+    public static double quantile(double previousIndex, double index, double nextIndex, double previousMean, double nextMean) {
+        final double delta = nextIndex - previousIndex;
+        final double previousWeight = (nextIndex - index) / delta;
+        final double nextWeight = (index - previousIndex) / delta;
+        return previousMean * previousWeight + nextMean * nextWeight;
+    }
 
     abstract int centroidCount();
 
@@ -103,8 +164,11 @@ public abstract class TDigest {
         add(x, 1);
     }
 
-    public void add(TreeDigest other) {
-        List<Centroid> tmp = Lists.newArrayList(other.centroids());
+    public void add(TDigest other) {
+        List<Centroid> tmp = new ArrayList<>();
+        for (Centroid centroid : other.centroids()) {
+            tmp.add(centroid);
+        }
 
         Collections.shuffle(tmp, gen);
         for (Centroid centroid : tmp) {

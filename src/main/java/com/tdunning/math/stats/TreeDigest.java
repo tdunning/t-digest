@@ -17,11 +17,8 @@
 
 package com.tdunning.math.stats;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -66,8 +63,8 @@ public class TreeDigest extends TDigest {
 
     @Override
     public void add(double x, int w) {
-            // note that because of a zero id, this will be sorted *before* any existing Centroid with the same mean
-            add(x, w, createCentroid(x, 0));
+        // note that because of a zero id, this will be sorted *before* any existing Centroid with the same mean
+        add(x, w, createCentroid(x, 0));
     }
 
     @Override
@@ -143,26 +140,9 @@ public class TreeDigest extends TDigest {
         }
     }
 
-    public static TreeDigest merge(double compression, Iterable<TDigest> subData, Random gen) {
-        List<Centroid> centroids = Lists.newArrayList();
-        boolean recordAll = false;
-        for (TDigest digest : subData) {
-            Iterables.addAll(centroids, digest.centroids());
-            recordAll |= digest.isRecording();
-        }
-        Collections.shuffle(centroids, gen);
+    public static TDigest merge(double compression, Iterable<TDigest> subData, Random gen) {
         TreeDigest r = new TreeDigest(compression);
-        if (recordAll) {
-            r.recordAllData();
-        }
-
-        for (Centroid c : centroids) {
-            if (r.recordAllData) {
-                // TODO should do something better here.
-            }
-            r.add(c.mean(), c.count(), c);
-        }
-        return r;
+        return merge(subData, gen, r);
     }
 
     @Override
@@ -176,7 +156,10 @@ public class TreeDigest extends TDigest {
         if (recordAllData) {
             reduced.recordAllData();
         }
-        List<Centroid> tmp = Lists.newArrayList(other);
+        List<Centroid> tmp = new ArrayList<>();
+        for (Centroid centroid : other) {
+            tmp.add(centroid);
+        }
         Collections.shuffle(tmp, gen);
         for (Centroid centroid : tmp) {
             reduced.add(centroid.mean(), centroid.count(), centroid);
@@ -301,13 +284,6 @@ public class TreeDigest extends TDigest {
         }
     }
 
-    private static double quantile(double previousIndex, double index, double nextIndex, double previousMean, double nextMean) {
-        final double delta = nextIndex - previousIndex;
-        final double previousWeight = (nextIndex - index) / delta;
-        final double nextWeight = (index - previousIndex) / delta;
-        return previousMean * previousWeight + nextMean * nextWeight;
-    }
-
     @Override
     public int centroidCount() {
         return summary.size();
@@ -382,31 +358,6 @@ public class TreeDigest extends TDigest {
         }
     }
 
-    public static void encode(ByteBuffer buf, int n) {
-        int k = 0;
-        while (n < 0 || n > 0x7f) {
-            byte b = (byte) (0x80 | (0x7f & n));
-            buf.put(b);
-            n = n >>> 7;
-            k++;
-            Preconditions.checkState(k < 6);
-        }
-        buf.put((byte) n);
-    }
-
-    public static int decode(ByteBuffer buf) {
-        int v = buf.get();
-        int z = 0x7f & v;
-        int shift = 7;
-        while ((v & 0x80) != 0) {
-            Preconditions.checkState(shift <= 28);
-            v = buf.get();
-            z += (v & 0x7f) << shift;
-            shift += 7;
-        }
-        return z;
-    }
-
     /**
      * Reads a histogram from a byte buffer
      *
@@ -446,10 +397,6 @@ public class TreeDigest extends TDigest {
         } else {
             throw new IllegalStateException("Invalid format for serialized histogram");
         }
-    }
-
-    private double interpolate(double x, double x0, double x1) {
-        return (x - x0) / (x1 - x0);
     }
 
 }

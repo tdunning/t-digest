@@ -17,12 +17,10 @@
 
 package com.tdunning.math.stats;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.Queues;
-
+import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * A tree containing TDigest.Centroid.  This adds to the normal NavigableSet the
@@ -95,9 +93,14 @@ public class GroupTree implements Iterable<Centroid> {
      * @param data      The recorded data
      */
     public void move(double x, int count, Centroid v, Iterable<? extends Double> data) {
-        Preconditions.checkState(size > 0, "Cannot move element of empty tree");
+        if (size <= 0) {
+            throw new IllegalStateException("Cannot move element of empty tree");
+        }
+
         if (size == 1) {
-            Preconditions.checkState(leaf == v, "Cannot move element that is not in tree");
+            if(leaf != v) {
+                throw new IllegalStateException("Cannot move element that is not in tree");
+            }
             leaf.add(x, count, data);
         } else if (v.compareTo(leaf) < 0) {
             left.move(x, count, v, data);
@@ -182,7 +185,9 @@ public class GroupTree implements Iterable<Centroid> {
      * @return the first Centroid in this set
      */
     public Centroid first() {
-        Preconditions.checkState(size > 0, "No first element of empty set");
+        if(size <= 0) {
+            throw new IllegalStateException("No first element of empty set");
+        }
         if (left == null) {
             return leaf;
         } else {
@@ -204,13 +209,40 @@ public class GroupTree implements Iterable<Centroid> {
      * specified Centroid.
      */
     private Iterator<Centroid> iterator(final Centroid start) {
-        return new AbstractIterator<Centroid>() {
+        return new Iterator<Centroid>() {
             {
-                stack = Queues.newArrayDeque();
+                stack = new ArrayDeque<>();
                 push(GroupTree.this, start);
             }
 
+            Centroid end = new Centroid(0, 0, -1);
+            Centroid next = null;
+
             Deque<GroupTree> stack;
+
+            @Override
+            public boolean hasNext() {
+                if (next == null) {
+                    next = computeNext();
+                }
+                return next != end;
+            }
+
+            @Override
+            public Centroid next() {
+                if (hasNext()) {
+                    Centroid r = next;
+                    next = null;
+                    return r;
+                } else {
+                    throw new NoSuchElementException("Can't iterate past end of data");
+                }
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException("Default operation");
+            }
 
             // recurses down to the leaf that is >= start
             // pending right hand branches on the way are put on the stack
@@ -232,7 +264,6 @@ public class GroupTree implements Iterable<Centroid> {
                 }
             }
 
-            @Override
             protected Centroid computeNext() {
                 GroupTree r = stack.poll();
                 while (r != null && r.left != null) {
@@ -247,15 +278,19 @@ public class GroupTree implements Iterable<Centroid> {
                 if (r != null) {
                     return r.leaf;
                 }
-                return endOfData();
+                return end;
             }
         };
     }
 
     public void remove(Centroid base) {
-        Preconditions.checkState(size > 0, "Cannot remove from empty set");
+        if(size <= 0) {
+            throw new IllegalStateException("Cannot remove from empty set");
+        }
         if (size == 1) {
-            Preconditions.checkArgument(base.compareTo(leaf) == 0, "Element %s not found", base);
+            if(base.compareTo(leaf) != 0) {
+                throw new IllegalStateException(String.format("Element %s not found", base));
+            }
             count = size = 0;
             leaf = null;
         } else {
@@ -316,7 +351,9 @@ public class GroupTree implements Iterable<Centroid> {
     }
 
     public Centroid last() {
-        Preconditions.checkState(size > 0, "Cannot find last element of empty set");
+        if(size <= 0) {
+            throw new IllegalStateException("Cannot find last element of empty set");
+        }
         if (size == 1) {
             return leaf;
         } else {
@@ -363,13 +400,23 @@ public class GroupTree implements Iterable<Centroid> {
 
     public void checkBalance() {
         if (left != null) {
-            Preconditions.checkState(Math.abs(left.depth() - right.depth()) < 2, "Imbalanced");
+            if(Math.abs(left.depth() - right.depth()) >= 2) {
+                throw new IllegalStateException("Imbalanced");
+            }
             int l = left.depth();
             int r = right.depth();
-            Preconditions.checkState(depth == Math.max(l, r) + 1, "Depth doesn't match children");
-            Preconditions.checkState(size == left.size + right.size, "Sizes don't match children");
-            Preconditions.checkState(count == left.count + right.count, "Counts don't match children");
-            Preconditions.checkState(leaf.compareTo(right.first()) == 0, "Split is wrong %.5d != %.5d or %d != %d", leaf.mean(), right.first().mean(), leaf.id(), right.first().id());
+            if(depth != Math.max(l, r) + 1){
+                throw new IllegalStateException( "Depth doesn't match children");
+            }
+            if(size != left.size + right.size){
+                throw new IllegalStateException( "Sizes don't match children");
+            }
+            if(count != left.count + right.count){
+                throw new IllegalStateException( "Counts don't match children");
+            }
+            if(leaf.compareTo(right.first()) != 0){
+                throw new IllegalStateException(String.format( "Split is wrong %.5f != %.5f or %d != %d", leaf.mean(), right.first().mean(), leaf.id(), right.first().id()));
+            }
             left.checkBalance();
             right.checkBalance();
         }

@@ -17,36 +17,34 @@
 
 package com.tdunning.math.stats;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  * Array based implementation of a TDigest.
  * <p/>
  * This implementation is essentially a one-level b-tree in which nodes are collected into
- * pages with up to 32 values.
+ * pages typically with 32 values per page.
  */
 public class ArrayDigest extends TDigest {
     private final int pageSize;
 
-    private List<Page> data = Lists.newArrayList();
+    private List<Page> data = new ArrayList<>();
     private int totalWeight = 0;
     private int centroidCount = 0;
     private double compression = 100;
 
     public ArrayDigest(int pageSize, double compression) {
-        Preconditions.checkArgument(pageSize > 3, "Must have page size of 4 or more");
-        this.pageSize = pageSize;
-        this.compression = compression;
+        if (pageSize > 3) {
+            this.pageSize = pageSize;
+            this.compression = compression;
+        } else {
+            throw new IllegalArgumentException("Must have page size of 4 or more");
+        }
     }
 
     Index floor(double x) {
@@ -118,7 +116,7 @@ public class ArrayDigest extends TDigest {
                     p.totalCount += w;
                     p.centroids[closest.subPage] += (x - p.centroids[closest.subPage]) / p.counts[closest.subPage];
                     if (p.history != null && p.history.get(closest.subPage) != null) {
-                        p.history.get(closest.subPage).add(new Point(x, w));
+                        p.history.get(closest.subPage).add(x);
                     }
                     totalWeight += w;
                 } else {
@@ -126,12 +124,12 @@ public class ArrayDigest extends TDigest {
                     // which means that ordering can change
                     double center = mean(closest);
                     int weight = count(closest);
-                    List<Point> history = history(closest);
+                    List<Double> history = history(closest);
 
                     delete(closest);
 
                     if (history != null) {
-                        history.add(new Point(x, w));
+                        history.add(x);
                     }
                     weight += w;
                     center = center + (x - center) / weight;
@@ -139,7 +137,6 @@ public class ArrayDigest extends TDigest {
                     addRaw(center, weight, history);
                 }
             }
-//            totalWeight += w;
 
             if (data.size() > 100 * compression) {
                 // something such as sequential ordering of data points
@@ -153,7 +150,7 @@ public class ArrayDigest extends TDigest {
         }
     }
 
-    private List<Point> history(Index index) {
+    private List<Double> history(Index index) {
         return data.get(index.page).history.get(index.subPage);
     }
 
@@ -219,10 +216,12 @@ public class ArrayDigest extends TDigest {
     }
 
     public void addRaw(double x, int w) {
-        addRaw(x, w, recordAllData ? new ArrayList<Point>() : null);
+        List<Double> tmp = new ArrayList<>();
+        tmp.add(x);
+        addRaw(x, w, recordAllData ? tmp : null);
     }
 
-    public void addRaw(double x, int w, List<Point> history) {
+    public void addRaw(double x, int w, List<Double> history) {
         if (data.size() == 0) {
             Page page = new Page();
             page.add(x, w, history);
@@ -252,7 +251,7 @@ public class ArrayDigest extends TDigest {
 
     @Override
     void add(double x, int w, Centroid base) {
-        throw new UnsupportedOperationException("Default operation");
+        addRaw(x, w, base.data());
     }
 
     @Override
@@ -261,7 +260,12 @@ public class ArrayDigest extends TDigest {
         if (recordAllData) {
             reduced.recordAllData();
         }
-        List<Index> tmp = Lists.newArrayList(this.iterator(0, 0));
+        List<Index> tmp = new ArrayList<>();
+        Iterator<Index> ix = this.iterator(0, 0);
+        while (ix.hasNext()) {
+            tmp.add(ix.next());
+        }
+
         Collections.shuffle(tmp, gen);
         for (Index index : tmp) {
             reduced.add(mean(index), count(index));
@@ -283,12 +287,97 @@ public class ArrayDigest extends TDigest {
 
     @Override
     public double cdf(double x) {
-        throw new UnsupportedOperationException("Default operation");
+        if (size() == 0) {
+            return Double.NaN;
+        } else if (size() == 1) {
+            return x < data.get(0).centroids[0] ? 0 : 1;
+        } else {
+            double r = 0;
+
+            // we scan a across the centroids
+            Iterator<Index> it = iterator(0, 0);
+            Index a = it.next();
+
+            // b is the look-ahead to the next centroid
+            Index b = it.next();
+
+            // initially, we set left width equal to right width
+            double left = (b.mean() - a.mean()) / 2;
+            double right = left;
+
+            // scan to next to last element
+            while (it.hasNext()) {
+                if (x < a.mean() + right) {
+                    return (r + a.count() * TDigest.interpolate(x, a.mean() - left, a.mean() + right)) / totalWeight;
+                }
+                r += a.count();
+
+                a = b;
+                b = it.next();
+
+                left = right;
+                right = (b.mean() - a.mean()) / 2;
+            }
+
+            // for the last element, assume right width is same as left
+            left = right;
+            a = b;
+            if (x < a.mean() + right) {
+                return (r + a.count() * TDigest.interpolate(x, a.mean() - left, a.mean() + right)) / totalWeight;
+            } else {
+                return 1;
+            }
+        }
     }
 
     @Override
     public double quantile(double q) {
-        throw new UnsupportedOperationException("Default operation");
+        if (q < 0 || q > 1) {
+            throw new IllegalArgumentException("q should be in [0,1], got " + q);
+        }
+
+        if (centroidCount() == 0) {
+            return Double.NaN;
+        } else if (centroidCount() == 1) {
+            return data.get(0).centroids[0];
+        }
+
+        // if values were stored in a sorted array, index would be the offset we are interested in
+        final double index = q * (size() - 1);
+
+        double previousMean = Double.NaN, previousIndex = 0;
+        long total = 0;
+        Index next;
+        Iterator<Index> it = iterator(0, 0);
+        while (true) {
+            next = it.next();
+            final double nextIndex = total + (next.count() - 1.0) / 2;
+            if (nextIndex >= index) {
+                if (Double.isNaN(previousMean)) {
+                    // special case 1: the index we are interested in is before the 1st centroid
+                    if (nextIndex == previousIndex) {
+                        return next.mean();
+                    }
+                    // assume values grow linearly between index previousIndex=0 and nextIndex2
+                    Index next2 = it.next();
+                    final double nextIndex2 = total + next.count() + (next2.count() - 1.0) / 2;
+                    previousMean = (nextIndex2 * next.mean() - nextIndex * next2.mean()) / (nextIndex2 - nextIndex);
+                }
+                // common case: we found two centroids previous and next so that the desired quantile is
+                // after 'previous' but before 'next'
+                return quantile(previousIndex, index, nextIndex, previousMean, next.mean());
+            } else if (!it.hasNext()) {
+                // special case 2: the index we are interested in is beyond the last centroid
+                // again, assume values grow linearly between index previousIndex and (count - 1)
+                // which is the highest possible index
+                final double nextIndex2 = size() - 1;
+                final double nextMean2 = (next.mean() * (nextIndex2 - previousIndex) - previousMean * (nextIndex2 - nextIndex)) / (nextIndex - previousIndex);
+                return quantile(nextIndex, index, nextIndex2, next.mean(), nextMean2);
+            }
+            total += next.count();
+            previousMean = next.mean();
+            previousIndex = nextIndex;
+        }
     }
 
     @Override
@@ -298,19 +387,20 @@ public class ArrayDigest extends TDigest {
 
     @Override
     public Iterable<? extends Centroid> centroids() {
-        return new Iterable<Centroid>() {
-            @Override
-            public Iterator<Centroid> iterator() {
-                return Iterators.transform(ArrayDigest.this.iterator(0, 0),
-                        new Function<Index, Centroid>() {
-                            @Override
-                            public Centroid apply(Index index) {
-                                Page current = data.get(index.page);
-                                return new Centroid(current.centroids[index.subPage], current.counts[index.subPage]);
-                            }
-                        });
+        List<Centroid> r = new ArrayList<>();
+        Iterator<Index> ix = iterator(0, 0);
+        while (ix.hasNext()) {
+            Index index = ix.next();
+            Page current = data.get(index.page);
+            Centroid centroid = new Centroid(current.centroids[index.subPage], current.counts[index.subPage]);
+            if (current.history != null) {
+                for (double x : current.history.get(index.subPage)) {
+                    centroid.insertData(x);
+                }
             }
-        };
+            r.add(centroid);
+        }
+        return r;
     }
 
     public Iterator<Index> after(double x) {
@@ -341,14 +431,39 @@ public class ArrayDigest extends TDigest {
     }
 
     private Iterator<Index> iterator(final int startPage, final int startSubPage) {
-        return new AbstractIterator<Index>() {
+        return new Iterator<Index>() {
             int page = startPage;
             int subPage = startSubPage;
+            Index end = new Index(-1, -1);
+            Index next = null;
 
             @Override
+            public boolean hasNext() {
+                if (next == null) {
+                    next = computeNext();
+                }
+                return next != end;
+            }
+
+            @Override
+            public Index next() {
+                if (hasNext()) {
+                    Index r = next;
+                    next = null;
+                    return r;
+                } else {
+                    throw new NoSuchElementException("Can't iterate past end of data");
+                }
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException("Default operation");
+            }
+
             protected Index computeNext() {
                 if (page >= data.size()) {
-                    return endOfData();
+                    return end;
                 } else {
                     Page current = data.get(page);
                     if (subPage >= current.active) {
@@ -397,14 +512,40 @@ public class ArrayDigest extends TDigest {
     }
 
     private Iterator<Index> reverse(final int startPage, final int startSubPage) {
-        return new AbstractIterator<Index>() {
+        return new Iterator<Index>() {
             int page = startPage;
             int subPage = startSubPage;
 
+            Index end = new Index(-1, -1);
+            Index next = null;
+
             @Override
+            public boolean hasNext() {
+                if (next == null) {
+                    next = computeNext();
+                }
+                return next != end;
+            }
+
+            @Override
+            public Index next() {
+                if (hasNext()) {
+                    Index r = next;
+                    next = null;
+                    return r;
+                } else {
+                    throw new NoSuchElementException("Can't reverse iterate before beginning of data");
+                }
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException("Default operation");
+            }
+
             protected Index computeNext() {
                 if (page < 0) {
-                    return endOfData();
+                    return end;
                 } else {
                     if (subPage < 0) {
                         page--;
@@ -424,27 +565,125 @@ public class ArrayDigest extends TDigest {
 
     @Override
     public double compression() {
-        throw new UnsupportedOperationException("Default operation");
+        return compression;
     }
-
+    /**
+     * Returns an upper bound on the number bytes that will be required to represent this histogram.
+     */
     @Override
     public int byteSize() {
-        throw new UnsupportedOperationException("Default operation");
+        return 4 + 8 + 8 + centroidCount * 12;
     }
 
+    /**
+     * Returns an upper bound on the number of bytes that will be required to represent this histogram in
+     * the tighter representation.
+     */
     @Override
     public int smallByteSize() {
-        throw new UnsupportedOperationException("Default operation");
+        int bound = byteSize();
+        ByteBuffer buf = ByteBuffer.allocate(bound);
+        asSmallBytes(buf);
+        return buf.position();
     }
 
+    public final static int VERBOSE_ENCODING = 1;
+    public final static int SMALL_ENCODING = 2;
+    public final static int VERBOSE_ARRAY_DIGEST = 3;
+    public final static int SMALL_ARRAY_DIGEST = 4;
+
+    /**
+     * Outputs a histogram as bytes using a particularly cheesy encoding.
+     */
     @Override
     public void asBytes(ByteBuffer buf) {
-        throw new UnsupportedOperationException("Default operation");
+        buf.putInt(VERBOSE_ARRAY_DIGEST);
+        buf.putDouble(compression());
+        buf.putInt(pageSize);
+        buf.putInt(centroidCount);
+        for (Page page : data) {
+            for (int i = 0; i < page.active; i++) {
+                buf.putDouble(page.centroids[i]);
+            }
+        }
+        for (Page page : data) {
+            for (int i = 0; i < page.active; i++) {
+                buf.putInt(page.counts[i]);
+            }
+        }
     }
 
     @Override
     public void asSmallBytes(ByteBuffer buf) {
-        throw new UnsupportedOperationException("Default operation");
+        buf.putInt(SMALL_ARRAY_DIGEST);
+        buf.putDouble(compression());
+        buf.putInt(pageSize);
+        buf.putInt(centroidCount);
+
+        double x = 0;
+        for (Page page : data) {
+            for (int i = 0; i < page.active; i++) {
+                double mean = page.centroids[i];
+                double delta = mean - x;
+                x = mean;
+                buf.putFloat((float) delta);
+            }
+        }
+        for (Page page : data) {
+            for (int i = 0; i < page.active; i++) {
+                int n = page.counts[i];
+                encode(buf, n);
+            }
+        }
+    }
+
+    /**
+     * Reads a histogram from a byte buffer
+     *
+     * @return The new histogram structure
+     */
+    public static ArrayDigest fromBytes(ByteBuffer buf) {
+        int encoding = buf.getInt();
+        if (encoding == VERBOSE_ENCODING || encoding == VERBOSE_ARRAY_DIGEST) {
+            double compression = buf.getDouble();
+            int pageSize = 32;
+            if (encoding == VERBOSE_ARRAY_DIGEST) {
+                pageSize = buf.getInt();
+            }
+            ArrayDigest r = new ArrayDigest(pageSize, compression);
+            int n = buf.getInt();
+            double[] means = new double[n];
+            for (int i = 0; i < n; i++) {
+                means[i] = buf.getDouble();
+            }
+            for (int i = 0; i < n; i++) {
+                r.add(means[i], buf.getInt());
+            }
+            return r;
+        } else if (encoding == SMALL_ENCODING || encoding == SMALL_ARRAY_DIGEST) {
+            double compression = buf.getDouble();
+            int pageSize = 32;
+            if (encoding == SMALL_ARRAY_DIGEST) {
+                pageSize = buf.getInt();
+            }
+            ArrayDigest r = new ArrayDigest(pageSize, compression);
+            int n = buf.getInt();
+            double[] means = new double[n];
+            double x = 0;
+            for (int i = 0; i < n; i++) {
+                double delta = buf.getFloat();
+                x += delta;
+                means[i] = x;
+            }
+
+            for (int i = 0; i < n; i++) {
+                int z = decode(buf);
+                r.add(means[i], z);
+            }
+            return r;
+        } else {
+            throw new IllegalStateException("Invalid format for serialized histogram");
+        }
     }
 
     class Index {
@@ -454,15 +693,13 @@ public class ArrayDigest extends TDigest {
             this.page = page;
             this.subPage = subPage;
         }
-    }
 
-    private static class Point {
-        final double x;
-        final int w;
+        double mean() {
+            return data.get(page).centroids[subPage];
+        }
 
-        public Point(double x, int w) {
-            this.x = x;
-            this.w = w;
+        int count() {
+            return data.get(page).counts[subPage];
         }
     }
 
@@ -471,9 +708,9 @@ public class ArrayDigest extends TDigest {
         int active;
         double[] centroids = new double[pageSize];
         int[] counts = new int[pageSize];
-        List<List<Point>> history = recordAllData ? new ArrayList<List<Point>>() : null;
+        List<List<Double>> history = recordAllData ? new ArrayList<List<Double>>() : null;
 
-        public Page add(double x, int w, List<Point> history) {
+        public Page add(double x, int w, List<Double> history) {
             for (int i = 0; i < pageSize; i++) {
                 if (centroids[i] >= x) {
                     // insert at i
@@ -505,7 +742,7 @@ public class ArrayDigest extends TDigest {
             }
         }
 
-        private void addAt(int i, double x, int w, List<Point> history) {
+        private void addAt(int i, double x, int w, List<Double> history) {
             if (i < active) {
                 // shift data to make room
                 System.arraycopy(centroids, i, centroids, i + 1, active - i);
@@ -533,8 +770,12 @@ public class ArrayDigest extends TDigest {
             System.arraycopy(centroids, 16, newPage.centroids, 0, pageSize / 2);
             System.arraycopy(counts, 16, newPage.counts, 0, pageSize / 2);
             if (history != null) {
-                newPage.history = Lists.newArrayList(history.subList(pageSize / 2, pageSize));
-                history = Lists.newArrayList(history.subList(0, pageSize / 2));
+                newPage.history = new ArrayList<>();
+                newPage.history.addAll(history.subList(pageSize / 2, pageSize));
+
+                List<List<Double>> tmp = new ArrayList<>();
+                tmp.addAll(history.subList(0, pageSize / 2));
+                history = tmp;
             }
             active = 16;
             newPage.active = 16;
@@ -552,12 +793,15 @@ public class ArrayDigest extends TDigest {
         public void delete(int i) {
             int w = counts[i];
             if (i != active - 1) {
-                System.arraycopy(centroids, i + 1, centroids, i, active - i);
-                System.arraycopy(counts, i + 1, counts, i, active - i);
+                System.arraycopy(centroids, i + 1, centroids, i, active - i - 1);
+                System.arraycopy(counts, i + 1, counts, i, active - i - 1);
                 history.remove(i);
             }
             active--;
             totalCount -= w;
+            centroidCount--;
         }
     }
+
+
 }

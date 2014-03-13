@@ -17,8 +17,7 @@
 
 package com.tdunning.math.stats;
 
-import com.google.common.collect.Lists;
-
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -37,7 +36,7 @@ public class Centroid implements Comparable<Centroid> {
     Centroid(boolean record) {
         id = uniqueCount.incrementAndGet();
         if (record) {
-            actualData = Lists.newArrayList();
+            actualData = new ArrayList<>();
         }
     }
 
@@ -108,8 +107,15 @@ public class Centroid implements Comparable<Centroid> {
         return r;
     }
 
-    public Iterable<? extends Double> data() {
+    public List<Double> data() {
         return actualData;
+    }
+
+    public void insertData(double x) {
+        if (actualData == null) {
+            actualData = new ArrayList<>();
+        }
+        actualData.add(x);
     }
 
     public static Centroid createWeighted(double x, int w, Iterable<? extends Double> data) {
