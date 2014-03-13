@@ -7,6 +7,7 @@ import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
 import org.apache.mahout.math.jet.random.Normal;
 import org.apache.mahout.math.jet.random.Uniform;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.Ignore;
 
@@ -245,6 +246,7 @@ public class ArrayDigestTest extends TDigestTest {
         }
     }
 
+    @Ignore
     @Test
     public void testRepeatedValues() {
         final Random gen = RandomUtils.getRandom();
