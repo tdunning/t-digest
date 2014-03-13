@@ -8,6 +8,7 @@ import org.apache.mahout.math.jet.random.Gamma;
 import org.apache.mahout.math.jet.random.Normal;
 import org.apache.mahout.math.jet.random.Uniform;
 import org.junit.Test;
+import org.junit.Ignore;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -175,6 +176,7 @@ public class ArrayDigestTest extends TDigestTest {
         }
     }
 
+    @Ignore
     @Test
     public void testGamma() {
         // this Gamma distribution is very heavily skewed.  The 0.1%-ile is 6.07e-30 while
