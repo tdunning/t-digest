@@ -279,7 +279,7 @@ public class TDigestTest {
         System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 100000);
         System.out.printf("# %d centroids\n", dist.centroidCount());
 
-        assertTrue(String.format("Summary is too large (got %d, wanted < %.1f)", dist.centroidCount(), 11 * sizeGuide), dist.centroidCount() < 10 * sizeGuide);
+        assertTrue(String.format("Summary is too large (got %d, wanted < %.1f)", dist.centroidCount(), 11 * sizeGuide), dist.centroidCount() < 11 * sizeGuide);
         int softErrors = 0;
         for (int i = 0; i < xValues.length; i++) {
             double x = xValues[i];
