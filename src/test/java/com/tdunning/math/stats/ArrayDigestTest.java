@@ -7,9 +7,7 @@ import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
 import org.apache.mahout.math.jet.random.Normal;
 import org.apache.mahout.math.jet.random.Uniform;
-import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.Ignore;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -126,22 +124,22 @@ public class ArrayDigestTest extends TDigestTest {
             i++;
         }
 
-        assertEquals(0, Lists.newArrayList(ad.before(0)).size());
-        assertEquals(ad.centroidCount(), Lists.newArrayList(ad.before(1)).size());
+        assertEquals(0, Lists.newArrayList(ad.allBefore(0)).size());
+        assertEquals(ad.centroidCount(), Lists.newArrayList(ad.allBefore(1)).size());
 
-        assertEquals(0, Lists.newArrayList(ad.after(1)).size());
-        assertEquals(ad.centroidCount(), Lists.newArrayList(ad.after(0)).size());
+        assertEquals(0, Lists.newArrayList(ad.allAfter(1)).size());
+        assertEquals(ad.centroidCount(), Lists.newArrayList(ad.allAfter(0)).size());
 
         for (int k = 0; k < 1000; k++) {
             final double split = random.nextDouble();
-            List<ArrayDigest.Index> z1 = Lists.newArrayList(ad.before(split));
+            List<ArrayDigest.Index> z1 = Lists.newArrayList(ad.allBefore(split));
             i = 0;
             for (ArrayDigest.Index index : z1) {
                 assertTrue("Check value before split " + i + " " + ad.mean(index), ad.mean(index) < split);
                 i++;
             }
 
-            List<ArrayDigest.Index> z2 = Lists.newArrayList(ad.after(split));
+            List<ArrayDigest.Index> z2 = Lists.newArrayList(ad.allAfter(split));
             i = 0;
             for (ArrayDigest.Index index : z2) {
                 assertTrue("Check value after split " + i + " " + ad.mean(index), ad.mean(index) > split);
@@ -245,7 +243,6 @@ public class ArrayDigestTest extends TDigestTest {
         }
     }
 
-    @Ignore
     @Test
     public void testRepeatedValues() {
         final Random gen = RandomUtils.getRandom();
@@ -261,8 +258,7 @@ public class ArrayDigestTest extends TDigestTest {
         TDigest dist = new ArrayDigest(32, (double) 1000);
         List<Double> data = Lists.newArrayList();
         for (int i1 = 0; i1 < 100000; i1++) {
-            double x = mix.nextDouble();
-            data.add(x);
+            data.add(mix.nextDouble());
         }
 
         long t0 = System.nanoTime();

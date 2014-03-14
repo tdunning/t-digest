@@ -48,12 +48,21 @@ public class ArrayDigest extends TDigest {
     }
 
     Index floor(double x) {
-        Iterator<Index> r = before(x);
-        return r.hasNext() ? r.next() : null;
+        Iterator<Index> rx = allBefore(x);
+        if (!rx.hasNext()) {
+            return null;
+        }
+        Index r = rx.next();
+        Index z = r;
+        while (rx.hasNext() && mean(z) == x) {
+            r = z;
+            z = rx.next();
+        }
+        return r;
     }
 
     private Index ceiling(double x) {
-        Iterator<Index> r = after(x);
+        Iterator<Index> r = allAfter(x);
         return r.hasNext() ? r.next() : null;
     }
 
@@ -122,23 +131,36 @@ public class ArrayDigest extends TDigest {
                 } else {
                     // if the nearest point was not unique, then we may not be modifying the first copy
                     // which means that ordering can change
+                    int weight = count(closest) + w;
                     double center = mean(closest);
-                    int weight = count(closest);
-                    List<Double> history = history(closest);
-
-                    delete(closest);
-
-                    if (history != null) {
-                        history.add(x);
-                    }
-                    weight += w;
                     center = center + (x - center) / weight;
 
-                    addRaw(center, weight, history);
+                    if (mean(increment(closest, -1)) <= center && mean(increment(closest, 1)) >= center) {
+                        // if order doesn't change, we can short-cut the process
+                        Page p = data.get(closest.page);
+                        p.counts[closest.subPage] = weight;
+                        p.centroids[closest.subPage] = center;
+
+                        p.totalCount += w;
+                        totalWeight += w;
+                        if (p.history != null && p.history.get(closest.subPage) != null) {
+                            p.history.get(closest.subPage).add(x);
+                        }
+                    } else {
+                        delete(closest);
+
+                        List<Double> history = history(closest);
+                        if (history != null) {
+                            history.add(x);
+                        }
+
+                        addRaw(center, weight, history);
+                    }
+
                 }
             }
 
-            if (data.size() > 100 * compression) {
+            if (centroidCount > 100 * compression) {
                 // something such as sequential ordering of data points
                 // has caused a pathological expansion of our summary.
                 // To fight this, we simply replay the current centroids
@@ -151,15 +173,14 @@ public class ArrayDigest extends TDigest {
     }
 
     private List<Double> history(Index index) {
-        return data.get(index.page).history.get(index.subPage);
+        List<List<Double>> h = data.get(index.page).history;
+        return h == null ? null : h.get(index.subPage);
     }
 
     private void delete(Index index) {
-        // don't want to delete empty pages here because other indexes would be screwed
+        // don't want to delete empty pages here because other indexes would be screwed up.
         // this should almost never happen anyway since deletes only cause small ordering
         // changes
-        totalWeight -= count(index);
-        centroidCount--;
         data.get(index.page).delete(index.subPage);
     }
 
@@ -222,12 +243,10 @@ public class ArrayDigest extends TDigest {
     }
 
     public void addRaw(double x, int w, List<Double> history) {
-        if (data.size() == 0) {
+        if (centroidCount == 0) {
             Page page = new Page();
             page.add(x, w, history);
             data.add(page);
-            totalWeight += w;
-            centroidCount++;
         } else {
             for (int i = 1; i < data.size(); i++) {
                 if (data.get(i).centroids[0] > x) {
@@ -235,8 +254,6 @@ public class ArrayDigest extends TDigest {
                     if (newPage != null) {
                         data.add(i, newPage);
                     }
-                    totalWeight += w;
-                    centroidCount++;
                     return;
                 }
             }
@@ -244,8 +261,6 @@ public class ArrayDigest extends TDigest {
             if (newPage != null) {
                 data.add(data.size(), newPage);
             }
-            totalWeight += w;
-            centroidCount++;
         }
     }
 
@@ -403,7 +418,7 @@ public class ArrayDigest extends TDigest {
         return r;
     }
 
-    public Iterator<Index> after(double x) {
+    public Iterator<Index> allAfter(double x) {
         if (data.size() == 0) {
             return iterator(0, 0);
         } else {
@@ -486,7 +501,7 @@ public class ArrayDigest extends TDigest {
      * @param x The upper bound of all returned elements
      * @return An iterator that returns elements in non-increasing order.
      */
-    public Iterator<Index> before(double x) {
+    public Iterator<Index> allBefore(double x) {
         if (data.size() == 0) {
             return iterator(0, 0);
         } else {
@@ -509,6 +524,22 @@ public class ArrayDigest extends TDigest {
             }
             return reverse(data.size(), -1);
         }
+    }
+
+    public Index increment(Index x, int delta) {
+        int i = x.page;
+        int j = x.subPage + delta;
+
+        while (i < data.size() && j >= data.get(i).active) {
+            j -= data.get(i).active;
+            i++;
+        }
+
+        while (i > 0 && j < 0) {
+            i--;
+            j += data.get(i).active;
+        }
+        return new Index(i, j);
     }
 
     private Iterator<Index> reverse(final int startPage, final int startSubPage) {
@@ -752,17 +783,18 @@ public class ArrayDigest extends TDigest {
                 }
                 centroids[i] = x;
                 counts[i] = w;
-                active++;
-                totalCount += w;
             } else {
                 centroids[active] = x;
                 counts[active] = w;
                 if (this.history != null) {
                     this.history.add(history);
                 }
-                active++;
-                totalCount += w;
             }
+            active++;
+            totalCount += w;
+
+            ArrayDigest.this.totalWeight += w;
+            ArrayDigest.this.centroidCount++;
         }
 
         private Page split() {
@@ -795,10 +827,13 @@ public class ArrayDigest extends TDigest {
             if (i != active - 1) {
                 System.arraycopy(centroids, i + 1, centroids, i, active - i - 1);
                 System.arraycopy(counts, i + 1, counts, i, active - i - 1);
-                history.remove(i);
+                if (history != null) {
+                    history.remove(i);
+                }
             }
             active--;
             totalCount -= w;
+            ArrayDigest.this.totalWeight -= w;
             centroidCount--;
         }
     }
