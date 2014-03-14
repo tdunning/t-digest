@@ -255,43 +255,45 @@ public class ArrayDigestTest extends TDigestTest {
             }
         };
 
-        TDigest dist = new ArrayDigest(32, (double) 1000);
-        List<Double> data = Lists.newArrayList();
-        for (int i1 = 0; i1 < 100000; i1++) {
-            data.add(mix.nextDouble());
-        }
+        for (int run = 0; run < 3 * repeats(); run++) {
+            TDigest dist = new ArrayDigest(32, (double) 1000);
+            List<Double> data = Lists.newArrayList();
+            for (int i1 = 0; i1 < 100000; i1++) {
+                data.add(mix.nextDouble());
+            }
 
-        long t0 = System.nanoTime();
-        for (double x: data) {
-            dist.add(x);
-        }
-        dist.compress();
+            long t0 = System.nanoTime();
+            for (double x : data) {
+                dist.add(x);
+            }
+            dist.compress();
 
-        System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 100000);
-        System.out.printf("# %d centroids\n", dist.centroidCount());
+            System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 100000);
+            System.out.printf("# %d centroids\n", dist.centroidCount());
 
-        // I would be happier with 5x compression, but repeated values make things kind of weird
-        assertTrue(String.format("Summary is too large, got %d, wanted < %.1f", dist.centroidCount(), 10 * 1000.0), dist.centroidCount() < 10 * (double) 1000);
+            // I would be happier with 5x compression, but repeated values make things kind of weird
+            assertTrue(String.format("Summary is too large, got %d, wanted < %.1f", dist.centroidCount(), 10 * 1000.0), dist.centroidCount() < 10 * (double) 1000);
 
-        // all quantiles should round to nearest actual value
-        for (int i = 0; i < 10; i++) {
-            double z = i / 10.0;
-            // we skip over troublesome points that are nearly halfway between
-            for (double delta : new double[]{0.01, 0.02, 0.03, 0.07, 0.08, 0.09}) {
-                double q = z + delta;
-                double cdf = dist.cdf(q);
-                // we also relax the tolerances for repeated values
-                assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f", z, q, cdf), z + 0.05, cdf, 0.01);
+            // all quantiles should round to nearest actual value
+            for (int i = 0; i < 10; i++) {
+                double z = i / 10.0;
+                // we skip over troublesome points that are nearly halfway between
+                for (double delta : new double[]{0.01, 0.02, 0.03, 0.07, 0.08, 0.09}) {
+                    double q = z + delta;
+                    double cdf = dist.cdf(q);
+                    // we also relax the tolerances for repeated values
+                    assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f", z, q, cdf), z + 0.05, cdf, 0.01);
 
-                double estimate = dist.quantile(q);
-                assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f, estimate = %.3f", z, q, cdf, estimate), Math.rint(q * 10) / 10.0, estimate, 0.001);
+                    double estimate = dist.quantile(q);
+                    assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f, estimate = %.3f", z, q, cdf, estimate), Math.rint(q * 10) / 10.0, estimate, 0.001);
+                }
             }
         }
     }
 
     @Test
     public void testSequentialPoints() {
-        for (int i = 0; i < repeats(); i++) {
+        for (int i = 0; i < 3 * repeats(); i++) {
             runTest(factory, new AbstractContinousDistribution() {
                 double base = 0;
 

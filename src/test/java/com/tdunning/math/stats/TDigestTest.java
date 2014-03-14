@@ -253,10 +253,15 @@ public class TDigestTest {
             data.add(x);
         }
         long t0 = System.nanoTime();
+        int sumW = 0;
         for (double x : data) {
             dist.add(x);
+            sumW++;
+            assertEquals(String.format("Lost count at %d", sumW), sumW, dist.size());
         }
         dist.compress();
+        System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 100000);
+        System.out.printf("# %d centroids\n", dist.centroidCount());
         Collections.sort(data);
 
         double[] xValues = qValues.clone();
@@ -275,9 +280,8 @@ public class TDigestTest {
             qz += centroid.count();
             iz++;
         }
-
-        System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 100000);
-        System.out.printf("# %d centroids\n", dist.centroidCount());
+        assertEquals(qz, dist.size(), 1e-10);
+        assertEquals(iz, dist.centroidCount());
 
         assertTrue(String.format("Summary is too large (got %d, wanted < %.1f)", dist.centroidCount(), 11 * sizeGuide), dist.centroidCount() < 11 * sizeGuide);
         int softErrors = 0;

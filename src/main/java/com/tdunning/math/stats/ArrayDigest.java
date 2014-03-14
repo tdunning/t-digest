@@ -181,6 +181,8 @@ public class ArrayDigest extends TDigest {
         // don't want to delete empty pages here because other indexes would be screwed up.
         // this should almost never happen anyway since deletes only cause small ordering
         // changes
+        totalWeight -= count(index);
+        centroidCount--;
         data.get(index.page).delete(index.subPage);
     }
 
@@ -244,13 +246,17 @@ public class ArrayDigest extends TDigest {
 
     public void addRaw(double x, int w, List<Double> history) {
         if (centroidCount == 0) {
-            Page page = new Page();
+            Page page = new Page(pageSize, recordAllData);
             page.add(x, w, history);
+            totalWeight += w;
+            centroidCount++;
             data.add(page);
         } else {
             for (int i = 1; i < data.size(); i++) {
                 if (data.get(i).centroids[0] > x) {
                     Page newPage = data.get(i - 1).add(x, w, history);
+                    totalWeight += w;
+                    centroidCount++;
                     if (newPage != null) {
                         data.add(i, newPage);
                     }
@@ -258,6 +264,8 @@ public class ArrayDigest extends TDigest {
                 }
             }
             Page newPage = data.get(data.size() - 1).add(x, w, history);
+            totalWeight += w;
+            centroidCount++;
             if (newPage != null) {
                 data.add(data.size(), newPage);
             }
@@ -734,15 +742,26 @@ public class ArrayDigest extends TDigest {
         }
     }
 
-    private class Page {
+    private static class Page {
+        private final boolean recordAllData;
+        private final int pageSize;
+
         int totalCount;
         int active;
-        double[] centroids = new double[pageSize];
-        int[] counts = new int[pageSize];
-        List<List<Double>> history = recordAllData ? new ArrayList<List<Double>>() : null;
+        double[] centroids;
+        int[] counts;
+        List<List<Double>> history;
+
+        private Page(int pageSize, boolean recordAllData) {
+            this.pageSize = pageSize;
+            this.recordAllData = recordAllData;
+            centroids = new double[this.pageSize];
+            counts = new int[this.pageSize];
+            history = this.recordAllData ? new ArrayList<List<Double>>() : null;
+        }
 
         public Page add(double x, int w, List<Double> history) {
-            for (int i = 0; i < pageSize; i++) {
+            for (int i = 0; i < active; i++) {
                 if (centroids[i] >= x) {
                     // insert at i
                     if (active >= pageSize) {
@@ -792,13 +811,10 @@ public class ArrayDigest extends TDigest {
             }
             active++;
             totalCount += w;
-
-            ArrayDigest.this.totalWeight += w;
-            ArrayDigest.this.centroidCount++;
         }
 
         private Page split() {
-            Page newPage = new Page();
+            Page newPage = new Page(pageSize, recordAllData);
             System.arraycopy(centroids, 16, newPage.centroids, 0, pageSize / 2);
             System.arraycopy(counts, 16, newPage.counts, 0, pageSize / 2);
             if (history != null) {
@@ -833,8 +849,6 @@ public class ArrayDigest extends TDigest {
             }
             active--;
             totalCount -= w;
-            ArrayDigest.this.totalWeight -= w;
-            centroidCount--;
         }
     }
 
