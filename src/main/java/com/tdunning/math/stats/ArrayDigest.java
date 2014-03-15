@@ -28,7 +28,9 @@ import java.util.NoSuchElementException;
  * Array based implementation of a TDigest.
  * <p/>
  * This implementation is essentially a one-level b-tree in which nodes are collected into
- * pages typically with 32 values per page.
+ * pages typically with 32 values per page.  Commonly, an ArrayDigest contains 500-3000
+ * centroids.  With 32 values per page, we have about 32 values per page and about 30 pages
+ * which seems to give a nice balance for speed.  Sizes from 4 to 100 are plausible, however.
  */
 public class ArrayDigest extends TDigest {
     private final int pageSize;
@@ -45,25 +47,6 @@ public class ArrayDigest extends TDigest {
         } else {
             throw new IllegalArgumentException("Must have page size of 4 or more");
         }
-    }
-
-    Index floor(double x) {
-        Iterator<Index> rx = allBefore(x);
-        if (!rx.hasNext()) {
-            return null;
-        }
-        Index r = rx.next();
-        Index z = r;
-        while (rx.hasNext() && mean(z) == x) {
-            r = z;
-            z = rx.next();
-        }
-        return r;
-    }
-
-    private Index ceiling(double x) {
-        Iterator<Index> r = allAfter(x);
-        return r.hasNext() ? r.next() : null;
     }
 
     @Override
@@ -172,25 +155,7 @@ public class ArrayDigest extends TDigest {
         }
     }
 
-    private List<Double> history(Index index) {
-        List<List<Double>> h = data.get(index.page).history;
-        return h == null ? null : h.get(index.subPage);
-    }
-
-    private void delete(Index index) {
-        // don't want to delete empty pages here because other indexes would be screwed up.
-        // this should almost never happen anyway since deletes only cause small ordering
-        // changes
-        totalWeight -= count(index);
-        centroidCount--;
-        data.get(index.page).delete(index.subPage);
-    }
-
-    private int count(Index index) {
-        return data.get(index.page).counts[index.subPage];
-    }
-
-    int headSum(Index limit) {
+    public int headSum(Index limit) {
         int r = 0;
 
         for (int i = 0; limit != null && i < limit.page; i++) {
@@ -204,10 +169,6 @@ public class ArrayDigest extends TDigest {
         }
 
         return r;
-    }
-
-    double mean(Index index) {
-        return data.get(index.page).centroids[index.subPage];
     }
 
     /**
@@ -229,52 +190,12 @@ public class ArrayDigest extends TDigest {
         return r;
     }
 
-    private Iterable<Index> inclusiveTail(final Index start) {
-        return new Iterable<Index>() {
-            @Override
-            public Iterator<Index> iterator() {
-                return ArrayDigest.this.iterator(start.page, start.subPage);
-            }
-        };
+    public double mean(Index index) {
+        return data.get(index.page).centroids[index.subPage];
     }
 
-    public void addRaw(double x, int w) {
-        List<Double> tmp = new ArrayList<>();
-        tmp.add(x);
-        addRaw(x, w, recordAllData ? tmp : null);
-    }
-
-    public void addRaw(double x, int w, List<Double> history) {
-        if (centroidCount == 0) {
-            Page page = new Page(pageSize, recordAllData);
-            page.add(x, w, history);
-            totalWeight += w;
-            centroidCount++;
-            data.add(page);
-        } else {
-            for (int i = 1; i < data.size(); i++) {
-                if (data.get(i).centroids[0] > x) {
-                    Page newPage = data.get(i - 1).add(x, w, history);
-                    totalWeight += w;
-                    centroidCount++;
-                    if (newPage != null) {
-                        data.add(i, newPage);
-                    }
-                    return;
-                }
-            }
-            Page newPage = data.get(data.size() - 1).add(x, w, history);
-            totalWeight += w;
-            centroidCount++;
-            if (newPage != null) {
-                data.add(data.size(), newPage);
-            }
-        }
-    }
-
-    @Override
-    void add(double x, int w, Centroid base) {
-        addRaw(x, w, base.data());
+    public int count(Index index) {
+        return data.get(index.page).counts[index.subPage];
     }
 
     @Override
@@ -453,54 +374,28 @@ public class ArrayDigest extends TDigest {
         }
     }
 
-    private Iterator<Index> iterator(final int startPage, final int startSubPage) {
-        return new Iterator<Index>() {
-            int page = startPage;
-            int subPage = startSubPage;
-            Index end = new Index(-1, -1);
-            Index next = null;
+    /**
+     * Returns a cursor pointing to the first element <= x.  Exposed only for testing.
+     * @param x The value used to find the cursor.
+     * @return The cursor.
+     */
+    public Index floor(double x) {
+        Iterator<Index> rx = allBefore(x);
+        if (!rx.hasNext()) {
+            return null;
+        }
+        Index r = rx.next();
+        Index z = r;
+        while (rx.hasNext() && mean(z) == x) {
+            r = z;
+            z = rx.next();
+        }
+        return r;
+    }
 
-            @Override
-            public boolean hasNext() {
-                if (next == null) {
-                    next = computeNext();
-                }
-                return next != end;
-            }
-
-            @Override
-            public Index next() {
-                if (hasNext()) {
-                    Index r = next;
-                    next = null;
-                    return r;
-                } else {
-                    throw new NoSuchElementException("Can't iterate past end of data");
-                }
-            }
-
-            @Override
-            public void remove() {
-                throw new UnsupportedOperationException("Default operation");
-            }
-
-            protected Index computeNext() {
-                if (page >= data.size()) {
-                    return end;
-                } else {
-                    Page current = data.get(page);
-                    if (subPage >= current.active) {
-                        subPage = 0;
-                        page++;
-                        return computeNext();
-                    } else {
-                        Index r = new Index(page, subPage);
-                        subPage++;
-                        return r;
-                    }
-                }
-            }
-        };
+    public Index ceiling(double x) {
+        Iterator<Index> r = allAfter(x);
+        return r.hasNext() ? r.next() : null;
     }
 
     /**
@@ -550,62 +445,11 @@ public class ArrayDigest extends TDigest {
         return new Index(i, j);
     }
 
-    private Iterator<Index> reverse(final int startPage, final int startSubPage) {
-        return new Iterator<Index>() {
-            int page = startPage;
-            int subPage = startSubPage;
-
-            Index end = new Index(-1, -1);
-            Index next = null;
-
-            @Override
-            public boolean hasNext() {
-                if (next == null) {
-                    next = computeNext();
-                }
-                return next != end;
-            }
-
-            @Override
-            public Index next() {
-                if (hasNext()) {
-                    Index r = next;
-                    next = null;
-                    return r;
-                } else {
-                    throw new NoSuchElementException("Can't reverse iterate before beginning of data");
-                }
-            }
-
-            @Override
-            public void remove() {
-                throw new UnsupportedOperationException("Default operation");
-            }
-
-            protected Index computeNext() {
-                if (page < 0) {
-                    return end;
-                } else {
-                    if (subPage < 0) {
-                        page--;
-                        if (page >= 0) {
-                            subPage = data.get(page).active - 1;
-                        }
-                        return computeNext();
-                    } else {
-                        Index r = new Index(page, subPage);
-                        subPage--;
-                        return r;
-                    }
-                }
-            }
-        };
-    }
-
     @Override
     public double compression() {
         return compression;
     }
+
     /**
      * Returns an upper bound on the number bytes that will be required to represent this histogram.
      */
@@ -625,11 +469,6 @@ public class ArrayDigest extends TDigest {
         asSmallBytes(buf);
         return buf.position();
     }
-
-    public final static int VERBOSE_ENCODING = 1;
-    public final static int SMALL_ENCODING = 2;
-    public final static int VERBOSE_ARRAY_DIGEST = 3;
-    public final static int SMALL_ARRAY_DIGEST = 4;
 
     /**
      * Outputs a histogram as bytes using a particularly cheesy encoding.
@@ -724,6 +563,175 @@ public class ArrayDigest extends TDigest {
             throw new IllegalStateException("Invalid format for serialized histogram");
         }
     }
+
+    private List<Double> history(Index index) {
+        List<List<Double>> h = data.get(index.page).history;
+        return h == null ? null : h.get(index.subPage);
+    }
+
+    private void delete(Index index) {
+        // don't want to delete empty pages here because other indexes would be screwed up.
+        // this should almost never happen anyway since deletes only cause small ordering
+        // changes
+        totalWeight -= count(index);
+        centroidCount--;
+        data.get(index.page).delete(index.subPage);
+    }
+
+    private Iterable<Index> inclusiveTail(final Index start) {
+        return new Iterable<Index>() {
+            @Override
+            public Iterator<Index> iterator() {
+                return ArrayDigest.this.iterator(start.page, start.subPage);
+            }
+        };
+    }
+
+    void addRaw(double x, int w) {
+        List<Double> tmp = new ArrayList<>();
+        tmp.add(x);
+        addRaw(x, w, recordAllData ? tmp : null);
+    }
+
+    void addRaw(double x, int w, List<Double> history) {
+        if (centroidCount == 0) {
+            Page page = new Page(pageSize, recordAllData);
+            page.add(x, w, history);
+            totalWeight += w;
+            centroidCount++;
+            data.add(page);
+        } else {
+            for (int i = 1; i < data.size(); i++) {
+                if (data.get(i).centroids[0] > x) {
+                    Page newPage = data.get(i - 1).add(x, w, history);
+                    totalWeight += w;
+                    centroidCount++;
+                    if (newPage != null) {
+                        data.add(i, newPage);
+                    }
+                    return;
+                }
+            }
+            Page newPage = data.get(data.size() - 1).add(x, w, history);
+            totalWeight += w;
+            centroidCount++;
+            if (newPage != null) {
+                data.add(data.size(), newPage);
+            }
+        }
+    }
+
+    @Override
+    void add(double x, int w, Centroid base) {
+        addRaw(x, w, base.data());
+    }
+
+    private Iterator<Index> iterator(final int startPage, final int startSubPage) {
+        return new Iterator<Index>() {
+            int page = startPage;
+            int subPage = startSubPage;
+            Index end = new Index(-1, -1);
+            Index next = null;
+
+            @Override
+            public boolean hasNext() {
+                if (next == null) {
+                    next = computeNext();
+                }
+                return next != end;
+            }
+
+            @Override
+            public Index next() {
+                if (hasNext()) {
+                    Index r = next;
+                    next = null;
+                    return r;
+                } else {
+                    throw new NoSuchElementException("Can't iterate past end of data");
+                }
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException("Default operation");
+            }
+
+            protected Index computeNext() {
+                if (page >= data.size()) {
+                    return end;
+                } else {
+                    Page current = data.get(page);
+                    if (subPage >= current.active) {
+                        subPage = 0;
+                        page++;
+                        return computeNext();
+                    } else {
+                        Index r = new Index(page, subPage);
+                        subPage++;
+                        return r;
+                    }
+                }
+            }
+        };
+    }
+
+    private Iterator<Index> reverse(final int startPage, final int startSubPage) {
+        return new Iterator<Index>() {
+            int page = startPage;
+            int subPage = startSubPage;
+
+            Index end = new Index(-1, -1);
+            Index next = null;
+
+            @Override
+            public boolean hasNext() {
+                if (next == null) {
+                    next = computeNext();
+                }
+                return next != end;
+            }
+
+            @Override
+            public Index next() {
+                if (hasNext()) {
+                    Index r = next;
+                    next = null;
+                    return r;
+                } else {
+                    throw new NoSuchElementException("Can't reverse iterate before beginning of data");
+                }
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException("Default operation");
+            }
+
+            protected Index computeNext() {
+                if (page < 0) {
+                    return end;
+                } else {
+                    if (subPage < 0) {
+                        page--;
+                        if (page >= 0) {
+                            subPage = data.get(page).active - 1;
+                        }
+                        return computeNext();
+                    } else {
+                        Index r = new Index(page, subPage);
+                        subPage--;
+                        return r;
+                    }
+                }
+            }
+        };
+    }
+
+    public final static int VERBOSE_ENCODING = 1;
+    public final static int SMALL_ENCODING = 2;
+    public final static int VERBOSE_ARRAY_DIGEST = 3;
+    public final static int SMALL_ARRAY_DIGEST = 4;
 
     class Index {
         final int page, subPage;
@@ -851,6 +859,4 @@ public class ArrayDigest extends TDigest {
             totalCount -= w;
         }
     }
-
-
 }

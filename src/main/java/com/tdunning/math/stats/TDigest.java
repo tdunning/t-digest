@@ -46,6 +46,29 @@ public abstract class TDigest {
     protected Random gen = new Random();
     protected boolean recordAllData = false;
 
+    /**
+     * Creates an ArrayDigest with default word size.
+     *
+     * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
+     *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
+     * @return the ArrayDigest
+     */
+    public static TDigest createArrayDigest(double compression) {
+        return new ArrayDigest(32, compression);
+    }
+
+    /**
+     * Creates a TreeDigest.  Going forward, ArrayDigests should be preferred to the TreeDigest since they are
+     * uniformly faster and require less memory while producing nearly identical results.
+     *
+     * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
+     *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
+     * @return the TreeDigest
+     */
+    public static TDigest createTreeDigest(double compression) {
+        return new TreeDigest(compression);
+    }
+
     public static double interpolate(double x, double x0, double x1) {
         return (x - x0) / (x1 - x0);
     }
