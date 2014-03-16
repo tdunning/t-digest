@@ -124,7 +124,7 @@ public class TDigestTest {
                         }
 
                         // now merge the sub-digests
-                        TDigest dist2 = TDigest.merge(subs, gen, factory.create());
+                        TDigest dist2 = AbstractTDigest.merge(subs, gen, factory.create());
 
                         // verify the merged result has the right data
                         List<Double> data3 = Lists.newArrayList();

@@ -51,14 +51,14 @@ public class ArrayDigestTest extends TDigestTest {
     private DigestFactory<ArrayDigest> factory = new DigestFactory<ArrayDigest>() {
         @Override
         public ArrayDigest create() {
-            return new ArrayDigest(32, 100);
+            return TDigest.createArrayDigest(100);
         }
     };
 
     @Test
     public void testBadPage() {
         try {
-            new ArrayDigest(3, 100);
+            TDigest.createArrayDigest(3, 100);
             fail("Should have caught bad page size");
         } catch (IllegalArgumentException e) {
             assertTrue(e.getMessage().startsWith("Must have page size"));
@@ -402,13 +402,13 @@ public class ArrayDigestTest extends TDigestTest {
             int n = gen.nextInt();
             n = n >>> (i / 100);
             ref.add(n);
-            TDigest.encode(buf, n);
+            AbstractTDigest.encode(buf, n);
         }
 
         buf.flip();
 
         for (int i = 0; i < 3000; i++) {
-            int n = TDigest.decode(buf);
+            int n = AbstractTDigest.decode(buf);
             assertEquals(String.format("%d:", i), ref.get(i).intValue(), n);
         }
     }

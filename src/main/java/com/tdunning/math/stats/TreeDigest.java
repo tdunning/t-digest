@@ -43,7 +43,7 @@ import java.util.Random;
  * <p/>
  * g) easy to adapt for use with map-reduce
  */
-public class TreeDigest extends TDigest {
+public class TreeDigest extends AbstractTDigest {
 
     private double compression = 100;
     private GroupTree summary = new GroupTree();

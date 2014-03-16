@@ -32,7 +32,7 @@ import java.util.NoSuchElementException;
  * centroids.  With 32 values per page, we have about 32 values per page and about 30 pages
  * which seems to give a nice balance for speed.  Sizes from 4 to 100 are plausible, however.
  */
-public class ArrayDigest extends TDigest {
+public class ArrayDigest extends AbstractTDigest {
     private final int pageSize;
 
     private List<Page> data = new ArrayList<>();
@@ -252,7 +252,7 @@ public class ArrayDigest extends TDigest {
             // scan to next to last element
             while (it.hasNext()) {
                 if (x < a.mean() + right) {
-                    return (r + a.count() * TDigest.interpolate(x, a.mean() - left, a.mean() + right)) / totalWeight;
+                    return (r + a.count() * AbstractTDigest.interpolate(x, a.mean() - left, a.mean() + right)) / totalWeight;
                 }
                 r += a.count();
 
@@ -267,7 +267,7 @@ public class ArrayDigest extends TDigest {
             left = right;
             a = b;
             if (x < a.mean() + right) {
-                return (r + a.count() * TDigest.interpolate(x, a.mean() - left, a.mean() + right)) / totalWeight;
+                return (r + a.count() * AbstractTDigest.interpolate(x, a.mean() - left, a.mean() + right)) / totalWeight;
             } else {
                 return 1;
             }

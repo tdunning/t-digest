@@ -241,13 +241,13 @@ public class TreeDigestTest extends TDigestTest {
             int n = gen.nextInt();
             n = n >>> (i / 100);
             ref.add(n);
-            TDigest.encode(buf, n);
+            AbstractTDigest.encode(buf, n);
         }
 
         buf.flip();
 
         for (int i = 0; i < 3000; i++) {
-            int n = TDigest.decode(buf);
+            int n = AbstractTDigest.decode(buf);
             assertEquals(String.format("%d:", i), ref.get(i).intValue(), n);
         }
     }

@@ -18,10 +18,6 @@
 package com.tdunning.math.stats;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
 
 /**
  * Adaptive histogram based on something like streaming k-means crossed with Q-digest.
@@ -43,18 +39,27 @@ import java.util.Random;
  * g) easy to adapt for use with map-reduce
  */
 public abstract class TDigest {
-    protected Random gen = new Random();
-    protected boolean recordAllData = false;
-
     /**
-     * Creates an ArrayDigest with default word size.
+     * Creates an ArrayDigest with default page size.
      *
      * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
      *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
      * @return the ArrayDigest
      */
-    public static TDigest createArrayDigest(double compression) {
+    public static ArrayDigest createArrayDigest(double compression) {
         return new ArrayDigest(32, compression);
+    }
+
+    /**
+     * Creates an ArrayDigest with specified page size.
+     *
+     * @param pageSize    The internal page size to use.  This should be about sqrt(10*compression)
+     * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
+     *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
+     * @return the ArrayDigest
+     */
+    public static ArrayDigest createArrayDigest(int pageSize, double compression) {
+        return new ArrayDigest(pageSize, compression);
     }
 
     /**
@@ -69,39 +74,6 @@ public abstract class TDigest {
         return new TreeDigest(compression);
     }
 
-    public static double interpolate(double x, double x0, double x1) {
-        return (x - x0) / (x1 - x0);
-    }
-
-    public static void encode(ByteBuffer buf, int n) {
-        int k = 0;
-        while (n < 0 || n > 0x7f) {
-            byte b = (byte) (0x80 | (0x7f & n));
-            buf.put(b);
-            n = n >>> 7;
-            k++;
-            if (k >= 6) {
-                throw new IllegalStateException("Size is implausibly large");
-            }
-        }
-        buf.put((byte) n);
-    }
-
-    public static int decode(ByteBuffer buf) {
-        int v = buf.get();
-        int z = 0x7f & v;
-        int shift = 7;
-        while ((v & 0x80) != 0) {
-            if (shift > 28) {
-                throw new IllegalStateException("Shift too large in decode");
-            }
-            v = buf.get();
-            z += (v & 0x7f) << shift;
-            shift += 7;
-        }
-        return z;
-    }
-
     /**
      * Adds a sample to a histogram.
      *
@@ -110,96 +82,113 @@ public abstract class TDigest {
      */
     public abstract void add(double x, int w);
 
-    abstract void add(double x, int w, Centroid base);
-
-    protected static TDigest merge(Iterable<TDigest> subData, Random gen, TDigest r) {
-        List<Centroid> centroids = new ArrayList<>();
-        boolean recordAll = false;
-        for (TDigest digest : subData) {
-            for (Centroid centroid : digest.centroids()) {
-                centroids.add(centroid);
-            }
-            recordAll |= digest.isRecording();
-        }
-        Collections.shuffle(centroids, gen);
-        if (recordAll) {
-            r.recordAllData();
-        }
-
-        for (Centroid c : centroids) {
-            if (r.recordAllData) {
-                // TODO should do something better here.
-            }
-            r.add(c.mean(), c.count(), c);
-        }
-        return r;
-    }
-
-    abstract void compress();
-
-    abstract void compress(GroupTree other);
-
-    abstract int size();
-
-    abstract double cdf(double x);
-
-    abstract double quantile(double q);
-
-    public static double quantile(double previousIndex, double index, double nextIndex, double previousMean, double nextMean) {
-        final double delta = nextIndex - previousIndex;
-        final double previousWeight = (nextIndex - index) / delta;
-        final double nextWeight = (index - previousIndex) / delta;
-        return previousMean * previousWeight + nextMean * nextWeight;
-    }
-
-    abstract int centroidCount();
-
-    abstract Iterable<? extends Centroid> centroids();
-
-    abstract double compression();
-
-    abstract int byteSize();
-
-    abstract int smallByteSize();
-
-    abstract void asBytes(ByteBuffer buf);
-
-    abstract void asSmallBytes(ByteBuffer buf);
-
     /**
-     * Sets up so that all centroids will record all data assigned to them.  For testing only, really.
+     * Re-examines a t-digest to determine whether some centroids are redundant.  If your data are
+     * perversely ordered, this may be a good idea.  Even if not, this may save 20% or so in space.
+     * <p/>
+     * The cost is roughly the same as adding as many data points as there are centroids.  This
+     * is typically < 10 * compression, but could be as high as 100 * compression.
+     * <p/>
+     * This is a destructive operation that is not thread-safe.
      */
-    public TDigest recordAllData() {
-        recordAllData = true;
-        return this;
-    }
-
-    public boolean isRecording() {
-        return recordAllData;
-    }
+    public abstract void compress();
 
     /**
-     * Adds a sample to a histogram.
+     * Returns the number of points that have been added to this TDigest.
      *
-     * @param x The value to add.
+     * @return The sum of the weights on all centroids.
      */
-    public void add(double x) {
-        add(x, 1);
-    }
+    public abstract int size();
 
-    public void add(TDigest other) {
-        List<Centroid> tmp = new ArrayList<>();
-        for (Centroid centroid : other.centroids()) {
-            tmp.add(centroid);
-        }
+    /**
+     * Returns the fraction of all points added which are <= x.
+     */
+    public abstract double cdf(double x);
 
-        Collections.shuffle(tmp, gen);
-        for (Centroid centroid : tmp) {
-            add(centroid.mean(), centroid.count(), centroid);
-        }
-    }
+    /**
+     * Returns an estimate of the cutoff such that a specified fraction of the data
+     * added to this TDigest would be less than or equal to the cutoff.
+     *
+     * @param q The desired fraction
+     * @return The value x such that cdf(x) == q
+     */
+    public abstract double quantile(double q);
 
-    protected Centroid createCentroid(double mean, int id) {
-        return new Centroid(mean, id, recordAllData);
-    }
+    /**
+     * The number of centroids currently in the TDigest.
+     *
+     * @return The number of centroids
+     */
+    public abstract int centroidCount();
+
+    /**
+     * An iterable that lets you go through the centroids in ascending order by mean.  Centroids
+     * returned will not be re-used, but may or may not share storage with this TDigest.
+     *
+     * @return The centroids in the form of an Iterable.
+     */
+    public abstract Iterable<? extends Centroid> centroids();
+
+    /**
+     * Returns the current compression factor.
+     *
+     * @return The compression factor originally used to set up the TDigest.
+     */
+    public abstract double compression();
+
+    /**
+     * Returns the number of bytes required to encode this TDigest using #asBytes().
+     *
+     * @return The number of bytes required.
+     */
+    public abstract int byteSize();
+
+    /**
+     * Returns the number of bytes required to encode this TDigest using #asSmallBytes().
+     *
+     * @return The number of bytes required.
+     */
+    public abstract int smallByteSize();
+
+    /**
+     * Serialize this TDigest into a byte buffer.  Note that the serialization used is
+     * very straightforward and is considerably larger than strictly necessary.
+     *
+     * @param buf The byte buffer into which the TDigest should be serialized.
+     */
+    public abstract void asBytes(ByteBuffer buf);
+
+    /**
+     * Serialize this TDigest into a byte buffer.  Some simple compression is used
+     * such as using variable byte representation to store the centroid weights and
+     * using delta-encoding on the centroid means so that floats can be reasonably
+     * used to store the centroid means.
+     *
+     * @param buf The byte buffer into which the TDigest should be serialized.
+     */
+    public abstract void asSmallBytes(ByteBuffer buf);
+
+    /**
+     * Tell this TDigest to record the original data as much as possible for test
+     * purposes.
+     *
+     * @return This TDigest so that configurations can be done in fluent style.
+     */
+    public abstract TDigest recordAllData();
+
+    public abstract boolean isRecording();
+
+    /**
+     * Add a sample to this TDigest.
+     *
+     * @param x The data value to add
+     */
+    public abstract void add(double x);
+
+    /**
+     * Add all of the centroids of another TDigest to this one.
+     *
+     * @param other The other TDigest
+     */
+    public abstract void add(TDigest other);
 }
