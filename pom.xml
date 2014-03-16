@@ -4,7 +4,7 @@
 
     <groupId>com.tdunning</groupId>
     <artifactId>t-digest</artifactId>
-    <version>2.0.1</version>
+    <version>2.1-SNAPSHOT</version>
 
     <packaging>jar</packaging>
     <name>T-Digest</name>
@@ -22,7 +22,7 @@
     <scm>
         <connection>scm:git:https://github.com/tdunning/t-digest.git</connection>
         <developerConnection>scm:git:https://github.com/tdunning/t-digest.git</developerConnection>
-        <tag>t-digest-2.0.1</tag>
+        <tag>HEAD</tag>
         <url>https://github.com/tdunning/t-digest</url>
     </scm>
 
