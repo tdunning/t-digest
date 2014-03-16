@@ -35,7 +35,7 @@ import java.util.NoSuchElementException;
 public class ArrayDigest extends AbstractTDigest {
     private final int pageSize;
 
-    private List<Page> data = new ArrayList<>();
+    private List<Page> data = new ArrayList<Page>();
     private int totalWeight = 0;
     private int centroidCount = 0;
     private double compression = 100;
@@ -204,7 +204,7 @@ public class ArrayDigest extends AbstractTDigest {
         if (recordAllData) {
             reduced.recordAllData();
         }
-        List<Index> tmp = new ArrayList<>();
+        List<Index> tmp = new ArrayList<Index>();
         Iterator<Index> ix = this.iterator(0, 0);
         while (ix.hasNext()) {
             tmp.add(ix.next());
@@ -331,7 +331,7 @@ public class ArrayDigest extends AbstractTDigest {
 
     @Override
     public Iterable<? extends Centroid> centroids() {
-        List<Centroid> r = new ArrayList<>();
+        List<Centroid> r = new ArrayList<Centroid>();
         Iterator<Index> ix = iterator(0, 0);
         while (ix.hasNext()) {
             Index index = ix.next();
@@ -588,7 +588,7 @@ public class ArrayDigest extends AbstractTDigest {
     }
 
     void addRaw(double x, int w) {
-        List<Double> tmp = new ArrayList<>();
+        List<Double> tmp = new ArrayList<Double>();
         tmp.add(x);
         addRaw(x, w, recordAllData ? tmp : null);
     }
@@ -826,10 +826,10 @@ public class ArrayDigest extends AbstractTDigest {
             System.arraycopy(centroids, 16, newPage.centroids, 0, pageSize / 2);
             System.arraycopy(counts, 16, newPage.counts, 0, pageSize / 2);
             if (history != null) {
-                newPage.history = new ArrayList<>();
+                newPage.history = new ArrayList<List<Double>>();
                 newPage.history.addAll(history.subList(pageSize / 2, pageSize));
 
-                List<List<Double>> tmp = new ArrayList<>();
+                List<List<Double>> tmp = new ArrayList<List<Double>>();
                 tmp.addAll(history.subList(0, pageSize / 2));
                 history = tmp;
             }

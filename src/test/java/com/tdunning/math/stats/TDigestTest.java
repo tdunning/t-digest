@@ -50,6 +50,7 @@ public class TDigestTest {
     protected static PrintWriter sizeDump;
     protected static PrintWriter errorDump;
     protected static PrintWriter deviationDump;
+
     @BeforeClass
     public static void setup() throws IOException {
         sizeDump = new PrintWriter(new FileWriter("sizes.csv"));
@@ -184,7 +185,7 @@ public class TDigestTest {
         // When there are few values in the tree, quantiles should be exact
         final Random r = RandomUtils.getRandom();
         final int length = r.nextInt(10);
-        final List<Double> values = new ArrayList<>();
+        final List<Double> values = new ArrayList<Double>();
         for (int i = 0; i < length; ++i) {
             final double value;
             if (i == 0 || r.nextBoolean()) {

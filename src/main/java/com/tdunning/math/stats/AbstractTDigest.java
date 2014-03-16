@@ -63,7 +63,7 @@ public abstract class AbstractTDigest extends TDigest {
     abstract void add(double x, int w, Centroid base);
 
     protected static TDigest merge(Iterable<TDigest> subData, Random gen, TDigest r) {
-        List<Centroid> centroids = new ArrayList<>();
+        List<Centroid> centroids = new ArrayList<Centroid>();
         boolean recordAll = false;
         for (TDigest digest : subData) {
             for (Centroid centroid : digest.centroids()) {
@@ -120,7 +120,7 @@ public abstract class AbstractTDigest extends TDigest {
 
     @Override
     public void add(TDigest other) {
-        List<Centroid> tmp = new ArrayList<>();
+        List<Centroid> tmp = new ArrayList<Centroid>();
         for (Centroid centroid : other.centroids()) {
             tmp.add(centroid);
         }

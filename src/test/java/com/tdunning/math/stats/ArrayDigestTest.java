@@ -416,36 +416,39 @@ public class ArrayDigestTest extends TDigestTest {
     @Test
     public void compareToQDigest() throws FileNotFoundException {
         Random rand = RandomUtils.getRandom();
-        try (PrintWriter out = new PrintWriter(new FileOutputStream("qd-array-comparison.csv"))) {
+        PrintWriter out = new PrintWriter(new FileOutputStream("qd-array-comparison.csv"));
+        try {
             out.printf("tag\tcompression\tq\te1\tcdf.vs.q\tsize\tqd.size\n");
 
             for (int i = 0; i < repeats(); i++) {
                 compareQD(out, new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
                 compareQD(out, new Uniform(0, 1, rand), "uniform", 1L << 48);
             }
+        } finally {
+            out.close();
         }
     }
 
     private void compareQD(PrintWriter out, AbstractContinousDistribution gen, String tag, long scale) throws FileNotFoundException {
-            for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000}) {
-                QDigest qd = new QDigest(compression);
-                TDigest dist = new ArrayDigest(32, compression);
-                List<Double> data = Lists.newArrayList();
-                for (int i = 0; i < 100000; i++) {
-                    double x = gen.nextDouble();
-                    dist.add(x);
-                    qd.offer((long) (x * scale));
-                    data.add(x);
-                }
-                dist.compress();
-                Collections.sort(data);
+        for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000}) {
+            QDigest qd = new QDigest(compression);
+            TDigest dist = new ArrayDigest(32, compression);
+            List<Double> data = Lists.newArrayList();
+            for (int i = 0; i < 100000; i++) {
+                double x = gen.nextDouble();
+                dist.add(x);
+                qd.offer((long) (x * scale));
+                data.add(x);
+            }
+            dist.compress();
+            Collections.sort(data);
 
-                for (double q : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99, 0.999}) {
-                    double x1 = dist.quantile(q);
-                    double x2 = (double) qd.getQuantile(q) / scale;
-                    double e1 = cdf(x1, data) - q;
-                    out.printf("%s\t%.0f\t%.8f\t%.10g\t%.10g\t%d\t%d\n", tag, compression, q, e1, cdf(x2, data) - q, dist.smallByteSize(), QDigest.serialize(qd).length);
-                }
+            for (double q : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99, 0.999}) {
+                double x1 = dist.quantile(q);
+                double x2 = (double) qd.getQuantile(q) / scale;
+                double e1 = cdf(x1, data) - q;
+                out.printf("%s\t%.0f\t%.8f\t%.10g\t%.10g\t%d\t%d\n", tag, compression, q, e1, cdf(x2, data) - q, dist.smallByteSize(), QDigest.serialize(qd).length);
+            }
         }
     }
 
@@ -453,11 +456,14 @@ public class ArrayDigestTest extends TDigestTest {
     public void compareToStreamingQuantile() throws FileNotFoundException {
         Random rand = RandomUtils.getRandom();
 
-        try (PrintWriter out = new PrintWriter(new FileOutputStream("sk-array-comparison.csv"))) {
+        PrintWriter out = new PrintWriter(new FileOutputStream("sk-array-comparison.csv"));
+        try {
             for (int i = 0; i < repeats(); i++) {
                 compareSQ(out, new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
                 compareSQ(out, new Uniform(0, 1, rand), "uniform", 1L << 48);
             }
+        } finally {
+            out.close();
         }
     }
 
@@ -537,7 +543,8 @@ public class ArrayDigestTest extends TDigestTest {
     public void testScaling() throws FileNotFoundException, InterruptedException, ExecutionException {
         final Random gen0 = RandomUtils.getRandom();
 
-        try (PrintWriter out = new PrintWriter(new FileOutputStream("error-scaling.tsv"))) {
+        PrintWriter out = new PrintWriter(new FileOutputStream("error-scaling.tsv"));
+        try {
             out.printf("pass\tcompression\tq\terror\tsize\n");
 
             Collection<Callable<String>> tasks = Lists.newArrayList();
@@ -585,6 +592,8 @@ public class ArrayDigestTest extends TDigestTest {
             for (Future<String> result : exec.invokeAll(tasks)) {
                 out.write(result.get());
             }
+        } finally {
+            out.close();
         }
     }
 

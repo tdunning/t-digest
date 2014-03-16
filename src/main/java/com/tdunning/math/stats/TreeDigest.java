@@ -156,7 +156,7 @@ public class TreeDigest extends AbstractTDigest {
         if (recordAllData) {
             reduced.recordAllData();
         }
-        List<Centroid> tmp = new ArrayList<>();
+        List<Centroid> tmp = new ArrayList<Centroid>();
         for (Centroid centroid : other) {
             tmp.add(centroid);
         }

@@ -255,12 +255,14 @@ public class TreeDigestTest extends TDigestTest {
     @Test
     public void compareToQDigest() throws FileNotFoundException {
         Random rand = RandomUtils.getRandom();
-        try (PrintWriter out = new PrintWriter(new FileOutputStream("qd-tree-comparison.csv"))) {
-
+        PrintWriter out = new PrintWriter(new FileOutputStream("qd-tree-comparison.csv"));
+        try {
             for (int i = 0; i < repeats(); i++) {
                 compareQD(out, new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
                 compareQD(out, new Uniform(0, 1, rand), "uniform", 1L << 48);
             }
+        } finally {
+            out.close();
         }
     }
 
@@ -292,14 +294,16 @@ public class TreeDigestTest extends TDigestTest {
     public void compareToStreamingQuantile() throws FileNotFoundException {
         Random rand = RandomUtils.getRandom();
 
-        try (PrintWriter out = new PrintWriter(new FileOutputStream("sq-tree-comparison.csv"))) {
+        PrintWriter out = new PrintWriter(new FileOutputStream("sq-tree-comparison.csv"));
+        try {
 
             for (int i = 0; i < repeats(); i++) {
                 compareSQ(out, new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
                 compareSQ(out, new Uniform(0, 1, rand), "uniform", 1L << 48);
             }
+        } finally {
+            out.close();
         }
-
     }
 
     private void compareSQ(PrintWriter out, AbstractContinousDistribution gen, String tag, long scale) {
@@ -378,7 +382,8 @@ public class TreeDigestTest extends TDigestTest {
     public void testScaling() throws FileNotFoundException, InterruptedException, ExecutionException {
         final Random gen0 = RandomUtils.getRandom();
 
-        try (PrintWriter out = new PrintWriter(new FileOutputStream("error-scaling.tsv"))) {
+        PrintWriter out = new PrintWriter(new FileOutputStream("error-scaling.tsv"));
+        try {
             out.printf("pass\tcompression\tq\terror\tsize\n");
 
             Collection<Callable<String>> tasks = Lists.newArrayList();
@@ -426,6 +431,8 @@ public class TreeDigestTest extends TDigestTest {
             for (Future<String> result : exec.invokeAll(tasks)) {
                 out.write(result.get());
             }
+        } finally {
+            out.close();
         }
     }
 

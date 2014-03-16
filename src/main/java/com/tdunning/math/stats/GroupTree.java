@@ -211,7 +211,7 @@ public class GroupTree implements Iterable<Centroid> {
     private Iterator<Centroid> iterator(final Centroid start) {
         return new Iterator<Centroid>() {
             {
-                stack = new ArrayDeque<>();
+                stack = new ArrayDeque<GroupTree>();
                 push(GroupTree.this, start);
             }
 
