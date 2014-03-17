@@ -1,0 +1,97 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.tdunning.math.stats;
+
+import static org.junit.Assert.assertEquals;
+
+import java.util.Random;
+
+import org.apache.mahout.common.RandomUtils;
+import org.junit.Before;
+import org.junit.Test;
+
+public class AVLGroupTreeTest {
+
+    @Before
+    public void setUp() {
+        RandomUtils.useTestSeed();
+    }
+
+    @Test
+    public void testSimpleAdds() {
+        AVLGroupTree x = new AVLGroupTree(false);
+        assertEquals(IntAVLTree.NIL, x.floor(34));
+        assertEquals(IntAVLTree.NIL, x.first());
+        assertEquals(0, x.size());
+        assertEquals(0, x.sum());
+
+        x.add(new Centroid(1));
+        assertEquals(1, x.sum());
+        Centroid centroid = new Centroid(2);
+        centroid.add(3, 1);
+        centroid.add(4, 1);
+        x.add(centroid);
+
+        assertEquals(2, x.size());
+        assertEquals(4, x.sum());
+    }
+
+    @Test
+    public void testBalancing() {
+        AVLGroupTree x = new AVLGroupTree(false);
+        for (int i = 0; i < 101; i++) {
+            x.add(new Centroid(i));
+        }
+
+        assertEquals(101, x.size());
+        assertEquals(101, x.sum());
+
+        x.checkBalance();
+        x.checkAggregates();
+    }
+
+    @Test
+    public void testFloor() {
+        // mostly tested in other tests
+        AVLGroupTree x = new AVLGroupTree(false);
+        for (int i = 0; i < 101; i++) {
+            x.add(new Centroid(i / 2));
+        }
+
+        assertEquals(IntAVLTree.NIL, x.floor(-30));
+
+        for (Centroid centroid : x) {
+            assertEquals(centroid.mean(), x.mean(x.floor(centroid.mean() + 0.1)), 0);
+        }
+    }
+
+    @Test
+    public void testHeadSum() {
+        Random gen = RandomUtils.getRandom();
+        AVLGroupTree x = new AVLGroupTree(false);
+        for (int i = 0; i < 1000; ++i) {
+            x.add(gen.nextDouble(), 1 + gen.nextInt(10), null);
+        }
+        long sum = 0;
+        for (int node = x.first(); node != IntAVLTree.NIL; node = x.next(node)) {
+            assertEquals(sum, x.headSum(node));
+            sum += x.count(node);
+        }
+    }
+
+}
