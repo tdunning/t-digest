@@ -51,7 +51,9 @@ public class ArrayDigestTest extends TDigestTest {
     private DigestFactory<ArrayDigest> factory = new DigestFactory<ArrayDigest>() {
         @Override
         public ArrayDigest create() {
-            return TDigest.createArrayDigest(100);
+            Random gen = RandomUtils.getRandom();
+            int pageSize = 4 + gen.nextInt(50);
+            return TDigest.createArrayDigest(pageSize, 100);
         }
     };
 
@@ -99,7 +101,7 @@ public class ArrayDigestTest extends TDigestTest {
     // verifies that the data that we add is preserved
     @Test
     public void testAddIterate() {
-        final ArrayDigest ad = new ArrayDigest(32, 100);
+        final ArrayDigest ad = factory.create();
 
         assertEquals("[]", Lists.newArrayList(ad.centroids()).toString());
 
@@ -170,7 +172,7 @@ public class ArrayDigestTest extends TDigestTest {
     @Test
     public void testInternalSums() {
         Random random = new Random();
-        ArrayDigest ad = new ArrayDigest(32, 100);
+        ArrayDigest ad = factory.create();
         for (int i = 0; i < 1000; i++) {
             ad.add(random.nextDouble(), 7);
         }
@@ -220,17 +222,17 @@ public class ArrayDigestTest extends TDigestTest {
 
     @Test
     public void testEmpty() {
-        empty(new ArrayDigest(32, 100));
+        empty(factory.create());
     }
 
     @Test
     public void testSingleValue() {
-        singleValue(new ArrayDigest(32, 100));
+        singleValue(factory.create());
     }
 
     @Test
     public void testFewValues() {
-        fewValues(new ArrayDigest(32, 100));
+        fewValues(factory.create());
     }
 
 
@@ -327,7 +329,7 @@ public class ArrayDigestTest extends TDigestTest {
     @Test
     public void testSerialization() {
         Random gen = RandomUtils.getRandom();
-        TDigest dist = new ArrayDigest(32, 100);
+        TDigest dist = factory.create();
         for (int i = 0; i < 100000; i++) {
             double x = gen.nextDouble();
             dist.add(x);
