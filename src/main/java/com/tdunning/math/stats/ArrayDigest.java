@@ -822,23 +822,25 @@ public class ArrayDigest extends AbstractTDigest {
         }
 
         private Page split() {
+            assert active == pageSize;
+            final int half = pageSize / 2;
             Page newPage = new Page(pageSize, recordAllData);
-            System.arraycopy(centroids, 16, newPage.centroids, 0, pageSize / 2);
-            System.arraycopy(counts, 16, newPage.counts, 0, pageSize / 2);
+            System.arraycopy(centroids, half, newPage.centroids, 0, pageSize - half);
+            System.arraycopy(counts, half, newPage.counts, 0, pageSize - half);
             if (history != null) {
                 newPage.history = new ArrayList<List<Double>>();
-                newPage.history.addAll(history.subList(pageSize / 2, pageSize));
+                newPage.history.addAll(history.subList(half, pageSize));
 
                 List<List<Double>> tmp = new ArrayList<List<Double>>();
-                tmp.addAll(history.subList(0, pageSize / 2));
+                tmp.addAll(history.subList(0, half));
                 history = tmp;
             }
-            active = 16;
-            newPage.active = 16;
+            active = half;
+            newPage.active = pageSize - half;
 
             newPage.totalCount = totalCount;
             totalCount = 0;
-            for (int i = 0; i < 16; i++) {
+            for (int i = 0; i < half; i++) {
                 totalCount += counts[i];
                 newPage.totalCount -= counts[i];
             }
