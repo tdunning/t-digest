@@ -18,11 +18,6 @@
 package com.tdunning.math.stats;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
 
 /**
  * Adaptive histogram based on something like streaming k-means crossed with Q-digest.
@@ -140,31 +135,13 @@ public class TreeDigest extends AbstractTDigest {
         }
     }
 
-    public static TDigest merge(double compression, Iterable<TDigest> subData, Random gen) {
-        TreeDigest r = new TreeDigest(compression);
-        return merge(subData, gen, r);
-    }
-
     @Override
     public void compress() {
-        compress(summary);
-    }
-
-    @Override
-    public void compress(GroupTree other) {
         TreeDigest reduced = new TreeDigest(compression);
         if (recordAllData) {
             reduced.recordAllData();
         }
-        List<Centroid> tmp = new ArrayList<Centroid>();
-        for (Centroid centroid : other) {
-            tmp.add(centroid);
-        }
-        Collections.shuffle(tmp, gen);
-        for (Centroid centroid : tmp) {
-            reduced.add(centroid.mean(), centroid.count(), centroid);
-        }
-
+        compress(this, reduced, gen);
         summary = reduced.summary;
     }
 
@@ -179,118 +156,13 @@ public class TreeDigest extends AbstractTDigest {
         return count;
     }
 
-    /**
-     * @param x the value at which the CDF should be evaluated
-     * @return the approximate fraction of all samples that were less than or equal to x.
-     */
-    @Override
-    public double cdf(double x) {
-        GroupTree values = summary;
-        if (values.size() == 0) {
-            return Double.NaN;
-        } else if (values.size() == 1) {
-            return x < values.first().mean() ? 0 : 1;
-        } else {
-            double r = 0;
-
-            // we scan a across the centroids
-            Iterator<Centroid> it = values.iterator();
-            Centroid a = it.next();
-
-            // b is the look-ahead to the next centroid
-            Centroid b = it.next();
-
-            // initially, we set left width equal to right width
-            double left = (b.mean() - a.mean()) / 2;
-            double right = left;
-
-            // scan to next to last element
-            while (it.hasNext()) {
-                if (x < a.mean() + right) {
-                    return (r + a.count() * interpolate(x, a.mean() - left, a.mean() + right)) / count;
-                }
-                r += a.count();
-
-                a = b;
-                b = it.next();
-
-                left = right;
-                right = (b.mean() - a.mean()) / 2;
-            }
-
-            // for the last element, assume right width is same as left
-            left = right;
-            a = b;
-            if (x < a.mean() + right) {
-                return (r + a.count() * interpolate(x, a.mean() - left, a.mean() + right)) / count;
-            } else {
-                return 1;
-            }
-        }
-    }
-
-    /**
-     * @param q The quantile desired.  Can be in the range [0,1].
-     * @return The minimum value x such that we think that the proportion of samples is <= x is q.
-     */
-    @Override
-    public double quantile(double q) {
-        if (q < 0 || q > 1) {
-            throw new IllegalArgumentException("q should be in [0,1], got " + q);
-        }
-
-        GroupTree values = summary;
-        if (values.size() == 0) {
-            return Double.NaN;
-        } else if (values.size() == 1) {
-            return values.iterator().next().mean();
-        }
-
-        // if values were stored in a sorted array, index would be the offset we are interested in
-        final double index = q * (count - 1);
-
-        double previousMean = Double.NaN, previousIndex = 0;
-        long total = 0;
-        Centroid next;
-        Iterator<? extends Centroid> it = centroids().iterator();
-        while (true) {
-            next = it.next();
-            final double nextIndex = total + (next.count() - 1.0) / 2;
-            if (nextIndex >= index) {
-                if (Double.isNaN(previousMean)) {
-                    // special case 1: the index we are interested in is before the 1st centroid
-                    if (nextIndex == previousIndex) {
-                        return next.mean();
-                    }
-                    // assume values grow linearly between index previousIndex=0 and nextIndex2
-                    Centroid next2 = it.next();
-                    final double nextIndex2 = total + next.count() + (next2.count() - 1.0) / 2;
-                    previousMean = (nextIndex2 * next.mean() - nextIndex * next2.mean()) / (nextIndex2 - nextIndex);
-                }
-                // common case: we found two centroids previous and next so that the desired quantile is
-                // after 'previous' but before 'next'
-                return quantile(previousIndex, index, nextIndex, previousMean, next.mean());
-            } else if (!it.hasNext()) {
-                // special case 2: the index we are interested in is beyond the last centroid
-                // again, assume values grow linearly between index previousIndex and (count - 1)
-                // which is the highest possible index
-                final double nextIndex2 = count - 1;
-                final double nextMean2 = (next.mean() * (nextIndex2 - previousIndex) - previousMean * (nextIndex2 - nextIndex)) / (nextIndex - previousIndex);
-                return quantile(nextIndex, index, nextIndex2, next.mean(), nextMean2);
-            }
-            total += next.count();
-            previousMean = next.mean();
-            previousIndex = nextIndex;
-        }
-    }
-
     @Override
     public int centroidCount() {
         return summary.size();
     }
 
     @Override
-    public Iterable<? extends Centroid> centroids() {
+    public Iterable<Centroid> centroids() {
         return summary;
     }
 

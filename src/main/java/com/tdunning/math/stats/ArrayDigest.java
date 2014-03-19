@@ -220,108 +220,8 @@ public class ArrayDigest extends AbstractTDigest {
     }
 
     @Override
-    public void compress(GroupTree other) {
-        throw new UnsupportedOperationException("Default operation");
-    }
-
-    @Override
     public int size() {
         return totalWeight;
-    }
-
-    @Override
-    public double cdf(double x) {
-        if (size() == 0) {
-            return Double.NaN;
-        } else if (size() == 1) {
-            return x < data.get(0).centroids[0] ? 0 : 1;
-        } else {
-            double r = 0;
-
-            // we scan a across the centroids
-            Iterator<Index> it = iterator(0, 0);
-            Index a = it.next();
-
-            // b is the look-ahead to the next centroid
-            Index b = it.next();
-
-            // initially, we set left width equal to right width
-            double left = (b.mean() - a.mean()) / 2;
-            double right = left;
-
-            // scan to next to last element
-            while (it.hasNext()) {
-                if (x < a.mean() + right) {
-                    return (r + a.count() * AbstractTDigest.interpolate(x, a.mean() - left, a.mean() + right)) / totalWeight;
-                }
-                r += a.count();
-
-                a = b;
-                b = it.next();
-
-                left = right;
-                right = (b.mean() - a.mean()) / 2;
-            }
-
-            // for the last element, assume right width is same as left
-            left = right;
-            a = b;
-            if (x < a.mean() + right) {
-                return (r + a.count() * AbstractTDigest.interpolate(x, a.mean() - left, a.mean() + right)) / totalWeight;
-            } else {
-                return 1;
-            }
-        }
-    }
-
-    @Override
-    public double quantile(double q) {
-        if (q < 0 || q > 1) {
-            throw new IllegalArgumentException("q should be in [0,1], got " + q);
-        }
-
-        if (centroidCount() == 0) {
-            return Double.NaN;
-        } else if (centroidCount() == 1) {
-            return data.get(0).centroids[0];
-        }
-
-        // if values were stored in a sorted array, index would be the offset we are interested in
-        final double index = q * (size() - 1);
-
-        double previousMean = Double.NaN, previousIndex = 0;
-        long total = 0;
-        Index next;
-        Iterator<Index> it = iterator(0, 0);
-        while (true) {
-            next = it.next();
-            final double nextIndex = total + (next.count() - 1.0) / 2;
-            if (nextIndex >= index) {
-                if (Double.isNaN(previousMean)) {
-                    // special case 1: the index we are interested in is before the 1st centroid
-                    if (nextIndex == previousIndex) {
-                        return next.mean();
-                    }
-                    // assume values grow linearly between index previousIndex=0 and nextIndex2
-                    Index next2 = it.next();
-                    final double nextIndex2 = total + next.count() + (next2.count() - 1.0) / 2;
-                    previousMean = (nextIndex2 * next.mean() - nextIndex * next2.mean()) / (nextIndex2 - nextIndex);
-                }
-                // common case: we found two centroids previous and next so that the desired quantile is
-                // after 'previous' but before 'next'
-                return quantile(previousIndex, index, nextIndex, previousMean, next.mean());
-            } else if (!it.hasNext()) {
-                // special case 2: the index we are interested in is beyond the last centroid
-                // again, assume values grow linearly between index previousIndex and (count - 1)
-                // which is the highest possible index
-                final double nextIndex2 = size() - 1;
-                final double nextMean2 = (next.mean() * (nextIndex2 - previousIndex) - previousMean * (nextIndex2 - nextIndex)) / (nextIndex - previousIndex);
-                return quantile(nextIndex, index, nextIndex2, next.mean(), nextMean2);
-            }
-            total += next.count();
-            previousMean = next.mean();
-            previousIndex = nextIndex;
-        }
     }
 
     @Override
@@ -330,7 +230,7 @@ public class ArrayDigest extends AbstractTDigest {
     }
 
     @Override
-    public Iterable<? extends Centroid> centroids() {
+    public Iterable<Centroid> centroids() {
         List<Centroid> r = new ArrayList<Centroid>();
         Iterator<Index> ix = iterator(0, 0);
         while (ix.hasNext()) {
@@ -622,7 +522,7 @@ public class ArrayDigest extends AbstractTDigest {
     }
 
     @Override
-    void add(double x, int w, Centroid base) {
+    protected void add(double x, int w, Centroid base) {
         addRaw(x, w, base.data());
     }
 

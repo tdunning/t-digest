@@ -127,7 +127,7 @@ public abstract class TDigest {
      *
      * @return The centroids in the form of an Iterable.
      */
-    public abstract Iterable<? extends Centroid> centroids();
+    public abstract Iterable<Centroid> centroids();
 
     /**
      * Returns the current compression factor.
