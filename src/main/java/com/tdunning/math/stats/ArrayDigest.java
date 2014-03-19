@@ -36,7 +36,7 @@ public class ArrayDigest extends AbstractTDigest {
     private final int pageSize;
 
     private List<Page> data = new ArrayList<Page>();
-    private int totalWeight = 0;
+    private long totalWeight = 0;
     private int centroidCount = 0;
     private double compression = 100;
 
@@ -76,7 +76,7 @@ public class ArrayDigest extends AbstractTDigest {
             }
 
             Index closest = null;
-            int sum = headSum(start);
+            long sum = headSum(start);
             i = headCount(start);
             double n = 0;
             for (Index neighbor : neighbors) {
@@ -155,8 +155,8 @@ public class ArrayDigest extends AbstractTDigest {
         }
     }
 
-    public int headSum(Index limit) {
-        int r = 0;
+    public long headSum(Index limit) {
+        long r = 0;
 
         for (int i = 0; limit != null && i < limit.page; i++) {
             r += data.get(i).totalCount;
@@ -225,7 +225,7 @@ public class ArrayDigest extends AbstractTDigest {
     }
 
     @Override
-    public int size() {
+    public long size() {
         return totalWeight;
     }
 

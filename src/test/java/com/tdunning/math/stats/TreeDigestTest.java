@@ -463,6 +463,12 @@ public class TreeDigestTest extends TDigestTest {
     }
 
     @Test
+    public void testMoreThan2BValues() {
+        final TDigest digest = new TreeDigest(100);
+        moreThan2BValues(digest);
+    }
+
+    @Test
     public void testExtremeQuantiles() {
         // t-digest shouldn't merge extreme nodes, but let's still test how it would
         // answer to extreme quantiles in that case ('extreme' in the sense that the

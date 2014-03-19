@@ -19,6 +19,7 @@ package com.tdunning.math.stats;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+
 import org.apache.mahout.common.RandomUtils;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.junit.AfterClass;
@@ -31,6 +32,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -326,6 +328,26 @@ public class TDigestTest {
     protected void empty(TDigest digest) {
         final double q = RandomUtils.getRandom().nextDouble();
         assertTrue(Double.isNaN(digest.quantile(q)));
+    }
+
+    protected void moreThan2BValues(TDigest digest) {
+        for (int i = 0; i < 10; ++i) {
+            final int count = 1 << 30;
+            digest.add(i, count);
+        }
+        Random gen = RandomUtils.getRandom();
+        for (int i = 0; i < 100; ++i) {
+            final double next = -5 + gen.nextDouble() * 20;
+            digest.add(next);
+        }
+        final double[] quantiles = new double[] {0, 0.1, 0.5, 0.9, 1, gen.nextDouble()};
+        Arrays.sort(quantiles);
+        double prev = Double.NEGATIVE_INFINITY;
+        for (double q : quantiles) {
+            final double v = digest.quantile(q);
+            assertTrue(v >= prev);
+            prev = v;
+        }
     }
 
     public interface DigestFactory<T extends TDigest> {
