@@ -98,7 +98,7 @@ public abstract class TDigest {
      *
      * @return The sum of the weights on all centroids.
      */
-    public abstract int size();
+    public abstract long size();
 
     /**
      * Returns the fraction of all points added which are <= x.

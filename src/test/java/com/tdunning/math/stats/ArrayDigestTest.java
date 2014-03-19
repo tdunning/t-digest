@@ -19,6 +19,7 @@ package com.tdunning.math.stats;
 
 import com.clearspring.analytics.stream.quantile.QDigest;
 import com.google.common.collect.Lists;
+
 import org.apache.mahout.common.RandomUtils;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
@@ -599,5 +600,10 @@ public class ArrayDigestTest extends TDigestTest {
         }
     }
 
+    @Test
+    public void testMoreThan2BValues() {
+        final TDigest digest = factory.create();
+        moreThan2BValues(digest);
+    }
 
 }

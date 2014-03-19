@@ -47,7 +47,7 @@ public class TreeDigest extends AbstractTDigest {
 
     private double compression = 100;
     private GroupTree summary = new GroupTree();
-    int count = 0; // package private for testing
+    long count = 0; // package private for testing
 
     /**
      * A histogram structure that will record a sketch of a distribution.
@@ -95,7 +95,7 @@ public class TreeDigest extends AbstractTDigest {
             }
 
             Centroid closest = null;
-            int sum = summary.headSum(start);
+            long sum = summary.headSum(start);
             i = summary.headCount(start);
             double n = 1;
             for (Centroid neighbor : neighbors) {
@@ -175,7 +175,7 @@ public class TreeDigest extends AbstractTDigest {
      * @return the number of samples that have been added.
      */
     @Override
-    public int size() {
+    public long size() {
         return count;
     }
 

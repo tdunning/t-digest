@@ -27,7 +27,7 @@ import java.util.NoSuchElementException;
  * ability to sum up the size of elements to the left of a particular group.
  */
 public class GroupTree implements Iterable<Centroid> {
-    private int count;
+    private long count;
     private int size;
     private int depth;
     private Centroid leaf;
@@ -167,7 +167,7 @@ public class GroupTree implements Iterable<Centroid> {
     /**
      * @return the sum of the size() function for all elements strictly before the current element.
      */
-    public int headSum(Centroid base) {
+    public long headSum(Centroid base) {
         if (size == 0) {
             return 0;
         } else if (left == null) {
@@ -394,7 +394,7 @@ public class GroupTree implements Iterable<Centroid> {
         };
     }
 
-    public int sum() {
+    public long sum() {
         return count;
     }
 
