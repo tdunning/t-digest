@@ -81,7 +81,7 @@ public class TreeDigest extends AbstractTDigest {
             Iterable<Centroid> neighbors = summary.tailSet(start);
             double minDistance = Double.MAX_VALUE;
             int lastNeighbor = 0;
-            int i = summary.headCount(start);
+            int i = 0;
             for (Centroid neighbor : neighbors) {
                 double z = Math.abs(neighbor.mean() - x);
                 if (z <= minDistance) {
@@ -96,7 +96,7 @@ public class TreeDigest extends AbstractTDigest {
 
             Centroid closest = null;
             long sum = summary.headSum(start);
-            i = summary.headCount(start);
+            i = 0;
             double n = 1;
             for (Centroid neighbor : neighbors) {
                 if (i > lastNeighbor) {

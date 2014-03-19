@@ -62,7 +62,7 @@ public class ArrayDigest extends AbstractTDigest {
             Iterable<Index> neighbors = inclusiveTail(start);
             double minDistance = Double.MAX_VALUE;
             int lastNeighbor = 0;
-            int i = headCount(start);
+            int i = 0;
             for (Index neighbor : neighbors) {
                 double z = Math.abs(mean(neighbor) - x);
                 if (z <= minDistance) {
@@ -77,7 +77,7 @@ public class ArrayDigest extends AbstractTDigest {
 
             Index closest = null;
             long sum = headSum(start);
-            i = headCount(start);
+            i = 0;
             double n = 0;
             for (Index neighbor : neighbors) {
                 if (i > lastNeighbor) {
