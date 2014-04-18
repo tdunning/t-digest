@@ -18,6 +18,7 @@
 package com.tdunning.math.stats;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Random;
 
@@ -91,6 +92,25 @@ public class AVLGroupTreeTest {
         for (int node = x.first(); node != IntAVLTree.NIL; node = x.next(node)) {
             assertEquals(sum, x.headSum(node));
             sum += x.count(node);
+        }
+    }
+
+    @Test
+    public void testFloorSum() {
+        Random gen = RandomUtils.getRandom();
+        AVLGroupTree x = new AVLGroupTree(false);
+        int total = 0;
+        for (int i = 0; i < 1000; ++i) {
+            int count = 1 + gen.nextInt(10);
+            x.add(gen.nextDouble(), count, null);
+            total += count;
+        }
+        assertEquals(IntAVLTree.NIL, x.floorSum(-1));
+        for (long i = 0; i < total + 10; ++i) {
+            final int floorNode = x.floorSum(i);
+            assertTrue(x.headSum(floorNode) <= i);
+            final int next = x.next(floorNode);
+            assertTrue(next == IntAVLTree.NIL || x.headSum(next) > i);
         }
     }
 

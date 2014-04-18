@@ -18,8 +18,6 @@
 package com.tdunning.math.stats;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -253,41 +251,45 @@ public class AVLTreeDigest extends AbstractTDigest {
         // if values were stored in a sorted array, index would be the offset we are interested in
         final double index = q * (count - 1);
 
-        // TODO: since nodes store aggregate counts, it should be possible to compute
-        // quantiles in O(log(centroidCount)) instead of iterating sequentially over all nodes
-
         double previousMean = Double.NaN, previousIndex = 0;
-        long total = 0;
-        Centroid next;
-        Iterator<? extends Centroid> it = centroids().iterator();
+        int next = values.floorSum((long) index);
+        assert next != IntAVLTree.NIL;
+        long total = values.headSum(next);
+        final int prev = values.prev(next);
+        if (prev != IntAVLTree.NIL) {
+            previousMean = values.mean(prev);
+            previousIndex = total - (values.count(prev) + 1.0) / 2;
+        }
+
         while (true) {
-            next = it.next();
-            final double nextIndex = total + (next.count() - 1.0) / 2;
+            final double nextIndex = total + (values.count(next) - 1.0) / 2;
             if (nextIndex >= index) {
                 if (Double.isNaN(previousMean)) {
                     // special case 1: the index we are interested in is before the 1st centroid
+                    assert total == 0 : total;
                     if (nextIndex == previousIndex) {
-                        return next.mean();
+                        return values.mean(next);
                     }
                     // assume values grow linearly between index previousIndex=0 and nextIndex2
-                    Centroid next2 = it.next();
-                    final double nextIndex2 = total + next.count() + (next2.count() - 1.0) / 2;
-                    previousMean = (nextIndex2 * next.mean() - nextIndex * next2.mean()) / (nextIndex2 - nextIndex);
+                    int next2 = values.next(next);
+                    final double nextIndex2 = total + values.count(next) + (values.count(next2) - 1.0) / 2;
+                    previousMean = (nextIndex2 * values.mean(next) - nextIndex * values.mean(next2)) / (nextIndex2 - nextIndex);
                 }
                 // common case: we found two centroids previous and next so that the desired quantile is
                 // after 'previous' but before 'next'
-                return quantile(previousIndex, index, nextIndex, previousMean, next.mean());
-            } else if (!it.hasNext()) {
+                return quantile(previousIndex, index, nextIndex, previousMean, values.mean(next));
+            } else if (values.next(next) == IntAVLTree.NIL) {
                 // special case 2: the index we are interested in is beyond the last centroid
                 // again, assume values grow linearly between index previousIndex and (count - 1)
                 // which is the highest possible index
                 final double nextIndex2 = count - 1;
-                final double nextMean2 = (next.mean() * (nextIndex2 - previousIndex) - previousMean * (nextIndex2 - nextIndex)) / (nextIndex - previousIndex);
-                return quantile(nextIndex, index, nextIndex2, next.mean(), nextMean2);
+                final double nextMean2 = (values.mean(next) * (nextIndex2 - previousIndex) - previousMean * (nextIndex2 - nextIndex)) / (nextIndex - previousIndex);
+                return quantile(nextIndex, index, nextIndex2, values.mean(next), nextMean2);
             }
-            total += next.count();
-            previousMean = next.mean();
+            total += values.count(next);
+            previousMean = values.mean(next);
             previousIndex = nextIndex;
+            next = values.next(next);
         }
     }
 
