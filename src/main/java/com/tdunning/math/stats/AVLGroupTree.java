@@ -109,6 +109,13 @@ final class AVLGroupTree implements Iterable<Centroid> {
     }
 
     /**
+     * Return the previous node.
+     */
+    public int prev(int node) {
+        return tree.prev(node);
+    }
+
+    /**
      * Return the next node.
      */
     public int next(int node) {
@@ -172,6 +179,26 @@ final class AVLGroupTree implements Iterable<Centroid> {
             } else {
                 floor = node;
                 node = tree.right(node);
+            }
+        }
+        return floor;
+    }
+
+    /**
+     * Return the last node so that the sum of counts of nodes that are before
+     * it is less than or equal to <code>sum</code>.
+     */
+    public int floorSum(long sum) {
+        int floor = IntAVLTree.NIL;
+        for (int node = tree.root(); node != IntAVLTree.NIL; ) {
+            final int left = tree.left(node);
+            final long leftCount = aggregatedCounts[left];
+            if (leftCount <= sum) {
+                floor = node;
+                sum -= leftCount + count(node);
+                node = tree.right(node);
+            } else {
+                node = tree.left(node);
             }
         }
         return floor;
