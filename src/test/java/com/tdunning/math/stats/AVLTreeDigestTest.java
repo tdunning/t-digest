@@ -492,4 +492,9 @@ public class AVLTreeDigestTest extends TDigestTest {
         }
     }
 
+    @Test
+    public void testSorted() {
+        final TDigest digest = factory.create();
+        sorted(digest);
+    }
 }

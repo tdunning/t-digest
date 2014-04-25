@@ -353,4 +353,18 @@ public class TDigestTest {
     public interface DigestFactory<T extends TDigest> {
         T create();
     }
+
+    protected void sorted(TDigest digest) {
+        Random gen = RandomUtils.getRandom();
+        for (int i = 0; i < 10000; ++i) {
+            digest.add(gen.nextDouble(), 1 + gen.nextInt(10));
+        }
+        Centroid previous = null;
+        for (Centroid centroid : digest.centroids()) {
+            if (previous != null) {
+                assertTrue(previous.mean() <= centroid.mean());
+            }
+            previous = centroid;
+        }
+    }
 }

@@ -792,7 +792,7 @@ public class ArrayDigest extends AbstractTDigest {
             if (active >= pageSize) {
                 // split page
                 Page newPage = split();
-                newPage.addAt(pageSize / 2, x, w, history);
+                newPage.addAt(newPage.active, x, w, history);
                 return newPage;
             } else {
                 addAt(active, x, w, history);
