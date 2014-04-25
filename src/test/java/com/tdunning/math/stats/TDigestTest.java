@@ -331,15 +331,18 @@ public class TDigestTest {
     }
 
     protected void moreThan2BValues(TDigest digest) {
-        for (int i = 0; i < 10; ++i) {
-            final int count = 1 << 30;
-            digest.add(i, count);
-        }
         Random gen = RandomUtils.getRandom();
-        for (int i = 0; i < 100; ++i) {
-            final double next = -5 + gen.nextDouble() * 20;
+        for (int i = 0; i < 1000; ++i) {
+            final double next = gen.nextDouble();
             digest.add(next);
         }
+        for (int i = 0; i < 10; ++i) {
+            final double next = gen.nextDouble();
+            final int count = 1 << 28;
+            digest.add(next, count);
+        }
+        assertEquals(1000 + 10L * (1 << 28), digest.size());
+        assertTrue(digest.size() > Integer.MAX_VALUE);
         final double[] quantiles = new double[] {0, 0.1, 0.5, 0.9, 1, gen.nextDouble()};
         Arrays.sort(quantiles);
         double prev = Double.NEGATIVE_INFINITY;
