@@ -606,4 +606,10 @@ public class ArrayDigestTest extends TDigestTest {
         moreThan2BValues(digest);
     }
 
+    @Test
+    public void testSorted() {
+        final TDigest digest = factory.create();
+        sorted(digest);
+    }
+
 }

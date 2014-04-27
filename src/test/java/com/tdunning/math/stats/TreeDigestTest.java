@@ -496,4 +496,9 @@ public class TreeDigestTest extends TDigestTest {
         }
     }
 
+    @Test
+    public void testSorted() {
+        final TDigest digest = factory.create();
+        sorted(digest);
+    }
 }
