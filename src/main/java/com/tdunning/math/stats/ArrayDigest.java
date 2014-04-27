@@ -291,13 +291,31 @@ public class ArrayDigest extends AbstractTDigest {
 
         double previousMean = Double.NaN, previousIndex = 0;
         long total = 0;
+        // Jump over pages until we reach the page containing the quantile we are interested in
+        int firstPage = 0;
+        while (firstPage < data.size() && total + data.get(firstPage).totalCount < index) {
+            total += data.get(firstPage++).totalCount;
+        }
+        Iterator<Index> it;
+        if (firstPage == 0) {
+            // start from the beginning
+            it = iterator(0, 0);
+        } else {
+            final int previousPageIndex = firstPage - 1;
+            final Page previousPage = data.get(previousPageIndex);
+            assert previousPage.active > 0;
+            final int lastSubPage = previousPage.active - 1;
+            previousMean = previousPage.centroids[lastSubPage];
+            previousIndex = total - (previousPage.counts[lastSubPage] + 1.0) / 2;
+            it = iterator(firstPage, 0);
+        }
         Index next;
-        Iterator<Index> it = iterator(0, 0);
         while (true) {
             next = it.next();
             final double nextIndex = total + (next.count() - 1.0) / 2;
             if (nextIndex >= index) {
                 if (Double.isNaN(previousMean)) {
+                    assert total == 0;
                     // special case 1: the index we are interested in is before the 1st centroid
                     if (nextIndex == previousIndex) {
                         return next.mean();
@@ -754,7 +772,7 @@ public class ArrayDigest extends AbstractTDigest {
         private final boolean recordAllData;
         private final int pageSize;
 
-        int totalCount;
+        long totalCount;
         int active;
         double[] centroids;
         int[] counts;
