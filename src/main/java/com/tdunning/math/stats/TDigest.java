@@ -82,6 +82,12 @@ public abstract class TDigest {
      */
     public abstract void add(double x, int w);
 
+    protected final void checkValue(double x) {
+        if (Double.isNaN(x)) {
+            throw new IllegalArgumentException("Cannot add NaN");
+        }
+    }
+
     /**
      * Re-examines a t-digest to determine whether some centroids are redundant.  If your data are
      * perversely ordered, this may be a good idea.  Even if not, this may save 20% or so in space.

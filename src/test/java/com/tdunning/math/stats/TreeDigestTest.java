@@ -501,4 +501,10 @@ public class TreeDigestTest extends TDigestTest {
         final TDigest digest = factory.create();
         sorted(digest);
     }
+
+    @Test
+    public void testNaN() {
+        final TDigest digest = factory.create();
+        nan(digest);
+    }
 }

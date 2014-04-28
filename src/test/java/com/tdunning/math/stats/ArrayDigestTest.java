@@ -612,4 +612,9 @@ public class ArrayDigestTest extends TDigestTest {
         sorted(digest);
     }
 
+    @Test
+    public void testNaN() {
+        final TDigest digest = factory.create();
+        nan(digest);
+    }
 }

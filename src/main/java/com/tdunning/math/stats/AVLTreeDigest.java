@@ -66,6 +66,7 @@ public class AVLTreeDigest extends AbstractTDigest {
     }
 
     public void add(double x, int w, List<Double> data) {
+        checkValue(x);
         int start = summary.floor(x);
         if (start == IntAVLTree.NIL) {
             start = summary.first();
