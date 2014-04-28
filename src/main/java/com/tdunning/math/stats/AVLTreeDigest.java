@@ -129,7 +129,7 @@ public class AVLTreeDigest extends AbstractTDigest {
             }
             count += w;
 
-            if (summary.size() > 100 * compression) {
+            if (summary.size() > 20 * compression) {
                 // may happen in case of sequential points
                 compress();
             }

@@ -143,7 +143,7 @@ public class ArrayDigest extends AbstractTDigest {
                 }
             }
 
-            if (centroidCount > 100 * compression) {
+            if (centroidCount > 20 * compression) {
                 // something such as sequential ordering of data points
                 // has caused a pathological expansion of our summary.
                 // To fight this, we simply replay the current centroids
