@@ -51,6 +51,7 @@ public class ArrayDigest extends AbstractTDigest {
 
     @Override
     public void add(double x, int w) {
+        checkValue(x);
         Index start = floor(x);
         if (start == null) {
             start = ceiling(x);

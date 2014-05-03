@@ -44,6 +44,8 @@ import java.util.concurrent.Future;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 
 /**
  * Common test methods for TDigests
@@ -368,6 +370,25 @@ public class TDigestTest {
                 assertTrue(previous.mean() <= centroid.mean());
             }
             previous = centroid;
+        }
+    }
+
+    protected void nan(TDigest digest) {
+        Random gen = RandomUtils.getRandom();
+        final int iters = gen.nextInt(100);
+        for (int i = 0; i < iters; ++i) {
+            digest.add(gen.nextDouble(), 1 + gen.nextInt(10));
+        }
+        try {
+            // both versions should fail
+            if (gen.nextBoolean()) {
+                digest.add(Double.NaN);
+            } else {
+                digest.add(Double.NaN, 1);
+            }
+            fail("NaN should be an illegal argument");
+        } catch (IllegalArgumentException e) {
+            // expected
         }
     }
 }

@@ -69,6 +69,7 @@ public class TreeDigest extends AbstractTDigest {
 
     @Override
     public void add(double x, int w, Centroid base) {
+        checkValue(x);
         Centroid start = summary.floor(base);
         if (start == null) {
             start = summary.ceiling(base);
