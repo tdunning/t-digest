@@ -14,3 +14,19 @@ target/
 .classpath
 .project
 .settings/
+
+# Latex related files
+_region_.prv/
+_region_*
+docs/t-digest-paper/*.log
+docs/t-digest-paper/*.aux
+docs/t-digest-paper/*.blg
+docs/t-digest-paper/*.bbl
+docs/t-digest-paper/Rplots.pdf
+docs/t-digest-paper/.Rhistory
+*.ini
+
+# diagnostic outputs
+*.csv
+*.tsv
+
