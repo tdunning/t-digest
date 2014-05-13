@@ -461,6 +461,7 @@ public class ArrayDigestTest extends TDigestTest {
 
         PrintWriter out = new PrintWriter(new FileOutputStream("sk-array-comparison.csv"));
         try {
+            out.printf("tag\tcompression\tq\te1\tcdf.vs.q\tsize\tsk.size\n");
             for (int i = 0; i < repeats(); i++) {
                 compareSQ(out, new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
                 compareSQ(out, new Uniform(0, 1, rand), "uniform", 1L << 48);
