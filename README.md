@@ -69,4 +69,13 @@ The output of these scripts are a collection of PNG image files that can be view
 such as Preview on a Mac.  Many of these images are used as figures in the paper in the same directory with
 the R scripts.
 
+Continuous Integration
+=================
 
+The t-digest project makes use of Travis integration with github for testing whenever a change is made.
+
+You can see the reports at:
+
+    https://travis-ci.org/tdunning/t-digest
+
+travis update
