@@ -63,7 +63,7 @@ public abstract class TDigest {
     }
 
     /**
-     * Creates a TreeDigest.  Going forward, ArrayDigests should be preferred to the TreeDigest since they are
+     * Creates a TreeDigest.  Going forward, AVLTreeDigest should be preferred to the TreeDigest since they are
      * uniformly faster and require less memory while producing nearly identical results.
      *
      * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
@@ -72,6 +72,29 @@ public abstract class TDigest {
      */
     public static TDigest createTreeDigest(double compression) {
         return new TreeDigest(compression);
+    }
+
+    /**
+     * Creates an AVLTreeDigest.  AVLTreeDigest is generally the best known implementation right now.
+     *
+     * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
+     *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
+     * @return the TreeDigest
+     */
+    public static TDigest createAvlTreeDigest(double compression) {
+        return new AVLTreeDigest(compression);
+    }
+
+    /**
+     * Creates a TreeDigest of whichever type is the currently recommended type.  AVLTreeDigest is generally the best
+     * known implementation right now.
+     *
+     * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
+     *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
+     * @return the TreeDigest
+     */
+    public static TDigest createDigest(double compression) {
+        return createAvlTreeDigest(compression);
     }
 
     /**
