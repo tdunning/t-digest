@@ -225,7 +225,7 @@ public class GroupTree implements Iterable<Centroid> {
                 if (next == null) {
                     next = computeNext();
                 }
-                return next != end;
+                return next != null && next != end;
             }
 
             @Override

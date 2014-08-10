@@ -657,7 +657,7 @@ public class ArrayDigest extends AbstractTDigest {
                 if (next == null) {
                     next = computeNext();
                 }
-                return next != end;
+                return next != null && next != end;
             }
 
             @Override

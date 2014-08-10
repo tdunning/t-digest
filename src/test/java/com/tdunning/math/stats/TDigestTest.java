@@ -24,6 +24,7 @@ import org.apache.mahout.common.RandomUtils;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -353,6 +354,16 @@ public class TDigestTest {
             assertTrue(v >= prev);
             prev = v;
         }
+    }
+
+    @Test
+    public void testMergeEmpty() {
+        final Random gen0 = RandomUtils.getRandom();
+        List<TDigest> subData = new ArrayList();
+        subData.add(new TreeDigest(10));
+        TreeDigest foo = new TreeDigest(10);
+        AbstractTDigest.merge(subData, gen0, foo);
+        empty(foo);
     }
 
     public interface DigestFactory<T extends TDigest> {
