@@ -34,7 +34,7 @@ public class Centroid implements Comparable<Centroid> {
     private List<Double> actualData = null;
 
     Centroid(boolean record) {
-        id = uniqueCount.incrementAndGet();
+        id = uniqueCount.getAndIncrement();
         if (record) {
             actualData = new ArrayList<Double>();
         }
