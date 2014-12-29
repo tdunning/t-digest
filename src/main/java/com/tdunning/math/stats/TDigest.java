@@ -18,6 +18,7 @@
 package com.tdunning.math.stats;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 
 /**
  * Adaptive histogram based on something like streaming k-means crossed with Q-digest.
@@ -144,19 +145,12 @@ public abstract class TDigest {
     public abstract double quantile(double q);
 
     /**
-     * The number of centroids currently in the TDigest.
-     *
-     * @return The number of centroids
-     */
-    public abstract int centroidCount();
-
-    /**
-     * An iterable that lets you go through the centroids in ascending order by mean.  Centroids
+     * A {@link Collection} that lets you go through the centroids in ascending order by mean.  Centroids
      * returned will not be re-used, but may or may not share storage with this TDigest.
      *
-     * @return The centroids in the form of an Iterable.
+     * @return The centroids in the form of a Collection.
      */
-    public abstract Iterable<? extends Centroid> centroids();
+    public abstract Collection<Centroid> centroids();
 
     /**
      * Returns the current compression factor.

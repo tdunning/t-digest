@@ -133,10 +133,10 @@ public class AVLTreeDigestTest extends TDigestTest {
         }
 
         System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 100000);
-        System.out.printf("# %d centroids\n", dist.centroidCount());
+        System.out.printf("# %d centroids\n", dist.centroids().size());
 
         // I would be happier with 5x compression, but repeated values make things kind of weird
-        assertTrue("Summary is too large: " + dist.centroidCount(), dist.centroidCount() < 10 * (double) 1000);
+        assertTrue("Summary is too large: " + dist.centroids().size(), dist.centroids().size() < 10 * (double) 1000);
 
         // all quantiles should round to nearest actual value
         for (int i = 0; i < 10; i++) {
@@ -194,7 +194,7 @@ public class AVLTreeDigestTest extends TDigestTest {
 
         buf.flip();
         AVLTreeDigest dist2 = AVLTreeDigest.fromBytes(buf);
-        assertEquals(dist.centroidCount(), dist2.centroidCount());
+        assertEquals(dist.centroids().size(), dist2.centroids().size());
         assertEquals(dist.compression(), dist2.compression(), 0);
         assertEquals(dist.size(), dist2.size());
 
@@ -216,7 +216,7 @@ public class AVLTreeDigestTest extends TDigestTest {
 
         buf.flip();
         dist2 = AVLTreeDigest.fromBytes(buf);
-        assertEquals(dist.centroidCount(), dist2.centroidCount());
+        assertEquals(dist.centroids().size(), dist2.centroids().size());
         assertEquals(dist.compression(), dist2.compression(), 0);
         assertEquals(dist.size(), dist2.size());
 
@@ -474,13 +474,9 @@ public class AVLTreeDigestTest extends TDigestTest {
         // answer to extreme quantiles in that case ('extreme' in the sense that the
         // quantile is either before the first node or after the last one)
         AVLTreeDigest digest = new AVLTreeDigest(100);
-        // we need to create the GroupTree manually
-        AVLGroupTree tree = (AVLGroupTree) digest.centroids();
-        Centroid g = new Centroid(10);
-        tree.add(10, 3, null);
-        tree.add(20, 1, null);
-        tree.add(40, 5, null);
-        digest.count = 3 + 1 + 5;
+        digest.add(10, 3);
+        digest.add(20, 1);
+        digest.add(40, 5);
         // this group tree is roughly equivalent to the following sorted array:
         // [ ?, 10, ?, 20, ?, ?, 50, ?, ? ]
         // and we expect it to compute approximate missing values:

@@ -26,7 +26,7 @@ public class TDigestMemoryBenchmark {
 
     private static double memoryUsagePerCentroid(TDigest tdigest) {
         final long totalSize = RamUsageEstimator.sizeOf(tdigest);
-        return (double) totalSize / tdigest.centroidCount();
+        return (double) totalSize / tdigest.centroids().size();
     }
 
 }
