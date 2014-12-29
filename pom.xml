@@ -43,6 +43,8 @@
     </developers>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- pass -DrunSlowTests=true on the command line to override -->
+        <runSlowTests>false</runSlowTests>
     </properties>
 
     <dependencies>
@@ -59,9 +61,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.8.2</version>
+            <groupId>com.carrotsearch.randomizedtesting</groupId>
+            <artifactId>randomizedtesting-runner</artifactId>
+            <version>2.1.11</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -96,10 +98,50 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.16</version>
                 <configuration>
-                    <parallel>methods</parallel>
-                    <perCoreThreadCount>true</perCoreThreadCount>
-                    <threadCount>1</threadCount>
+                    <skipTests>true</skipTests>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.carrotsearch.randomizedtesting</groupId>
+                <artifactId>junit4-maven-plugin</artifactId>
+                <version>2.1.11</version>
+                <executions>
+                    <execution>
+                        <id>tests</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>junit4</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*Test.class</include>
+                            </includes>
+                            <systemProperties>
+                                <runSlowTests>${runSlowTests}</runSlowTests>
+                            </systemProperties>
+                            <seed>${tests.seed}</seed>
+                            <jvmOutputAction>pipe</jvmOutputAction>
+                            <parallelism>1</parallelism>
+                            <listeners>
+                                <report-ant-xml mavenExtensions="true"
+                                                dir="${project.build.directory}/surefire-reports"/>
+                                <report-text
+                                        showThrowable="true"
+                                        showStackTraces="true"
+                                        showOutput="always"
+                                        showStatusOk="false"
+                                        showStatusError="true"
+                                        showStatusFailure="true"
+                                        showStatusIgnored="true"
+                                        showSuiteSummary="true"
+                                        timestamps="false"/>
+                            </listeners>
+                            <assertions>
+                                <enable/>
+                            </assertions>
+                        </configuration>
+                   </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
