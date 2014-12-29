@@ -148,17 +148,12 @@ public class TreeDigest extends AbstractTDigest {
 
     @Override
     public void compress() {
-        compress(summary);
-    }
-
-    @Override
-    public void compress(GroupTree other) {
         TreeDigest reduced = new TreeDigest(compression);
         if (recordAllData) {
             reduced.recordAllData();
         }
         List<Centroid> tmp = new ArrayList<Centroid>();
-        for (Centroid centroid : other) {
+        for (Centroid centroid : summary) {
             tmp.add(centroid);
         }
         Collections.shuffle(tmp, gen);

@@ -166,11 +166,6 @@ public class AVLTreeDigest extends AbstractTDigest {
         }
     }
 
-    @Override
-    public void compress(GroupTree other) {
-        throw new UnsupportedOperationException();
-    }
-
     /**
      * Returns the number of samples represented in this histogram.  If you want to know how many
      * centroids are being used, try centroids().size().

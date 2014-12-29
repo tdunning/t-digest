@@ -85,8 +85,6 @@ public abstract class AbstractTDigest extends TDigest {
         return r;
     }
 
-    public abstract void compress(GroupTree other);
-
     static double quantile(double previousIndex, double index, double nextIndex, double previousMean, double nextMean) {
         final double delta = nextIndex - previousIndex;
         final double previousWeight = (nextIndex - index) / delta;
