@@ -205,7 +205,7 @@ public class TDigestTest {
         Collections.sort(values);
 
         // for this value of the compression, the tree shouldn't have merged any node
-        assertEquals(digest.centroidCount(), values.size());
+        assertEquals(digest.centroids().size(), values.size());
         for (double q : new double [] {0, 1e-10, r.nextDouble(), 0.5, 1-1e-10, 1}) {
             assertEquals(quantile(q, values), digest.quantile(q), 0.01);
         }
@@ -267,7 +267,7 @@ public class TDigestTest {
         }
         dist.compress();
         System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 100000);
-        System.out.printf("# %d centroids\n", dist.centroidCount());
+        System.out.printf("# %d centroids\n", dist.centroids().size());
         Collections.sort(data);
 
         double[] xValues = qValues.clone();
@@ -287,9 +287,9 @@ public class TDigestTest {
             iz++;
         }
         assertEquals(qz, dist.size(), 1e-10);
-        assertEquals(iz, dist.centroidCount());
+        assertEquals(iz, dist.centroids().size());
 
-        assertTrue(String.format("Summary is too large (got %d, wanted < %.1f)", dist.centroidCount(), 11 * sizeGuide), dist.centroidCount() < 11 * sizeGuide);
+        assertTrue(String.format("Summary is too large (got %d, wanted < %.1f)", dist.centroids().size(), 11 * sizeGuide), dist.centroids().size() < 11 * sizeGuide);
         int softErrors = 0;
         for (int i = 0; i < xValues.length; i++) {
             double x = xValues[i];

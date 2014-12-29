@@ -18,7 +18,9 @@
 package com.tdunning.math.stats;
 
 import java.nio.ByteBuffer;
+import java.util.AbstractCollection;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -172,25 +174,6 @@ public class ArrayDigest extends AbstractTDigest {
         return r;
     }
 
-    /**
-     * Returns the number of centroids strictly before the limit.
-     */
-    private int headCount(Index limit) {
-        int r = 0;
-
-        for (int i = 0; i < limit.page; i++) {
-            r += data.get(i).active;
-        }
-
-        if (limit.page < data.size()) {
-            for (int j = 0; j < limit.subPage; j++) {
-                r++;
-            }
-        }
-
-        return r;
-    }
-
     public double mean(Index index) {
         return data.get(index.page).centroids[index.subPage];
     }
@@ -276,9 +259,9 @@ public class ArrayDigest extends AbstractTDigest {
             throw new IllegalArgumentException("q should be in [0,1], got " + q);
         }
 
-        if (centroidCount() == 0) {
+        if (centroidCount == 0) {
             return Double.NaN;
-        } else if (centroidCount() == 1) {
+        } else if (centroidCount == 1) {
             return data.get(0).centroids[0];
         }
 
@@ -339,26 +322,44 @@ public class ArrayDigest extends AbstractTDigest {
     }
 
     @Override
-    public int centroidCount() {
-        return centroidCount;
-    }
+    public Collection<Centroid> centroids() {
+        return new AbstractCollection<Centroid>() {
 
-    @Override
-    public Iterable<? extends Centroid> centroids() {
-        List<Centroid> r = new ArrayList<Centroid>();
-        Iterator<Index> ix = iterator(0, 0);
-        while (ix.hasNext()) {
-            Index index = ix.next();
-            Page current = data.get(index.page);
-            Centroid centroid = new Centroid(current.centroids[index.subPage], current.counts[index.subPage]);
-            if (current.history != null) {
-                for (double x : current.history.get(index.subPage)) {
-                    centroid.insertData(x);
-                }
+            @Override
+            public Iterator<Centroid> iterator() {
+                final Iterator<Index> ix = ArrayDigest.this.iterator(0, 0);
+                return new Iterator<Centroid>() {
+
+                    @Override
+                    public boolean hasNext() {
+                        return ix.hasNext();
+                    }
+
+                    @Override
+                    public Centroid next() {
+                        final Index index = ix.next();
+                        final Page current = data.get(index.page);
+                        Centroid centroid = new Centroid(current.centroids[index.subPage], current.counts[index.subPage]);
+                        if (current.history != null) {
+                            for (double x : current.history.get(index.subPage)) {
+                                centroid.insertData(x);
+                            }
+                        }
+                        return centroid;
+                    }
+
+                    @Override
+                    public void remove() {
+                        throw new UnsupportedOperationException();
+                    }
+                };
             }
-            r.add(centroid);
-        }
-        return r;
+
+            @Override
+            public int size() {
+                return centroidCount;
+            }
+        };
     }
 
     public Iterator<Index> allAfter(double x) {

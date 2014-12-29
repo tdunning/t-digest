@@ -17,6 +17,7 @@
 
 package com.tdunning.math.stats;
 
+import java.util.AbstractCollection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -25,7 +26,7 @@ import java.util.List;
 /**
  * A tree of t-digest centroids.
  */
-final class AVLGroupTree implements Iterable<Centroid> {
+final class AVLGroupTree extends AbstractCollection<Centroid> {
 
     /* For insertions into the tree */
     private double centroid;
@@ -153,8 +154,10 @@ final class AVLGroupTree implements Iterable<Centroid> {
         tree.add();
     }
 
-    public void add(Centroid centroid) {
+    @Override
+    public boolean add(Centroid centroid) {
         add(centroid.mean(), centroid.count(), centroid.data());
+        return true;
     }
 
     /**

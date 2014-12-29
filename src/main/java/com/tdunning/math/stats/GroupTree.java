@@ -17,6 +17,7 @@
 
 package com.tdunning.math.stats;
 
+import java.util.AbstractCollection;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
@@ -26,7 +27,7 @@ import java.util.NoSuchElementException;
  * A tree containing TDigest.Centroid.  This adds to the normal NavigableSet the
  * ability to sum up the size of elements to the left of a particular group.
  */
-public class GroupTree implements Iterable<Centroid> {
+public class GroupTree extends AbstractCollection<Centroid> {
     private long count;
     private int size;
     private int depth;
@@ -55,13 +56,13 @@ public class GroupTree implements Iterable<Centroid> {
         leaf = this.right.first();
     }
 
-    public void add(Centroid centroid) {
+    public boolean add(Centroid centroid) {
         if (size == 0) {
             leaf = centroid;
             depth = 1;
             count = centroid.count();
             size = 1;
-            return;
+            return true;
         } else if (size == 1) {
             int order = centroid.compareTo(leaf);
             if (order < 0) {
@@ -82,6 +83,7 @@ public class GroupTree implements Iterable<Centroid> {
         depth = Math.max(left.depth, right.depth) + 1;
 
         rebalance();
+        return true;
     }
 
     /**

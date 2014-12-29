@@ -120,7 +120,7 @@ public class ArrayDigestTest extends TDigestTest {
         }
 
         assertEquals(totalWeight, ad.size());
-        assertEquals(1001, ad.centroidCount());
+        assertEquals(1001, ad.centroids().size());
 
         for (int i = 0; i < 1000; i++) {
             int w = random.nextInt(5) + 2;
@@ -131,7 +131,7 @@ public class ArrayDigestTest extends TDigestTest {
         }
 
         assertEquals(totalWeight, ad.size());
-        assertEquals(2001, ad.centroidCount());
+        assertEquals(2001, ad.centroids().size());
 
 
         Collections.sort(ref);
@@ -145,10 +145,10 @@ public class ArrayDigestTest extends TDigestTest {
         }
 
         assertEquals(0, Lists.newArrayList(ad.allBefore(0)).size());
-        assertEquals(ad.centroidCount(), Lists.newArrayList(ad.allBefore(1)).size());
+        assertEquals(ad.centroids().size(), Lists.newArrayList(ad.allBefore(1)).size());
 
         assertEquals(0, Lists.newArrayList(ad.allAfter(1)).size());
-        assertEquals(ad.centroidCount(), Lists.newArrayList(ad.allAfter(0)).size());
+        assertEquals(ad.centroids().size(), Lists.newArrayList(ad.allAfter(0)).size());
 
         for (int k = 0; k < 1000; k++) {
             final double split = random.nextDouble();
@@ -166,7 +166,7 @@ public class ArrayDigestTest extends TDigestTest {
                 i++;
             }
 
-            assertEquals("Bad counts for split " + split, ad.centroidCount(), z1.size() + z2.size());
+            assertEquals("Bad counts for split " + split, ad.centroids().size(), z1.size() + z2.size());
         }
     }
 
@@ -289,10 +289,10 @@ public class ArrayDigestTest extends TDigestTest {
             dist.compress();
 
             System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 100000);
-            System.out.printf("# %d centroids\n", dist.centroidCount());
+            System.out.printf("# %d centroids\n", dist.centroids().size());
 
             // I would be happier with 5x compression, but repeated values make things kind of weird
-            assertTrue(String.format("Summary is too large, got %d, wanted < %.1f", dist.centroidCount(), 10 * 1000.0), dist.centroidCount() < 10 * (double) 1000);
+            assertTrue(String.format("Summary is too large, got %d, wanted < %.1f", dist.centroids().size(), 10 * 1000.0), dist.centroids().size() < 10 * (double) 1000);
 
             // all quantiles should round to nearest actual value
             for (int i = 0; i < 10; i++) {
@@ -344,7 +344,7 @@ public class ArrayDigestTest extends TDigestTest {
 
         buf.flip();
         TDigest dist2 = ArrayDigest.fromBytes(buf);
-        assertEquals(dist.centroidCount(), dist2.centroidCount());
+        assertEquals(dist.centroids().size(), dist2.centroids().size());
         assertEquals(dist.compression(), dist2.compression(), 0);
         assertEquals(dist.size(), dist2.size());
 
@@ -358,7 +358,7 @@ public class ArrayDigestTest extends TDigestTest {
 
         buf.flip();
         TDigest dist3 = ArrayDigest.fromBytes(buf);
-        assertEquals(dist.centroidCount(), dist3.centroidCount());
+        assertEquals(dist.centroids().size(), dist3.centroids().size());
         assertEquals(dist.compression(), dist3.compression(), 0);
         assertEquals(dist.size(), dist3.size());
 
@@ -380,7 +380,7 @@ public class ArrayDigestTest extends TDigestTest {
 
         buf.flip();
         dist3 = ArrayDigest.fromBytes(buf);
-        assertEquals(dist.centroidCount(), dist3.centroidCount());
+        assertEquals(dist.centroids().size(), dist3.centroids().size());
         assertEquals(dist.compression(), dist3.compression(), 0);
         assertEquals(dist.size(), dist3.size());
 

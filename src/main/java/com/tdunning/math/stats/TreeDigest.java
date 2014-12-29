@@ -19,6 +19,7 @@ package com.tdunning.math.stats;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -281,13 +282,8 @@ public class TreeDigest extends AbstractTDigest {
     }
 
     @Override
-    public int centroidCount() {
-        return summary.size();
-    }
-
-    @Override
-    public Iterable<? extends Centroid> centroids() {
-        return summary;
+    public Collection<Centroid> centroids() {
+        return Collections.unmodifiableCollection(summary);
     }
 
     @Override
