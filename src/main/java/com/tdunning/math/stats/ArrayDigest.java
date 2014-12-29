@@ -221,11 +221,6 @@ public class ArrayDigest extends AbstractTDigest {
     }
 
     @Override
-    public void compress(GroupTree other) {
-        throw new UnsupportedOperationException("Default operation");
-    }
-
-    @Override
     public long size() {
         return totalWeight;
     }
