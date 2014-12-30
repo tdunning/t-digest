@@ -134,7 +134,7 @@ public class Centroid implements Comparable<Centroid> {
                 actualData.add(x);
             }
         }
+        centroid = AbstractTDigest.weightedAverage(centroid, count, x, w);
         count += w;
-        centroid += w * (x - centroid) / count;
     }
 }

@@ -27,6 +27,32 @@ public abstract class AbstractTDigest extends TDigest {
     protected Random gen = new Random();
     protected boolean recordAllData = false;
 
+    /**
+     * Same as {@link #weightedAverageSorted(double, int, double, int)} but flips
+     * the order of the variables if <code>x2</code> is greater than
+     * <code>x1</code>.
+     */
+    public static double weightedAverage(double x1, int w1, double x2, int w2) {
+        if (x1 <= x2) {
+            return weightedAverageSorted(x1, w1, x2, w2);
+        } else {
+            return weightedAverageSorted(x2, w2, x1, w1);
+        }
+    }
+
+    /**
+     * Compute the weighted average between <code>x1</code> with a weight of
+     * <code>w1</code> and <code>x2</code> with a weight of <code>w2</code>.
+     * This expects <code>x1</code> to be less than or equal to <code>x2</code>
+     * and is guaranteed to return a number between <code>x1</code> and
+     * <code>x2</code>.
+     */
+    public static double weightedAverageSorted(double x1, int w1, double x2, int w2) {
+        assert x1 <= x2;
+        final double x = (x1 * w1 + x2 * w2) / (w1 + w2);
+        return Math.max(x1, Math.min(x, x2));
+    }
+
     public static double interpolate(double x, double x0, double x1) {
         return (x - x0) / (x1 - x0);
     }

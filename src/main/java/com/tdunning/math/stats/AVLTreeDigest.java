@@ -126,8 +126,8 @@ public class AVLTreeDigest extends AbstractTDigest {
                         d.addAll(data);
                     }
                 }
+                centroid = weightedAverage(centroid, count, x, w);
                 count += w;
-                centroid += w * (x - centroid) / count;
                 summary.update(closest, centroid, count, d);
             }
             count += w;
