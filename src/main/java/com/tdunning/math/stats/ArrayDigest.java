@@ -107,13 +107,14 @@ public class ArrayDigest extends AbstractTDigest {
                 if (n == 1) {
                     // if the nearest point was unique, centroid ordering cannot change
                     Page p = data.get(closest.page);
+                    p.centroids[closest.subPage] = weightedAverage(p.centroids[closest.subPage], p.counts[closest.subPage], x, w);
                     p.counts[closest.subPage] += w;
                     p.totalCount += w;
-                    p.centroids[closest.subPage] += (x - p.centroids[closest.subPage]) / p.counts[closest.subPage];
                     if (p.history != null && p.history.get(closest.subPage) != null) {
                         p.history.get(closest.subPage).add(x);
                     }
                     totalWeight += w;
+                    assert p.sorted();
                 } else {
                     // if the nearest point was not unique, then we may not be modifying the first copy
                     // which means that ordering can change
@@ -783,6 +784,15 @@ public class ArrayDigest extends AbstractTDigest {
             history = this.recordAllData ? new ArrayList<List<Double>>() : null;
         }
 
+        boolean sorted() {
+            for (int i = 1; i < active; ++i) {
+                if (centroids[i] < centroids[i - 1]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         public Page add(double x, int w, List<Double> history) {
             for (int i = 0; i < active; i++) {
                 if (centroids[i] >= x) {
@@ -795,9 +805,12 @@ public class ArrayDigest extends AbstractTDigest {
                         } else {
                             newPage.addAt(i - pageSize / 2, x, w, history);
                         }
+                        assert sorted();
+                        assert newPage.sorted();
                         return newPage;
                     } else {
                         addAt(i, x, w, history);
+                        assert sorted();
                         return null;
                     }
                 }
@@ -808,9 +821,12 @@ public class ArrayDigest extends AbstractTDigest {
                 // split page
                 Page newPage = split();
                 newPage.addAt(newPage.active, x, w, history);
+                assert sorted();
+                assert newPage.sorted();
                 return newPage;
             } else {
                 addAt(active, x, w, history);
+                assert sorted();
                 return null;
             }
         }
@@ -826,6 +842,7 @@ public class ArrayDigest extends AbstractTDigest {
                 centroids[i] = x;
                 counts[i] = w;
             } else {
+                assert i == active;
                 centroids[active] = x;
                 counts[active] = w;
                 if (this.history != null) {
@@ -874,6 +891,7 @@ public class ArrayDigest extends AbstractTDigest {
             }
             active--;
             totalCount -= w;
+            assert sorted();
         }
     }
 }
