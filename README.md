@@ -56,11 +56,11 @@ The data from these tests are stored in a variety of data files in the root dire
 quite large.  To visualize the contents of these files, copy all of them into the t-digest-paper directory so
 that they are accessible to the R scripts there:
 
-    cp *.?sv docs/theory/t-digest-paper/
+    cp *.?sv docs/t-digest-paper/
 
 At this point you can run the R analysis scripts:
 
-    cd docs/theory/t-digest-paper/
+    cd docs/t-digest-paper/
     for i in *.r; do (R --slave -f $i; echo $i complete) & echo $i started; done
 
 Most of these scripts will complete almost instantaneously; one or two will take a few tens of seconds.
