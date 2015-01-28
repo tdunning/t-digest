@@ -158,7 +158,8 @@ Computing an approximation of the $q$ quantile of the data points seen so far ca
 $t = 0$, $q \gets q \sum c_i.\mathtt{count}$\;
 \For {$i \in 1\ldots m$} {
   $k_i = c_i.\mathtt{count}$\;
-  \If {$q < k_i$} {
+  $m_i = c_i.\mathtt{mean}$\;
+  \If {$q < t + k_i$} {
     \uIf {$i = 1$} {
       $\Delta \gets (c_{i+1}.\mathtt{mean} - c_i.\mathtt{mean})$\;
     } \uElseIf {$i = m$} {
