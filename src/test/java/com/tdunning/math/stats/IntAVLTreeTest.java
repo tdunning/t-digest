@@ -1,8 +1,5 @@
 package com.tdunning.math.stats;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.*;
-
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
@@ -12,7 +9,7 @@ import java.util.TreeMap;
 import org.junit.Test;
 
 
-public class IntAVLTreeTest {
+public class IntAVLTreeTest extends AbstractTest {
 
     static class IntBag extends IntAVLTree {
 

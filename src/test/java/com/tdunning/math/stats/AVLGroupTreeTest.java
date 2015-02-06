@@ -17,16 +17,11 @@
 
 package com.tdunning.math.stats;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.util.Random;
-
 import org.apache.mahout.common.RandomUtils;
 import org.junit.Before;
 import org.junit.Test;
 
-public class AVLGroupTreeTest {
+public class AVLGroupTreeTest extends AbstractTest {
 
     @Before
     public void setUp() {
@@ -83,10 +78,9 @@ public class AVLGroupTreeTest {
 
     @Test
     public void testHeadSum() {
-        Random gen = RandomUtils.getRandom();
         AVLGroupTree x = new AVLGroupTree(false);
         for (int i = 0; i < 1000; ++i) {
-            x.add(gen.nextDouble(), 1 + gen.nextInt(10), null);
+            x.add(randomDouble(), randomIntBetween(1, 10), null);
         }
         long sum = 0;
         for (int node = x.first(); node != IntAVLTree.NIL; node = x.next(node)) {
@@ -97,12 +91,11 @@ public class AVLGroupTreeTest {
 
     @Test
     public void testFloorSum() {
-        Random gen = RandomUtils.getRandom();
         AVLGroupTree x = new AVLGroupTree(false);
         int total = 0;
         for (int i = 0; i < 1000; ++i) {
-            int count = 1 + gen.nextInt(10);
-            x.add(gen.nextDouble(), count, null);
+            int count = randomIntBetween(1, 10);
+            x.add(randomDouble(), count, null);
             total += count;
         }
         assertEquals(IntAVLTree.NIL, x.floorSum(-1));

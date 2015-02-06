@@ -88,29 +88,6 @@ public abstract class AbstractTDigest extends TDigest {
 
     abstract void add(double x, int w, Centroid base);
 
-    protected static TDigest merge(Iterable<TDigest> subData, Random gen, TDigest r) {
-        List<Centroid> centroids = new ArrayList<Centroid>();
-        boolean recordAll = false;
-        for (TDigest digest : subData) {
-            for (Centroid centroid : digest.centroids()) {
-                centroids.add(centroid);
-            }
-            recordAll |= digest.isRecording();
-        }
-        Collections.shuffle(centroids, gen);
-        if (recordAll) {
-            r.recordAllData();
-        }
-
-        for (Centroid c : centroids) {
-            if (r.isRecording()) {
-                // TODO should do something better here.
-            }
-            ((AbstractTDigest) r).add(c.mean(), c.count(), c);
-        }
-        return r;
-    }
-
     static double quantile(double previousIndex, double index, double nextIndex, double previousMean, double nextMean) {
         final double delta = nextIndex - previousIndex;
         final double previousWeight = (nextIndex - index) / delta;

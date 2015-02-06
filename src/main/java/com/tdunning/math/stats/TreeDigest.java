@@ -142,11 +142,6 @@ public class TreeDigest extends AbstractTDigest {
         }
     }
 
-    public static TDigest merge(double compression, Iterable<TDigest> subData, Random gen) {
-        TreeDigest r = new TreeDigest(compression);
-        return merge(subData, gen, r);
-    }
-
     @Override
     public void compress() {
         TreeDigest reduced = new TreeDigest(compression);
