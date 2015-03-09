@@ -22,9 +22,7 @@ import com.google.common.collect.Lists;
 
 import org.apache.mahout.common.RandomUtils;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -52,20 +50,26 @@ import static org.junit.Assert.fail;
  * Common test methods for TDigests
  */
 public class TDigestTest {
-    protected static PrintWriter sizeDump;
-    protected static PrintWriter errorDump;
-    protected static PrintWriter deviationDump;
+    protected static PrintWriter sizeDump = null;
+    protected static PrintWriter errorDump = null;
+    protected static PrintWriter deviationDump = null;
 
-    @BeforeClass
-    public static void setup() throws IOException {
-        sizeDump = new PrintWriter(new FileWriter("sizes.csv"));
+    public static void setup(String digestName) throws IOException {
+        sizeDump = new PrintWriter(new FileWriter("sizes-" + digestName + ".csv"));
         sizeDump.printf("tag\ti\tq\tk\tactual\n");
 
-        errorDump = new PrintWriter((new FileWriter("errors.csv")));
+        errorDump = new PrintWriter((new FileWriter("errors-" + digestName + ".csv")));
         errorDump.printf("dist\ttag\tx\tQ\terror\n");
 
-        deviationDump = new PrintWriter((new FileWriter("deviation.csv")));
+        deviationDump = new PrintWriter((new FileWriter("deviation-" + digestName + ".csv")));
         deviationDump.printf("tag\tQ\tk\tx\tmean\tleft\tright\tdeviation\n");
+    }
+
+    @After
+    public void flush() {
+        sizeDump.flush();
+        errorDump.flush();
+        deviationDump.flush();
     }
 
     @AfterClass
@@ -181,7 +185,7 @@ public class TDigestTest {
         final double value = RandomUtils.getRandom().nextDouble() * 1000;
         digest.add(value);
         final double q = RandomUtils.getRandom().nextDouble();
-        for (double qValue : new double[] {0, q, 1}) {
+        for (double qValue : new double[]{0, q, 1}) {
             assertEquals(value, digest.quantile(qValue), 0.001f);
         }
     }
@@ -346,7 +350,7 @@ public class TDigestTest {
         }
         assertEquals(1000 + 10L * (1 << 28), digest.size());
         assertTrue(digest.size() > Integer.MAX_VALUE);
-        final double[] quantiles = new double[] {0, 0.1, 0.5, 0.9, 1, gen.nextDouble()};
+        final double[] quantiles = new double[]{0, 0.1, 0.5, 0.9, 1, gen.nextDouble()};
         Arrays.sort(quantiles);
         double prev = Double.NEGATIVE_INFINITY;
         for (double q : quantiles) {
@@ -359,15 +363,21 @@ public class TDigestTest {
     @Test
     public void testMergeEmpty() {
         final Random gen0 = RandomUtils.getRandom();
-        List<TDigest> subData = new ArrayList();
+        List<TDigest> subData = new ArrayList<TDigest>();
         subData.add(new TreeDigest(10));
         TreeDigest foo = new TreeDigest(10);
         AbstractTDigest.merge(subData, gen0, foo);
         empty(foo);
     }
 
-    public interface DigestFactory<T extends TDigest> {
-        T create();
+    public static class DigestFactory<T extends TDigest> {
+        public T create() {
+            throw new UnsupportedOperationException("Must over-ride");
+        }
+
+        public T create(double ignore) {
+            throw new UnsupportedOperationException("Must over-ride");
+        }
     }
 
     protected void sorted(TDigest digest) {

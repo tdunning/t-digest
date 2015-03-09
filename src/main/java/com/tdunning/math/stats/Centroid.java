@@ -60,6 +60,11 @@ public class Centroid implements Comparable<Centroid> {
         start(x, 1, id);
     }
 
+    Centroid(double x, int w, List<Double> data) {
+        this(x, w);
+        actualData = data;
+    }
+
     private void start(double x, int w, int id) {
         this.id = id;
         add(x, w);

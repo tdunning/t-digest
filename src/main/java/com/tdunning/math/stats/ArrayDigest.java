@@ -307,14 +307,14 @@ public class ArrayDigest extends AbstractTDigest {
                 }
                 // common case: we found two centroids previous and next so that the desired quantile is
                 // after 'previous' but before 'next'
-                return quantile(previousIndex, index, nextIndex, previousMean, next.mean());
+                return quantile(index, previousIndex, nextIndex, previousMean, next.mean());
             } else if (!it.hasNext()) {
                 // special case 2: the index we are interested in is beyond the last centroid
                 // again, assume values grow linearly between index previousIndex and (count - 1)
                 // which is the highest possible index
                 final double nextIndex2 = size() - 1;
                 final double nextMean2 = (next.mean() * (nextIndex2 - previousIndex) - previousMean * (nextIndex2 - nextIndex)) / (nextIndex - previousIndex);
-                return quantile(nextIndex, index, nextIndex2, next.mean(), nextMean2);
+                return quantile(index, nextIndex, nextIndex2, next.mean(), nextMean2);
             }
             total += next.count();
             previousMean = next.mean();

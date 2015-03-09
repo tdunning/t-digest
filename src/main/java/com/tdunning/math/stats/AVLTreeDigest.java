@@ -275,14 +275,14 @@ public class AVLTreeDigest extends AbstractTDigest {
                 }
                 // common case: we found two centroids previous and next so that the desired quantile is
                 // after 'previous' but before 'next'
-                return quantile(previousIndex, index, nextIndex, previousMean, values.mean(next));
+                return quantile(index, previousIndex, nextIndex, previousMean, values.mean(next));
             } else if (values.next(next) == IntAVLTree.NIL) {
                 // special case 2: the index we are interested in is beyond the last centroid
                 // again, assume values grow linearly between index previousIndex and (count - 1)
                 // which is the highest possible index
                 final double nextIndex2 = count - 1;
                 final double nextMean2 = (values.mean(next) * (nextIndex2 - previousIndex) - previousMean * (nextIndex2 - nextIndex)) / (nextIndex - previousIndex);
-                return quantile(nextIndex, index, nextIndex2, values.mean(next), nextMean2);
+                return quantile(index, nextIndex, nextIndex2, values.mean(next), nextMean2);
             }
             total += values.count(next);
             previousMean = values.mean(next);
