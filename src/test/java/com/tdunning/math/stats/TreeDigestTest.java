@@ -36,10 +36,14 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 public class TreeDigestTest extends TDigestTest {
+    @BeforeClass
+    public static void setup() throws IOException {
+        TDigestTest.setup("tree");
+    }
 
-    private DigestFactory<TDigest> factory = new DigestFactory<TDigest>() {
+    private DigestFactory<TreeDigest> factory = new DigestFactory<TreeDigest>() {
         @Override
-        public TDigest create() {
+        public TreeDigest create() {
             return new TreeDigest(100);
         }
     };
@@ -47,13 +51,6 @@ public class TreeDigestTest extends TDigestTest {
     @Before
     public void testSetUp() {
         RandomUtils.useTestSeed();
-    }
-
-    @After
-    public void flush() {
-        sizeDump.flush();
-        errorDump.flush();
-        deviationDump.flush();
     }
 
     @Test
@@ -341,7 +338,7 @@ public class TreeDigestTest extends TDigestTest {
         assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
 
         final Random gen0 = RandomUtils.getRandom();
-        final PrintWriter out = new PrintWriter(new FileOutputStream("scaling.tsv"));
+        final PrintWriter out = new PrintWriter(new FileOutputStream("scaling-tree.tsv"));
         out.printf("k\tsamples\tcompression\tsize1\tsize2\n");
 
         List<Callable<String>> tasks = Lists.newArrayList();

@@ -20,6 +20,7 @@ package com.tdunning.math.stats;
 import com.clearspring.analytics.stream.quantile.QDigest;
 import com.google.common.collect.Lists;
 
+import com.google.common.collect.Sets;
 import org.apache.mahout.common.RandomUtils;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
@@ -36,10 +37,14 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 public class AVLTreeDigestTest extends TDigestTest {
+    @BeforeClass
+    public static void setup() throws IOException {
+        TDigestTest.setup("avl");
+    }
 
-    private DigestFactory<TDigest> factory = new DigestFactory<TDigest>() {
+    private AvlDigestFactory factory = new AvlDigestFactory() {
         @Override
-        public TDigest create() {
+        public AVLTreeDigest create() {
             return new AVLTreeDigest(100);
         }
     };
@@ -47,13 +52,6 @@ public class AVLTreeDigestTest extends TDigestTest {
     @Before
     public void testSetUp() {
         RandomUtils.useTestSeed();
-    }
-
-    @After
-    public void flush() {
-        sizeDump.flush();
-        errorDump.flush();
-        deviationDump.flush();
     }
 
     @Test
@@ -158,14 +156,14 @@ public class AVLTreeDigestTest extends TDigestTest {
     public void testSequentialPoints() {
         for (int i = 0; i < repeats(); i++) {
             runTest(factory, new AbstractContinousDistribution() {
-                double base = 0;
+                        double base = 0;
 
-                @Override
-                public double nextDouble() {
-                    base += Math.PI * 1e-5;
-                    return base;
-                }
-            }, 100, new double[]{0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999},
+                        @Override
+                        public double nextDouble() {
+                            base += Math.PI * 1e-5;
+                            return base;
+                        }
+                    }, 100, new double[]{0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999},
                     "sequential", true);
         }
     }
@@ -336,19 +334,26 @@ public class AVLTreeDigestTest extends TDigestTest {
 
     @Test()
     public void testSizeControl() throws IOException, InterruptedException, ExecutionException {
+        runSizeControl("scaling-avl.tsv", new AvlDigestFactory());
+
+    }
+
+    private void runSizeControl(String name, final DigestFactory<? extends TDigest> factory) throws FileNotFoundException, InterruptedException {
         // very slow running data generator.  Don't want to run this normally.  To run slow tests use
         // mvn test -DrunSlowTests=true
         assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
 
         final Random gen0 = RandomUtils.getRandom();
-        final PrintWriter out = new PrintWriter(new FileOutputStream("scaling.tsv"));
+        final PrintWriter out = new PrintWriter(new FileOutputStream(name));
         out.printf("k\tsamples\tcompression\tsize1\tsize2\n");
 
-        List<Callable<String>> tasks = Lists.newArrayList();
-        for (int k = 0; k < 20; k++) {
-            for (final int size : new int[]{10, 100, 1000, 10000}) {
+        ExecutorService pool = Executors.newFixedThreadPool(20);
+
+        Set<Future<String>> tasks = Sets.newHashSet();
+        for (final int size : new int[]{10000, 1000, 100, 10}) {
+            for (int k = 0; k < 20; k++) {
                 final int currentK = k;
-                tasks.add(new Callable<String>() {
+                Callable<String> task = new Callable<String>() {
                     Random gen = new Random(gen0.nextLong());
 
                     @Override
@@ -357,7 +362,7 @@ public class AVLTreeDigestTest extends TDigestTest {
                         StringWriter s = new StringWriter();
                         PrintWriter out = new PrintWriter(s);
                         for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
-                            AVLTreeDigest dist = new AVLTreeDigest(compression);
+                            TDigest dist = factory.create(compression);
                             for (int i = 0; i < size * 1000; i++) {
                                 dist.add(gen.nextDouble());
                             }
@@ -365,17 +370,45 @@ public class AVLTreeDigestTest extends TDigestTest {
                             out.flush();
                         }
                         out.close();
+                        System.out.printf("Done with %d,%d\n", currentK, size);
                         return s.toString();
                     }
-                });
+                };
+
+                tasks.add(pool.submit(task));
             }
         }
 
-        for (Future<String> result : Executors.newFixedThreadPool(20).invokeAll(tasks)) {
-            out.write(result.get());
+        // this idiom allows us to abort if there are any exceptions
+        // using pool.invokeAll(...) would require us to wait for all tasks
+        try {
+            while (tasks.size() > 0) {
+                List<Future<String>> done = Lists.newArrayList();
+                for (Future<String> result : tasks) {
+                    if (result.isDone()) {
+                        done.add(result);
+                    }
+                }
+                tasks.removeAll(done);
+                Thread.sleep(100);
+            }
+        } finally {
+            pool.shutdownNow();
         }
 
         out.close();
+    }
+
+    private static class AvlDigestFactory extends DigestFactory<AVLTreeDigest> {
+        @Override
+        public AVLTreeDigest create() {
+            return create(50);
+        }
+
+        @Override
+        public AVLTreeDigest create(double compression) {
+            return new AVLTreeDigest(compression);
+        }
     }
 
     @Test

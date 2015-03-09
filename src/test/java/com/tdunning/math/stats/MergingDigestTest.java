@@ -47,7 +47,7 @@ public class MergingDigestTest extends TDigestTest {
 
     private MergingDigestFactory factory = new MergingDigestFactory() {
         @Override
-        public TDigest create() {
+        public MergingDigest create() {
             return new MergingDigest(500);
         }
     };
@@ -402,14 +402,14 @@ public class MergingDigestTest extends TDigestTest {
         out.close();
     }
 
-    private static class MergingDigestFactory extends DigestFactory {
+    private static class MergingDigestFactory extends DigestFactory<MergingDigest> {
         @Override
-        public TDigest create() {
+        public MergingDigest create() {
             return create(50);
         }
 
         @Override
-        public TDigest create(double compression) {
+        public MergingDigest create(double compression) {
             return new MergingDigest(compression);
         }
     }
@@ -474,7 +474,7 @@ public class MergingDigestTest extends TDigestTest {
 
     @Test
     public void testMerge() throws FileNotFoundException, InterruptedException, ExecutionException {
-        merge(new DigestFactory() {
+        merge(new DigestFactory<MergingDigest>() {
             @Override
             public MergingDigest create() {
                 return new MergingDigest(50);

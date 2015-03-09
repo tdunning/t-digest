@@ -25,6 +25,7 @@ import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
 import org.apache.mahout.math.jet.random.Normal;
 import org.apache.mahout.math.jet.random.Uniform;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
@@ -49,6 +50,11 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 public class ArrayDigestTest extends TDigestTest {
+    @BeforeClass
+    public static void setup() throws IOException {
+        TDigestTest.setup("array");
+    }
+
     private DigestFactory<ArrayDigest> factory = new DigestFactory<ArrayDigest>() {
         @Override
         public ArrayDigest create() {
@@ -506,12 +512,12 @@ public class ArrayDigestTest extends TDigestTest {
         assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
 
         final Random gen0 = RandomUtils.getRandom();
-        final PrintWriter out = new PrintWriter(new FileOutputStream("scaling.tsv"));
+        final PrintWriter out = new PrintWriter(new FileOutputStream("scaling-array.tsv"));
         out.printf("k\tsamples\tcompression\tsize1\tsize2\n");
 
         List<Callable<String>> tasks = Lists.newArrayList();
-        for (int k = 0; k < 20; k++) {
-            for (final int size : new int[]{10, 100, 1000, 10000}) {
+            for (final int size : new int[]{10000, 1000, 10, 100}) {
+                for (int k = 0; k < 20; k++) {
                 final int currentK = k;
                 tasks.add(new Callable<String>() {
                     Random gen = new Random(gen0.nextLong());
@@ -530,6 +536,8 @@ public class ArrayDigestTest extends TDigestTest {
                             out.flush();
                         }
                         out.close();
+                        System.out.printf("Finished %d,%d\n", currentK, size);
+
                         return s.toString();
                     }
                 });
