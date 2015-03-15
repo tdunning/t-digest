@@ -18,10 +18,14 @@
 package com.tdunning.math.stats;
 
 import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
 import junit.framework.TestCase;
+import org.apache.mahout.common.RandomUtils;
+import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.junit.Assert;
 
+import java.util.List;
 import java.util.Random;
 
 public class SortTest extends TestCase {
@@ -38,6 +42,18 @@ public class SortTest extends TestCase {
     public void testIdentical() {
         int[] order = new int[6];
         double[] values = new double[6];
+
+        Sort.sort(order, values);
+        checkOrder(order, values);
+    }
+
+    public void testRepeated() {
+        int n = 50;
+        int[] order = new int[n];
+        double[] values = new double[n];
+        for (int i = 0; i < n; i++) {
+            values[i] = Math.rint(10 * ((double) i / n)) / 10.0;
+        }
 
         Sort.sort(order, values);
         checkOrder(order, values);

@@ -29,11 +29,23 @@ public class Sort {
      * @param values The values to sort.
      */
     public static void sort(int[] order, double[] values) {
-        for (int i = 0; i < values.length; i++) {
+        sort(order, values, values.length);
+    }
+
+    /**
+     * Quick sort using an index array.  On return, the
+     * values[order[i]] is in order as i goes 0..values.length
+     *
+     * @param order  Indexes into values
+     * @param values The values to sort.
+     * @param n      The number of values to sort
+     */
+    public static void sort(int[] order, double[] values, int n) {
+        for (int i = 0; i < n; i++) {
             order[i] = i;
         }
-        quickSort(order, values, 0, order.length, 8);
-        insertionSort(order, values, 8);
+        quickSort(order, values, 0, n, 8);
+        insertionSort(order, values, n, 8);
     }
 
     /**
@@ -105,10 +117,18 @@ public class Sort {
             int high = end;        // high points to first value > pivotValue
             int i = low;           // i scans the array
             while (i < high) {
+                // invariant:  values[order[k]] == pivotValue for k in [0..low)
+                // invariant:  values[order[k]] < pivotValue for k in [low..i)
+                // invariant:  values[order[k]] > pivotValue for k in [high..end)
+                // in-loop:  i < high
+                // in-loop:  low < high
+                // in-loop:  i >= low
                 double vi = values[order[i]];
                 if (vi == pivotValue) {
                     if (low != i) {
                         swap(order, low, i);
+                    } else {
+                        i++;
                     }
                     low++;
                 } else if (vi > pivotValue) {
@@ -119,6 +139,10 @@ public class Sort {
                     i++;
                 }
             }
+            // invariant:  values[order[k]] == pivotValue for k in [0..low)
+            // invariant:  values[order[k]] < pivotValue for k in [low..i)
+            // invariant:  values[order[k]] > pivotValue for k in [high..end)
+            // assert i == high || low == high therefore, we are done with partition
 
             // at this point, i==high, from [start,low) are == pivot, [low,high) are < and [high,end) are >
             // we have to move the values equal to the pivot into the middle.  To do this, we swap pivot
@@ -138,7 +162,7 @@ public class Sort {
                 low = from;
             }
 
-//            checkParition(order, values, pivotValue, start, low, high, end);
+//            checkPartition(order, values, pivotValue, start, low, high, end);
 
             // now recurse, but arrange it so we handle the longer limit by tail recursion
             if (low - start < end - high) {
@@ -156,6 +180,16 @@ public class Sort {
         }
     }
 
+    private static void swap(int[] order, int i, int j) {
+        int t = order[i];
+        order[i] = order[j];
+        order[j] = t;
+    }
+
+    /**
+     * Check that a partition step was done correctly.  For debugging and testing.
+     */
+    @SuppressWarnings("UnusedDeclaration")
     public static void checkPartition(int[] order, double[] values, double pivotValue, int start, int low, int high, int end) {
         if (order.length != values.length) {
             throw new IllegalArgumentException("Arguments must be same size");
@@ -188,14 +222,13 @@ public class Sort {
 
     /**
      * Limited range insertion sort.  We assume that no element has to move more than limit steps
-     * because quick sort has already handled things up to there.
+     * because quick sort has done its thing.
      *
      * @param order  The permutation index
      * @param values The values we are sorting
      * @param limit  The largest amount of disorder
      */
-    private static void insertionSort(int[] order, double[] values, int limit) {
-        int n = order.length;
+    private static void insertionSort(int[] order, double[] values, int n, int limit) {
         for (int i = 1; i < n; i++) {
             int t = order[i];
             double v = values[order[i]];
@@ -211,11 +244,4 @@ public class Sort {
             }
         }
     }
-
-    private static void swap(int[] order, int i, int j) {
-        int t = order[i];
-        order[i] = order[j];
-        order[j] = t;
-    }
-
 }

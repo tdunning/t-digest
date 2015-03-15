@@ -121,7 +121,7 @@ public class MergingDigestTest extends TDigestTest {
             }
         };
 
-        AVLTreeDigest dist = new AVLTreeDigest((double) 1000);
+        MergingDigest dist = new MergingDigest((double) 1000);
         List<Double> data = Lists.newArrayList();
         for (int i1 = 0; i1 < 100000; i1++) {
             double x = mix.nextDouble();
@@ -174,7 +174,7 @@ public class MergingDigestTest extends TDigestTest {
     @Test
     public void testSerialization() {
         Random gen = RandomUtils.getRandom();
-        AVLTreeDigest dist = new AVLTreeDigest(100);
+        MergingDigest dist = new MergingDigest(100);
         for (int i = 0; i < 100000; i++) {
             double x = gen.nextDouble();
             dist.add(x);
@@ -194,13 +194,13 @@ public class MergingDigestTest extends TDigestTest {
         System.out.printf("# big %d bytes\n", buf.position());
 
         buf.flip();
-        AVLTreeDigest dist2 = AVLTreeDigest.fromBytes(buf);
+        MergingDigest dist2 = MergingDigest.fromBytes(buf);
         assertEquals(dist.centroids().size(), dist2.centroids().size());
         assertEquals(dist.compression(), dist2.compression(), 0);
         assertEquals(dist.size(), dist2.size());
 
         for (double q = 0; q < 1; q += 0.01) {
-            assertEquals(dist.quantile(q), dist2.quantile(q), 1e-8);
+            assertEquals(dist.quantile(q), dist2.quantile(q), 1e-6);
         }
 
         Iterator<? extends Centroid> ix = dist2.centroids().iterator();
@@ -216,7 +216,7 @@ public class MergingDigestTest extends TDigestTest {
         System.out.printf("# small %d bytes\n", buf.position());
 
         buf.flip();
-        dist2 = AVLTreeDigest.fromBytes(buf);
+        dist2 = MergingDigest.fromBytes(buf);
         assertEquals(dist.centroids().size(), dist2.centroids().size());
         assertEquals(dist.compression(), dist2.compression(), 0);
         assertEquals(dist.size(), dist2.size());
@@ -270,7 +270,7 @@ public class MergingDigestTest extends TDigestTest {
     private void compareQD(PrintWriter out, AbstractContinousDistribution gen, String tag, long scale) {
         for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000}) {
             QDigest qd = new QDigest(compression);
-            AVLTreeDigest dist = new AVLTreeDigest(compression);
+            MergingDigest dist = new MergingDigest(compression);
             List<Double> data = Lists.newArrayList();
             for (int i = 0; i < 100000; i++) {
                 double x = gen.nextDouble();
@@ -311,7 +311,7 @@ public class MergingDigestTest extends TDigestTest {
         double[] quantiles = {0.001, 0.01, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99, 0.999};
         for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000}) {
             QuantileEstimator sq = new QuantileEstimator(1001);
-            AVLTreeDigest dist = new AVLTreeDigest(compression);
+            MergingDigest dist = new MergingDigest(compression);
             List<Double> data = Lists.newArrayList();
             for (int i = 0; i < 100000; i++) {
                 double x = gen.nextDouble();
@@ -337,7 +337,7 @@ public class MergingDigestTest extends TDigestTest {
 
     @Test()
     public void testSizeControl() throws IOException, InterruptedException, ExecutionException {
-        runSizeControl("scaling-avl.tsv", new MergingDigestFactory());
+        runSizeControl("scaling-merging.tsv", new MergingDigestFactory());
 
     }
 
@@ -442,7 +442,7 @@ public class MergingDigestTest extends TDigestTest {
                         Collections.sort(data);
 
                         for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
-                            AVLTreeDigest dist = new AVLTreeDigest(compression);
+                            MergingDigest dist = new MergingDigest(compression);
                             for (Double x : data) {
                                 dist.add(x);
                             }
@@ -484,23 +484,23 @@ public class MergingDigestTest extends TDigestTest {
 
     @Test
     public void testEmpty() {
-        empty(new AVLTreeDigest(100));
+        empty(new MergingDigest(100));
     }
 
     @Test
     public void testSingleValue() {
-        singleValue(new AVLTreeDigest(100));
+        singleValue(new MergingDigest(100));
     }
 
     @Test
     public void testFewValues() {
-        final TDigest digest = new AVLTreeDigest(100);
+        final TDigest digest = new MergingDigest(100);
         fewValues(digest);
     }
 
     @Test
     public void testMoreThan2BValues() {
-        final TDigest digest = new AVLTreeDigest(100);
+        final TDigest digest = new MergingDigest(100);
         moreThan2BValues(digest);
     }
 
@@ -509,7 +509,7 @@ public class MergingDigestTest extends TDigestTest {
         // t-digest shouldn't merge extreme nodes, but let's still test how it would
         // answer to extreme quantiles in that case ('extreme' in the sense that the
         // quantile is either before the first node or after the last one)
-        AVLTreeDigest digest = new AVLTreeDigest(100);
+        MergingDigest digest = new MergingDigest(100);
         digest.add(10, 3);
         digest.add(20, 1);
         digest.add(40, 5);
