@@ -56,10 +56,10 @@ The basic outline of the algorithm for constructing a $t$-digest is quite simple
 \KwOut{final set $C=[c_1 \ldots c_m]$ of weighted centroids} 
 \For{$(x_n, w_n) \in X$} {
   $z = \min | c_i.\mathtt{mean} - x |$\;
-  $S = \lbrace c_i  :  |c_i.\mathtt{mean} - x| = z \wedge c_i.\mathtt{count} + 1 \le 4n\delta q(c_i) (1-q(c_i)) \rbrace $\;
+  $S = \lbrace c_i  :  |c_i.\mathtt{mean} - x| = z \wedge c_i.\mathtt{count} + w_n \le 4n\delta q(c_i) (1-q(c_i)) \rbrace $\;
    \While {$S \ne \lbrace \rbrace\wedge w_n > 0$} {
        Sample $c_j \sim \mathrm{Uniform}( S)$\;
-       $\Delta w = \min(4n\delta q(c_i) (1-q(c_i))-c_j.\mathtt{count}, w_n)$\;
+       $\Delta w = \min(4n\delta q(c_j) (1-q(c_j))-c_j.\mathtt{count}, w_n)$\;
        $c_j.\mathtt{count} \gets c_j.\mathtt{count} + \Delta w$\;
        $c_j.\mathtt{mean} \gets c_j.\mathtt{mean} + \Delta w (x_n - c_j.\mathtt{mean})/c_j.\mathtt{count}$\;
        $w_n \gets w_n - \Delta w$\;
@@ -131,7 +131,7 @@ $t = 0$, $N = \sum_i k_i$\;
     }
     $z = \max(-1, (x-m_i)/\Delta)$\;
   \If {$z < 1$} {
-    \Return $(t + \frac{k_i} N \frac{z+1} {2})$
+    \Return $( \frac{t}{N} + \frac{k_i} N \frac{z+1} {2})$
   }
   $t \gets t + k_i$\;
 }
