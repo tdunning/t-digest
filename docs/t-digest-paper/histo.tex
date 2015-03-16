@@ -131,7 +131,7 @@ $t = 0$, $N = \sum_i k_i$\;
     }
     $z = \max(-1, (x-m_i)/\Delta)$\;
   \If {$z < 1$} {
-    \Return $(t + \frac{k_i} N \frac{z+1} {2})$
+    \Return $( \frac{t}{N} + \frac{k_i} N \frac{z+1} {2})$
   }
   $t \gets t + k_i$\;
 }
