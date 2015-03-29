@@ -522,6 +522,28 @@ public class AVLTreeDigestTest extends TDigestTest {
     }
 
     @Test
+    public void testCDFNonDecreasing() {
+        AVLTreeDigest digest = new AVLTreeDigest(100);
+
+        digest.add(25., 1);
+        digest.add(14., 1);
+        digest.add(10., 1);
+        digest.add(13., 1);
+        digest.add( 5., 1);
+        digest.add(20., 1);
+        digest.add(27., 1);
+        digest.compress();
+
+        double max = 0.;
+        for(int num = 0; num < 30; ++num) {
+            double cdf = digest.cdf((double)num);
+            System.out.printf("# cdf (%d) = %.3f\n", num, cdf);
+            assertTrue(max <= cdf);
+            max = cdf;
+        }
+    }
+
+    @Test
     public void testSorted() {
         final TDigest digest = factory.create();
         sorted(digest);
