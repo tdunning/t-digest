@@ -205,26 +205,28 @@ public class AVLTreeDigest extends AbstractTDigest {
             double right = left;
 
             // scan to next to last element
-            while (it.hasNext()) {
+            while (true) {
                 if (x < a.mean() + right) {
-                    return (r + a.count() * interpolate(x, a.mean() - left, a.mean() + right)) / count;
+                    double value = (r + a.count() * interpolate(x, a.mean() - left, a.mean() + right)) / count;
+                    return value > 0.0 ? value : 0.0;
                 }
+
                 r += a.count();
-
+                
                 a = b;
-                b = it.next();
-
                 left = right;
-                right = (b.mean() - a.mean()) / 2;
-            }
-
-            // for the last element, assume right width is same as left
-            left = right;
-            a = b;
-            if (x < a.mean() + right) {
-                return (r + a.count() * interpolate(x, a.mean() - left, a.mean() + right)) / count;
-            } else {
-                return 1;
+                
+                if(it.hasNext()) {
+                    b = it.next();
+                    right = (b.mean() - a.mean()) / 2;
+                } else {
+                    // for the last element, assume right width is same as left
+                    if (x < a.mean() + right) {
+                        return (r + a.count() * interpolate(x, a.mean() - left, a.mean() + right)) / count;
+                    } else {
+                        return 1;
+                    }
+                }
             }
         }
     }
