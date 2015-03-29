@@ -151,7 +151,7 @@ public class AVLTreeDigest extends AbstractTDigest {
         final int[] nodes = new int[centroids.size()];
         nodes[0] = centroids.first();
         for (int i = 1; i < nodes.length; ++i) {
-            nodes[i] = centroids.next(nodes[i-1]);
+            nodes[i] = centroids.next(nodes[i - 1]);
             assert nodes[i] != IntAVLTree.NIL;
         }
         assert centroids.next(nodes[nodes.length - 1]) == IntAVLTree.NIL;
@@ -205,28 +205,26 @@ public class AVLTreeDigest extends AbstractTDigest {
             double right = left;
 
             // scan to next to last element
-            while (true) {
+            while (it.hasNext()) {
                 if (x < a.mean() + right) {
                     double value = (r + a.count() * interpolate(x, a.mean() - left, a.mean() + right)) / count;
                     return value > 0.0 ? value : 0.0;
                 }
 
                 r += a.count();
-                
+
                 a = b;
                 left = right;
-                
-                if(it.hasNext()) {
-                    b = it.next();
-                    right = (b.mean() - a.mean()) / 2;
-                } else {
-                    // for the last element, assume right width is same as left
-                    if (x < a.mean() + right) {
-                        return (r + a.count() * interpolate(x, a.mean() - left, a.mean() + right)) / count;
-                    } else {
-                        return 1;
-                    }
-                }
+
+                b = it.next();
+                right = (b.mean() - a.mean()) / 2;
+            }
+
+            // for the last element, assume right width is same as left
+            if (x < a.mean() + right) {
+                return (r + a.count() * interpolate(x, a.mean() - left, a.mean() + right)) / count;
+            } else {
+                return 1;
             }
         }
     }
