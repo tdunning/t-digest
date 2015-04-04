@@ -17,7 +17,7 @@ public class TDigestBenchmark extends Benchmark {
 
     private static final int ARRAY_PAGE_SIZE = 32;
 
-    static enum TDigestFactory {
+    enum TDigestFactory {
         ARRAY {
             @Override
             TDigest create(double compression) {
@@ -40,7 +40,7 @@ public class TDigestBenchmark extends Benchmark {
         abstract TDigest create(double compression);
     }
 
-    private static enum DistributionFactory {
+    private enum DistributionFactory {
         UNIFORM {
             @Override
             AbstractDistribution create(Random random) {

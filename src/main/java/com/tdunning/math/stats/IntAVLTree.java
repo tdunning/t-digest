@@ -196,7 +196,7 @@ abstract class IntAVLTree {
             return true;
         } else {
             int node = root; assert parent(root) == NIL;
-            int parent = NIL;
+            int parent;
             int cmp;
             do {
                 cmp = compare(node);

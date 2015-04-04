@@ -18,15 +18,10 @@
 package com.tdunning.math.stats;
 
 import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
-import junit.framework.TestCase;
-import org.apache.mahout.common.RandomUtils;
-import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
-import org.junit.Assert;
-
-import java.util.List;
 import java.util.Random;
+import junit.framework.TestCase;
+import org.junit.Assert;
 
 public class SortTest extends TestCase {
     public void testEmpty() {

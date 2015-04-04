@@ -18,7 +18,11 @@
 package com.tdunning.math.stats;
 
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Maintains a t-digest by collecting new points in a buffer that is then sorted occasionally and merged
@@ -113,8 +117,7 @@ public class MergingDigest extends AbstractTDigest {
         if (compression > 1000) {
             compression = 1000;
         }
-        int r = (int) (7.5 + 0.37 * compression - 2e-4 * compression * compression);
-        return r;
+        return (int) (7.5 + 0.37 * compression - 2e-4 * compression * compression);
     }
 
     /**
@@ -191,7 +194,7 @@ public class MergingDigest extends AbstractTDigest {
                 tempData.add(new ArrayList<Double>());
             }
             if (history == null) {
-                history = Arrays.asList(x);
+                history = Collections.singletonList(x);
             }
             tempData.get(where).addAll(history);
         }
@@ -603,7 +606,6 @@ public class MergingDigest extends AbstractTDigest {
             int bufferSize = buf.getShort();
             MergingDigest r = new MergingDigest(compression, bufferSize, n);
             r.lastUsedCell = buf.getShort();
-            double x = 0;
             for (int i = 0; i <= r.lastUsedCell; i++) {
                 r.weight[i] = buf.getFloat();
                 r.mean[i] = buf.getFloat();
