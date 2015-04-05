@@ -75,6 +75,9 @@ public class MergingDigest extends AbstractTDigest {
     private double[] weight;
     // mean of points added to each merged centroid
     private double[] mean;
+    // absolute min and max samples seen
+    private double min, max;
+
     // history of all data added to centroids (for testing purposes)
     private List<List<Double>> data = null;
 
@@ -143,6 +146,8 @@ public class MergingDigest extends AbstractTDigest {
 
         weight = new double[size];
         mean = new double[size];
+        min = Double.MAX_VALUE;
+        max = -Double.MAX_VALUE;
 
         mergeWeight = new double[size];
         mergeMean = new double[size];
@@ -186,6 +191,7 @@ public class MergingDigest extends AbstractTDigest {
         tempWeight[where] = w;
         tempMean[where] = x;
         unmergedWeight += w;
+
         if (data != null) {
             if (tempData == null) {
                 tempData = new ArrayList<List<Double>>();
@@ -201,66 +207,77 @@ public class MergingDigest extends AbstractTDigest {
     }
 
     private void mergeNewValues() {
-        Sort.sort(order, tempMean, tempUsed);
+        if (unmergedWeight > 0) {
+            Sort.sort(order, tempMean, tempUsed);
 
-        double wSoFar = 0;
-        double k1 = 0;
-        int i = 0;
-        int j = 0;
-        int n = 0;
-        if (totalWeight > 0) {
-            if (weight[lastUsedCell] > 0) {
-                n = lastUsedCell + 1;
-            } else {
-                n = lastUsedCell;
+            double wSoFar = 0;
+            double k1 = 0;
+            int i = 0;
+            int j = 0;
+            int n = 0;
+            if (totalWeight > 0) {
+                if (weight[lastUsedCell] > 0) {
+                    n = lastUsedCell + 1;
+                } else {
+                    n = lastUsedCell;
+                }
             }
-        }
-        lastUsedCell = 0;
-        totalWeight += unmergedWeight;
-        unmergedWeight = 0;
+            lastUsedCell = 0;
+            totalWeight += unmergedWeight;
+            unmergedWeight = 0;
 
-        // merge tempWeight,tempMean and weight,mean into mergeWeight,mergeMean
-        while (i < tempUsed && j < n) {
-            int ix = order[i];
-            if (tempMean[ix] <= mean[j]) {
+            // merge tempWeight,tempMean and weight,mean into mergeWeight,mergeMean
+            while (i < tempUsed && j < n) {
+                int ix = order[i];
+                if (tempMean[ix] <= mean[j]) {
+                    wSoFar += tempWeight[ix];
+                    k1 = mergeCentroid(wSoFar, k1, tempWeight[ix], tempMean[ix], tempData != null ? tempData.get(ix) : null);
+                    i++;
+                } else {
+                    wSoFar += weight[j];
+                    k1 = mergeCentroid(wSoFar, k1, weight[j], mean[j], data != null ? data.get(j) : null);
+                    j++;
+                }
+            }
+
+            while (i < tempUsed) {
+                int ix = order[i];
                 wSoFar += tempWeight[ix];
                 k1 = mergeCentroid(wSoFar, k1, tempWeight[ix], tempMean[ix], tempData != null ? tempData.get(ix) : null);
                 i++;
-            } else {
+            }
+
+            while (j < n) {
                 wSoFar += weight[j];
                 k1 = mergeCentroid(wSoFar, k1, weight[j], mean[j], data != null ? data.get(j) : null);
                 j++;
             }
-        }
+            tempUsed = 0;
 
-        while (i < tempUsed) {
-            int ix = order[i];
-            wSoFar += tempWeight[ix];
-            k1 = mergeCentroid(wSoFar, k1, tempWeight[ix], tempMean[ix], tempData != null ? tempData.get(ix) : null);
-            i++;
-        }
+            // swap pointers for working space and merge space
+            double[] z = weight;
+            weight = mergeWeight;
+            mergeWeight = z;
+            Arrays.fill(mergeWeight, 0);
 
-        while (j < n) {
-            wSoFar += weight[j];
-            k1 = mergeCentroid(wSoFar, k1, weight[j], mean[j], data != null ? data.get(j) : null);
-            j++;
-        }
-        tempUsed = 0;
+            z = mean;
+            mean = mergeMean;
+            mergeMean = z;
 
-        // swap pointers for working space and merge space
-        double[] z = weight;
-        weight = mergeWeight;
-        mergeWeight = z;
-        Arrays.fill(mergeWeight, 0);
+            if (totalWeight > 0) {
+                min = Math.min(min, mean[0]);
+                if (weight[lastUsedCell] > 0) {
+                    max = Math.max(max, mean[lastUsedCell]);
+                } else {
+                    max = Math.max(max, mean[lastUsedCell - 1]);
+                }
+            }
 
-        z = mean;
-        mean = mergeMean;
-        mergeMean = z;
-
-        if (data != null) {
-            data = mergeData;
-            mergeData = new ArrayList<List<Double>>();
-            tempData = new ArrayList<List<Double>>();
+            if (data != null) {
+                data = mergeData;
+                mergeData = new ArrayList<List<Double>>();
+                tempData = new ArrayList<List<Double>>();
+            }
         }
     }
 
@@ -276,7 +293,7 @@ public class MergingDigest extends AbstractTDigest {
             mergeMean[lastUsedCell] = m;
             mergeWeight[lastUsedCell] = w;
 
-            k1 = k2;
+            k1 = integratedLocation((wSoFar - w) / totalWeight);
         }
         if (mergeData != null) {
             while (mergeData.size() <= lastUsedCell) {
@@ -286,6 +303,40 @@ public class MergingDigest extends AbstractTDigest {
         }
 
         return k1;
+    }
+
+    /**
+     * Exposed for testing.
+     */
+    int checkWeights() {
+        return checkWeights(weight, totalWeight, lastUsedCell);
+    }
+
+    private int checkWeights(double[] w, double total, int last) {
+        int badCount = 0;
+
+        int n = last;
+        if (w[n] > 0) {
+            n++;
+        }
+
+        double k1 = 0;
+        double q = 0;
+        for (int i = 0; i < n; i++) {
+            double dq = w[i] / total;
+            double k2 = integratedLocation(q + dq);
+            if (k2 - k1 > 1 && w[i] != 1) {
+                System.out.printf("Oversize centroid at %d, k0=%.2f, k1=%.2f, dk=%.2f, w=%.2f, q=%.4f\n", i, k1, k2, k2 - k1, w[i], q);
+                badCount++;
+            }
+            if (k2 - k1 > 1.5 && w[i] != 1) {
+                throw new IllegalStateException(String.format("Egregiously oversized centroid at %d, k0=%.2f, k1=%.2f, dk=%.2f, w=%.2f, q=%.4f\n", i, k1, k2, k2 - k1, w[i], q));
+            }
+            q += dq;
+            k1 = k2;
+        }
+
+        return badCount;
     }
 
     /**
@@ -312,9 +363,6 @@ public class MergingDigest extends AbstractTDigest {
     @Override
     public void compress() {
         mergeNewValues();
-        // make an extra pass just to make sure we have compacted things as much as possible
-        // Probably unnecessary, but should remain until proven redundant
-        mergeNewValues();
     }
 
     @Override
@@ -331,95 +379,75 @@ public class MergingDigest extends AbstractTDigest {
                 // no data to examine
                 return Double.NaN;
             } else {
-                // exactly one centroid and no idea of width
-                // this centroid should have only one point in it
-                return x < mean[0] ? 0 : 1;
+                // exactly one centroid, probably have max==min
+                if (x < min) {
+                    return 0;
+                } else if (x > max) {
+                    return 1;
+                } else if (max - min < Double.MIN_NORMAL) {
+                    // x lands right on our only sample
+                    return 0.5;
+                } else {
+                    // interpolate
+                    return (x - min) / (max - min);
+                }
             }
         } else {
-            // we now know that there are at least two centroids
-            if (x < mean[0]) {
-                // left of left-most centroid is handled specially
-                if (weight[0] == 1) {
-                    // single sample, mean == sample
-                    return 0;
-                } else {
-                    // we assume half of the points for this centroid are to the
-                    // left and the density is the same as the average to the right
-                    double dx = mean[1] - mean[0];
-                    double dq = (weight[0] + weight[1]) / 2;
-
-                    double delta = mean[0] - x;
-                    if (delta > dx / dq * weight[0] / 2) {
-                        // beyond the range
-                        return 0;
-                    } else {
-                        if (dx == 0) {
-                            // points are right on top of each other
-                            return 0;
-                        } else {
-                            return (weight[0] / 2 - dq / dx * delta) / totalWeight;
-                        }
-                    }
-                }
-            }
-
             int n = lastUsedCell;
             if (weight[n] > 0) {
-                n = n + 1;
+                n++;
             }
 
-            if (x > mean[n - 1]) {
-                // right of right-most centroid is similar to left-hand case
-                if (weight[n - 1] == 1) {
-                    // singleton means we know exact answer
-                    return 1;
-                } else {
-                    // otherwise assume half of the points for this centroid are to the right
-                    // and spread at the same density as the average for the interval to the left
-                    double dx = mean[n - 1] - mean[n - 2];
-                    double dq = (weight[n - 1] + weight[n - 2]) / 2;
+            if (x < min) {
+                return 0;
+            }
 
-                    double delta = x - mean[n - 1];
-                    if (delta > dx / dq * weight[n] / 2) {
-                        // beyond the edge
-                        return 0;
-                    } else {
-                        if (dx == 0) {
-                            // points are stacked up
-                            return 0;
-                        } else {
-                            // otherwise, interpolate
-                            return (totalWeight - weight[n - 1] / 2 + dq / dx * delta) / totalWeight;
-                        }
-                    }
+            if (x >= max) {
+                return 1;
+            }
+
+            // we now know that there are at least two centroids
+            double r = 0;
+            // we scan a across the centroids
+            double a = min;
+            double aCount;
+
+            double b = min;
+            double bCount = 0;
+
+            double left;
+            double right = 0;
+
+            // to find enclosing pair of centroids (counting min as a virtual centroid
+            for (int it = 0; it < n; it++) {
+                left = b - (a + right);
+                a = b;
+                aCount = bCount;
+
+                b = mean[it];
+                bCount = weight[it];
+                right = (b - a) * aCount / (aCount + bCount);
+
+                // we know that x >= a-left
+                if (x < a + right) {
+                    double value = (r + aCount * interpolate(x, a - left, a + right)) / totalWeight;
+                    return value > 0.0 ? value : 0.0;
                 }
+
+                r += aCount;
             }
 
-            // x has to be exactly equal to one of the means or between two consecutive means
-            double weightSoFar = 0;
-            for (int i = 1; i < n; i++) {
-                // examine interval between centroids i-1 and i
-                if (mean[i - 1] == x) {
-                    // exact hit on centroid ... sounds good, but there may be many with same mean
-                    double mass = 0;
-                    for (int j = i - 1; j < n && mean[j] == mean[i]; j++) {
-                        mass += weight[j];
-                    }
-                    // we assume that the mass for these means (at least one, anyway) is split evenly
-                    return (weightSoFar + mass / 2) / totalWeight;
-                } else if (mean[i - 1] < x && mean[i] > x) {
-                    // assume half of the left and right centroids mass is spread through interval
-                    double dx = mean[i] - mean[i - 1];
-                    double dq = (weight[i] + weight[i - 1]) / 2;
+            left = b - (a + right);
+            a = b;
+            aCount = bCount;
+            right = max - a;
 
-                    double delta = x - mean[i - 1];
-                    return (weightSoFar + weight[i - 1] / 2 + dq / dx * delta) / totalWeight;
-                }
-                weightSoFar += weight[i - 1];
+            // for the last element, use max to determine right
+            if (x < a + right) {
+                return (r + aCount * interpolate(x, a - left, a + right)) / totalWeight;
+            } else {
+                return 1;
             }
-
-            // can't happen because x[0] <= x <= x[n-1]
-            throw new IllegalArgumentException("Internal consistency error in merging digest");
         }
     }
 
@@ -436,83 +464,53 @@ public class MergingDigest extends AbstractTDigest {
             return mean[0];
         }
 
-        // if values were stored in a sorted array, index would be the offset we are interested in
-        final double index = q * totalWeight;
-
-        if (index < (weight[0] - 1) / 2) {
-            // special case 1: the index we are interested in is before the 1st centroid
-            return quantile(index, weight[0] / 2, weight[0] + weight[1] / 2, mean[0], mean[1]);
-        }
-
-        if (q < weight[0] / 2 / totalWeight) {
-            if (weight[0] == 1) {
-                return mean[0];
-            } else {
-                double dx = mean[1] - mean[0];
-                double dq = (weight[1] + weight[0]) / 2;
-                // dq > 0 because weight[0] != 0
-
-                double delta = q - weight[0] / 2 / totalWeight;
-                return mean[0] + dx / dq * delta;
-            }
-        }
+        // we know that there are at least two centroids now
 
         int n = lastUsedCell;
         if (weight[n] > 0) {
-            n = n + 1;
+            n++;
         }
 
-        if (q > 1 - weight[n - 1] / 2 / totalWeight) {
-            if (weight[n - 1] == 1) {
-                return mean[n - 1];
-            } else {
-                double dx = mean[n - 1] - mean[n - 2];
-                double dq = (weight[n - 1] + weight[n - 2]) / 2;
-                // dq > 0 because weight[n-1] != 0
+        // if values were stored in a sorted array, index would be the offset we are interested in
+        final double index = q * totalWeight;
 
-                double delta = q - weight[n - 1] / 2 / totalWeight;
-                return mean[n - 1] + dx / dq * delta;
-            }
-        }
+        double left;
+        double a;
+        double aCount;
 
-        // q corresponds to some range between centroids
+        double right = min;
+        double b = mean[0];
+        double bCount = weight[0];
+
         double weightSoFar = 0;
-        for (int i = 1; i < n; i++) {
-            // examine the range from i-1 to i
-            double q1 = weightSoFar + weight[i - 1]/2;
-            double q2 = weightSoFar + weight[i] + weight[i] / 2;
-            if (q >= q1 && q < q2) {
-                double dx = mean[i] - mean[i];
-                double dq = (weight[i] + weight[i-1]) / 2;
+        for (int it = 1; it < n; it++) {
+            a = b;
+            aCount = bCount;
+            left = right;
+
+            b = mean[it];
+            bCount = weight[it];
+            right = (bCount * a + aCount * b) / (aCount + bCount);
+
+            if (index < weightSoFar + aCount) {
+                // belongs to left side of a
+                double p = (index - weightSoFar) / aCount;
+                return left * (1 - p) + right * p;
             }
+            weightSoFar += aCount;
         }
 
-        double previousMean = mean[0];
-        double previousIndex = 0;
-        int next = 0;
-        long total = 0;
+        left = right;
+        aCount = bCount;
+        right = max;
 
-        int last = weight[lastUsedCell] == 0 ? lastUsedCell - 1 : lastUsedCell;
-        double lastIndex = totalWeight - weight[last] / 2;
-        while (index <= lastIndex) {
-            final double nextIndex = total + weight[next] / 2;
-            if (nextIndex == index) {
-                return mean[next];
-            } else if (nextIndex > index) {
-                // common case: we found two centroids previous and next so that the desired quantile is
-                // after 'previous' but before 'next'
-                return quantile(index, previousIndex, nextIndex, previousMean, mean[next]);
-            }
-            total += weight[next];
-            previousMean = mean[next];
-            previousIndex = nextIndex;
-            next++;
+        if (index < weightSoFar + aCount) {
+            // belongs to left side of a
+            double p = (index - weightSoFar) / aCount;
+            return left * (1 - p) + right * p;
+        } else {
+            return max;
         }
-
-        // special case 2: the index we are interested in is beyond the last centroid
-        // again, assume values grow linearly between index previousIndex and (count - 1)
-        // which is the highest possible index
-        return quantile(index, previousIndex, lastIndex, mean[last - 1], mean[last]);
     }
 
     @Override
@@ -536,7 +534,7 @@ public class MergingDigest extends AbstractTDigest {
         compress();
         // format code, compression(float), buffer-size(int), temp-size(int), #centroids-1(int),
         // then two doubles per centroid
-        return (lastUsedCell + 1) * 16 + 20;
+        return (lastUsedCell + 1) * 16 + 40;
     }
 
     @Override
@@ -544,7 +542,15 @@ public class MergingDigest extends AbstractTDigest {
         compress();
         // format code(int), compression(float), buffer-size(short), temp-size(short), #centroids-1(short),
         // then two floats per centroid
-        return lastUsedCell * 8 + 22;
+        return lastUsedCell * 8 + 38;
+    }
+
+    /**
+     * Over-ride the min and max values for testing purposes
+     */
+    void setMinMax(double min, double max) {
+        this.min = min;
+        this.max = max;
     }
 
     public enum Encoding {
@@ -561,6 +567,9 @@ public class MergingDigest extends AbstractTDigest {
     public void asBytes(ByteBuffer buf) {
         compress();
         buf.putInt(Encoding.VERBOSE_ENCODING.code);
+        buf.putDouble(min);
+        buf.putDouble(max);
+        buf.putFloat((float) compression);
         buf.putFloat((float) compression);
         buf.putInt(mean.length);
         buf.putInt(tempMean.length);
@@ -575,6 +584,8 @@ public class MergingDigest extends AbstractTDigest {
     public void asSmallBytes(ByteBuffer buf) {
         compress();
         buf.putInt(Encoding.SMALL_ENCODING.code);
+        buf.putDouble(min);
+        buf.putDouble(max);
         buf.putFloat((float) compression);
         buf.putShort((short) mean.length);
         buf.putShort((short) tempMean.length);
@@ -588,10 +599,14 @@ public class MergingDigest extends AbstractTDigest {
     public static MergingDigest fromBytes(ByteBuffer buf) {
         int encoding = buf.getInt();
         if (encoding == Encoding.VERBOSE_ENCODING.code) {
+            double min = buf.getDouble();
+            double max = buf.getDouble();
             double compression = buf.getFloat();
             int n = buf.getInt();
             int bufferSize = buf.getInt();
             MergingDigest r = new MergingDigest(compression, bufferSize, n);
+            r.min = min;
+            r.max = max;
             r.lastUsedCell = buf.getInt();
             for (int i = 0; i <= r.lastUsedCell; i++) {
                 r.weight[i] = buf.getDouble();
@@ -601,10 +616,14 @@ public class MergingDigest extends AbstractTDigest {
             }
             return r;
         } else if (encoding == Encoding.SMALL_ENCODING.code) {
+            double min = buf.getDouble();
+            double max = buf.getDouble();
             double compression = buf.getFloat();
             int n = buf.getShort();
             int bufferSize = buf.getShort();
             MergingDigest r = new MergingDigest(compression, bufferSize, n);
+            r.min = min;
+            r.max = max;
             r.lastUsedCell = buf.getShort();
             for (int i = 0; i <= r.lastUsedCell; i++) {
                 r.weight[i] = buf.getFloat();

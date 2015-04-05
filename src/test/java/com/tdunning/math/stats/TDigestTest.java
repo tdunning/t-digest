@@ -148,13 +148,21 @@ public class TDigestTest {
                             assertEquals(ix.next(), x);
                         }
 
+                        if (dist instanceof MergingDigest) {
+                            ((MergingDigest) dist).checkWeights();
+                            ((MergingDigest) dist2).checkWeights();
+                            for (TDigest sub : subs) {
+                                ((MergingDigest) sub).checkWeights();
+                            }
+                        }
+
                         for (double q : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5}) {
                             double z = quantile(q, data);
                             double e1 = dist.quantile(q) - z;
                             double e2 = dist2.quantile(q) - z;
                             out.printf("quantile\t%d\t%.6f\t%.6f\t%.6f\t%.6f\t%.6f\n", parts, q, z - q, e1, e2, Math.abs(e2) / q);
-                            assertTrue(String.format("parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f", parts, q, e1, e2, Math.abs(e2) / q), Math.abs(e2) / q < 0.1);
-                            assertTrue(String.format("parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f", parts, q, e1, e2, Math.abs(e2) / q), Math.abs(e2) < 0.015);
+                            assertTrue(String.format("Relative error: parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f", parts, q, e1, e2, Math.abs(e2) / q), Math.abs(e2) / q < 0.3);
+                            assertTrue(String.format("Absolute error: parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f", parts, q, e1, e2, Math.abs(e2) / q), Math.abs(e2) < 0.015);
                         }
 
                         for (double x : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5}) {
@@ -163,8 +171,8 @@ public class TDigestTest {
                             double e2 = dist2.cdf(x) - z;
 
                             out.printf("cdf\t%d\t%.6f\t%.6f\t%.6f\t%.6f\t%.6f\n", parts, x, z - x, e1, e2, Math.abs(e2) / x);
-                            assertTrue(String.format("parts=%d, x=%.4f, e1=%.5f, e2=%.5f", parts, x, e1, e2), Math.abs(e2) < 0.015);
-                            assertTrue(String.format("parts=%d, x=%.4f, e1=%.5f, e2=%.5f", parts, x, e1, e2), Math.abs(e2) / x < 0.1);
+                            assertTrue(String.format("Absolute cdf: parts=%d, x=%.4f, e1=%.5f, e2=%.5f", parts, x, e1, e2), Math.abs(e2) < 0.015);
+                            assertTrue(String.format("Relative cdf: parts=%d, x=%.4f, e1=%.5f, e2=%.5f, rel=%.3f", parts, x, e1, e2, Math.abs(e2) / x), Math.abs(e2) / x < 0.3);
                         }
                         out.flush();
                     }
@@ -211,7 +219,9 @@ public class TDigestTest {
         // for this value of the compression, the tree shouldn't have merged any node
         assertEquals(digest.centroids().size(), values.size());
         for (double q : new double [] {0, 1e-10, r.nextDouble(), 0.5, 1-1e-10, 1}) {
-            assertEquals(quantile(q, values), digest.quantile(q), 0.01);
+            double q1 = quantile(q, values);
+            double q2 = digest.quantile(q);
+            assertEquals(String.format("At q=%g, expected %.2f vs %.2f", q, q1, q2), q1, q2, 0.03);
         }
     }
 

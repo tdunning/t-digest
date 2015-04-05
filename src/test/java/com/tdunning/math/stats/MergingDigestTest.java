@@ -61,7 +61,7 @@ public class MergingDigestTest extends TDigestTest {
     public void testUniform() {
         Random gen = RandomUtils.getRandom();
         for (int i = 0; i < repeats(); i++) {
-            runTest(factory, new Uniform(0, 1, gen), 100,
+            runTest(factory, new Uniform(0, 1, gen), 200,
                     new double[]{0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999},
                     "uniform", true);
         }
@@ -75,7 +75,7 @@ public class MergingDigestTest extends TDigestTest {
         // varies by over 11 orders of magnitude.
         Random gen = RandomUtils.getRandom();
         for (int i = 0; i < repeats(); i++) {
-            runTest(factory, new Gamma(0.1, 0.1, gen), 100,
+            runTest(factory, new Gamma(0.1, 0.1, gen), 200,
 //                    new double[]{6.0730483624079e-30, 6.0730483624079e-20, 6.0730483627432e-10, 5.9339110446023e-03,
 //                            2.6615455373884e+00, 1.5884778179295e+01, 3.3636770117188e+01},
                     new double[]{0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999},
@@ -105,15 +105,12 @@ public class MergingDigestTest extends TDigestTest {
         };
 
         for (int i = 0; i < repeats(); i++) {
-            runTest(factory, mix, 100, new double[]{0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99, 0.999}, "mixture", false);
+            runTest(factory, mix, 200, new double[]{0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99, 0.999}, "mixture", false);
         }
     }
 
     @Test
     public void testRepeatedValues() {
-        // disable this test for now, but leave a marker
-        assumeTrue(false);
-
         final Random gen = RandomUtils.getRandom();
 
         // 5% of samples will be 0 or 1.0.  10% for each of the values 0.1 through 0.9
@@ -124,9 +121,9 @@ public class MergingDigestTest extends TDigestTest {
             }
         };
 
-        MergingDigest dist = new MergingDigest((double) 1000);
+        MergingDigest dist = new MergingDigest(500);
         List<Double> data = Lists.newArrayList();
-        for (int i1 = 0; i1 < 100000; i1++) {
+        for (int i = 0; i < 100000; i++) {
             double x = mix.nextDouble();
             data.add(x);
         }
@@ -139,8 +136,7 @@ public class MergingDigestTest extends TDigestTest {
         System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 100000);
         System.out.printf("# %d centroids\n", dist.centroids().size());
 
-        // I would be happier with 5x compression, but repeated values make things kind of weird
-        assertTrue("Summary is too large: " + dist.centroids().size(), dist.centroids().size() < 10 * (double) 1000);
+        assertTrue("Summary is too large: " + dist.centroids().size(), dist.centroids().size() <  5000);
 
         // all quantiles should round to nearest actual value
         for (int i = 0; i < 10; i++) {
@@ -169,7 +165,7 @@ public class MergingDigestTest extends TDigestTest {
                             base += Math.PI * 1e-5;
                             return base;
                         }
-                    }, 100, new double[]{0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999},
+                    }, 200, new double[]{0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999},
                     "sequential", true);
         }
     }
@@ -203,7 +199,11 @@ public class MergingDigestTest extends TDigestTest {
         assertEquals(dist.size(), dist2.size());
 
         for (double q = 0; q < 1; q += 0.01) {
-            assertEquals(dist.quantile(q), dist2.quantile(q), 1e-6);
+            double quantile = dist2.quantile(q);
+            if (Double.isNaN(quantile)) {
+                System.out.printf("saw NaN for %.3f\n", dist2.quantile(q));
+            }
+            assertEquals(dist.quantile(q), quantile, 1e-6);
         }
 
         Iterator<? extends Centroid> ix = dist2.centroids().iterator();
@@ -302,15 +302,15 @@ public class MergingDigestTest extends TDigestTest {
         try {
 
             for (int i = 0; i < repeats(); i++) {
-                compareSQ(out, new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
-                compareSQ(out, new Uniform(0, 1, rand), "uniform", 1L << 48);
+                compareSQ(out, new Gamma(0.1, 0.1, rand), "gamma");
+                compareSQ(out, new Uniform(0, 1, rand), "uniform");
             }
         } finally {
             out.close();
         }
     }
 
-    private void compareSQ(PrintWriter out, AbstractContinousDistribution gen, String tag, long scale) {
+    private void compareSQ(PrintWriter out, AbstractContinousDistribution gen, String tag) {
         double[] quantiles = {0.001, 0.01, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99, 0.999};
         for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000}) {
             QuantileEstimator sq = new QuantileEstimator(1001);
@@ -477,13 +477,10 @@ public class MergingDigestTest extends TDigestTest {
 
     @Test
     public void testMerge() throws FileNotFoundException, InterruptedException, ExecutionException {
-        // disable this test for now, but leave a marker
-        assumeTrue("true".equals(System.getProperty("runDisabledTests", "false")));
-
         merge(new DigestFactory<MergingDigest>() {
             @Override
             public MergingDigest create() {
-                return new MergingDigest(50);
+                return new MergingDigest(1000);
             }
         });
     }
@@ -500,9 +497,6 @@ public class MergingDigestTest extends TDigestTest {
 
     @Test
     public void testFewValues() {
-        // disable this test for now, but leave a marker
-        assumeTrue("true".equals(System.getProperty("runDisabledTests", "false")));
-
         final TDigest digest = new MergingDigest(100);
         fewValues(digest);
     }
@@ -515,9 +509,6 @@ public class MergingDigestTest extends TDigestTest {
 
     @Test
     public void testExtremeQuantiles() {
-        // disable this test for now, but leave a marker
-        assumeTrue("true".equals(System.getProperty("runDisabledTests", "false")));
-
         // t-digest shouldn't merge extreme nodes, but let's still test how it would
         // answer to extreme quantiles in that case ('extreme' in the sense that the
         // quantile is either before the first node or after the last one)
@@ -525,14 +516,39 @@ public class MergingDigestTest extends TDigestTest {
         digest.add(10, 3);
         digest.add(20, 1);
         digest.add(40, 5);
+        digest.setMinMax(5, 70);
         // this group tree is roughly equivalent to the following sorted array:
         // [ ?, 10, ?, 20, ?, ?, 50, ?, ? ]
         // and we expect it to compute approximate missing values:
         // [ 5, 10, 15, 20, 30, 40, 50, 60, 70]
         List<Double> values = Arrays.asList(5., 10., 15., 20., 30., 40., 50., 60., 70.);
         for (int i = 0; i < digest.size(); ++i) {
-            final double q = 1.0 / (digest.size() - 1); // a quantile that matches an array index
-            assertEquals(quantile(q, values), digest.quantile(q), 0.01);
+            final double q = i / (digest.size() - 1.0); // a quantile that matches an array index
+            double q1 = quantile(q, values);
+            double q2 = digest.quantile(q);
+            assertEquals(String.format("Expected quantile(%.2f) = %.3f, got %.3f", q, q1, q2), q1, q2, 5);
+        }
+    }
+
+    @Test
+    public void testCDFNonDecreasing() {
+        MergingDigest digest = new MergingDigest(100);
+
+        digest.add(25., 1);
+        digest.add(14., 1);
+        digest.add(10., 1);
+        digest.add(13., 1);
+        digest.add( 5., 1);
+        digest.add(20., 1);
+        digest.add(27., 1);
+        digest.compress();
+
+        double max = 0.;
+        for(int num = 0; num < 30; ++num) {
+            double cdf = digest.cdf((double)num);
+            System.out.printf("# cdf (%d) = %.3f vs %.3f\n", num, cdf, max);
+            assertTrue(max <= cdf);
+            max = cdf;
         }
     }
 
