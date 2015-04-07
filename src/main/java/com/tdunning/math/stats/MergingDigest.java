@@ -519,7 +519,11 @@ public class MergingDigest extends AbstractTDigest {
         compress();
         List<Centroid> r = new ArrayList<Centroid>();
         for (int i = 0; i <= lastUsedCell; i++) {
-            r.add(new Centroid(mean[i], (int) weight[i], data != null ? data.get(i) : null));
+            if (weight[i] > 0) {
+                r.add(new Centroid(mean[i], (int) weight[i], data != null ? data.get(i) : null));
+            } else {
+                break;
+            }
         }
         return r;
     }
