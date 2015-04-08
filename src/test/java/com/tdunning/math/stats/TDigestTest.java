@@ -54,6 +54,11 @@ public class TDigestTest {
     protected static PrintWriter errorDump = null;
     protected static PrintWriter deviationDump = null;
 
+    @BeforeClass
+    public static void freezeSeed() {
+        RandomUtils.useTestSeed();
+    }
+
     public static void setup(String digestName) throws IOException {
         sizeDump = new PrintWriter(new FileWriter("sizes-" + digestName + ".csv"));
         sizeDump.printf("tag\ti\tq\tk\tactual\n");
@@ -249,6 +254,12 @@ public class TDigestTest {
 
     protected int repeats() {
         return Boolean.parseBoolean(System.getProperty("runSlowTests")) ? 10 : 1;
+    }
+
+    public void testEmptyDigest(DigestFactory<? extends TDigest> factory) {
+        TDigest digest = factory.create();
+        assertEquals(0, digest.centroids().size());
+        assertEquals(0, digest.centroids().size());
     }
 
     /**

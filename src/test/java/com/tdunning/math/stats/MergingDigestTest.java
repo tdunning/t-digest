@@ -155,6 +155,11 @@ public class MergingDigestTest extends TDigestTest {
     }
 
     @Test
+    public void testEmptyDigest() {
+        super.testEmptyDigest(factory);
+    }
+
+    @Test
     public void testSequentialPoints() {
         for (int i = 0; i < repeats(); i++) {
             runTest(factory, new AbstractContinousDistribution() {

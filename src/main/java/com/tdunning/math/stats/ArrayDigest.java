@@ -82,6 +82,7 @@ public class ArrayDigest extends AbstractTDigest {
             long sum = headSum(start);
             i = 0;
             double n = 0;
+            double duplicates = 0;
             for (Index neighbor : neighbors) {
                 if (i > lastNeighbor) {
                     break;
@@ -90,11 +91,14 @@ public class ArrayDigest extends AbstractTDigest {
                 double q = (sum + count(neighbor) / 2.0) / totalWeight;
                 double k = 4 * totalWeight * q * (1 - q) / compression;
 
-                // this slightly clever selection method improves accuracy with lots of repeated points
-                if (z == minDistance && count(neighbor) + w <= k) {
-                    n++;
-                    if (gen.nextDouble() < 1 / n) {
-                        closest = neighbor;
+                if (z == minDistance) {
+                    duplicates++;
+                    if (count(neighbor) + w <= k) {
+                        n++;
+                        // this slightly clever selection method improves accuracy with lots of repeated points
+                        if (gen.nextDouble() < 1 / n) {
+                            closest = neighbor;
+                        }
                     }
                 }
                 sum += count(neighbor);
@@ -104,10 +108,11 @@ public class ArrayDigest extends AbstractTDigest {
             if (closest == null) {
                 addRaw(x, w);
             } else {
-                if (n == 1) {
+                if (duplicates == 1) {
                     // if the nearest point was unique, centroid ordering cannot change
                     Page p = data.get(closest.page);
-                    p.centroids[closest.subPage] = weightedAverage(p.centroids[closest.subPage], p.counts[closest.subPage], x, w);
+                    double z = weightedAverage(p.centroids[closest.subPage], p.counts[closest.subPage], x, w);
+                    p.centroids[closest.subPage] = z;
                     p.counts[closest.subPage] += w;
                     p.totalCount += w;
                     if (p.history != null && p.history.get(closest.subPage) != null) {
@@ -392,6 +397,7 @@ public class ArrayDigest extends AbstractTDigest {
 
     /**
      * Returns a cursor pointing to the first element <= x.  Exposed only for testing.
+     *
      * @param x The value used to find the cursor.
      * @return The cursor.
      */
