@@ -79,3 +79,18 @@ You can see the reports at:
     https://travis-ci.org/tdunning/t-digest
 
 travis update
+
+Installation
+===============
+
+The t-Digest library Jars are released via [Maven Central Repository] (http://repo1.maven.org/maven2/com/tdunning/).
+The current version is 3.1.
+
+ ```xml
+      <dependency>
+          <groupId>com.tdunning</groupId>
+          <artifactId>t-digest</artifactId>
+          <version>3.1</version>
+      </dependency>
+ ```     
+      
