@@ -79,9 +79,15 @@ public class TDigestTest {
 
     @AfterClass
     public static void teardown() {
-        sizeDump.close();
-        errorDump.close();
-        deviationDump.close();
+        if (sizeDump != null) {
+            sizeDump.close();
+        }
+        if (errorDump != null) {
+            errorDump.close();
+        }
+        if (deviationDump != null) {
+            deviationDump.close();
+        }
     }
 
 
