@@ -18,10 +18,12 @@
 package com.tdunning.math.stats;
 
 import java.nio.ByteBuffer;
+import java.util.AbstractCollection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -525,7 +527,36 @@ public class MergingDigest extends AbstractTDigest {
                 break;
             }
         }
-        return r;
+        return new AbstractCollection<Centroid>() {
+            @Override
+            public Iterator<Centroid> iterator() {
+                return new Iterator<Centroid>() {
+                    int i = 0;
+
+                    @Override
+                    public boolean hasNext() {
+                        return i < lastUsedCell || (i <= lastUsedCell && weight[lastUsedCell] > 0);
+                    }
+
+                    @Override
+                    public Centroid next() {
+                        Centroid rc = new Centroid(mean[i], (int) weight[i], data != null ? data.get(i) : null);
+                        i++;
+                        return rc;
+                    }
+
+                    @Override
+                    public void remove() {
+                        throw new UnsupportedOperationException("Default operation");
+                    }
+                };
+            }
+
+            @Override
+            public int size() {
+                return lastUsedCell + (weight[lastUsedCell] > 0 ? 1 : 0);
+            }
+        };
     }
 
     @Override

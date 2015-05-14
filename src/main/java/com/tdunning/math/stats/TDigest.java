@@ -22,21 +22,21 @@ import java.util.Collection;
 
 /**
  * Adaptive histogram based on something like streaming k-means crossed with Q-digest.
- * <p/>
+ *
  * The special characteristics of this algorithm are:
- * <p/>
+ *
  * a) smaller summaries than Q-digest
- * <p/>
+ *
  * b) works on doubles as well as integers.
- * <p/>
+ *
  * c) provides part per million accuracy for extreme quantiles and typically <1000 ppm accuracy for middle quantiles
- * <p/>
+ *
  * d) fast
- * <p/>
+ *
  * e) simple
- * <p/>
+ *
  * f) test coverage > 90%
- * <p/>
+ *
  * g) easy to adapt for use with map-reduce
  */
 public abstract class TDigest {
@@ -115,10 +115,10 @@ public abstract class TDigest {
     /**
      * Re-examines a t-digest to determine whether some centroids are redundant.  If your data are
      * perversely ordered, this may be a good idea.  Even if not, this may save 20% or so in space.
-     * <p/>
+     *
      * The cost is roughly the same as adding as many data points as there are centroids.  This
      * is typically < 10 * compression, but could be as high as 100 * compression.
-     * <p/>
+     *
      * This is a destructive operation that is not thread-safe.
      */
     public abstract void compress();
