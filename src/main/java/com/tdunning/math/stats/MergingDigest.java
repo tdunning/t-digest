@@ -357,7 +357,22 @@ public class MergingDigest extends AbstractTDigest {
      * @return The centroid scale value corresponding to q.
      */
     private double integratedLocation(double q) {
-        return compression * (Math.asin(2 * q - 1) + Math.PI / 2) / Math.PI;
+        return compression * (approximateSteeperArcSin(2 * q - 1) + Math.PI / 2) / Math.PI;
+    }
+
+    /**
+     * A function that approximates arcsin. Its derivative is always steeper than the derivative of arcsin.
+     * <p>
+     * see <a href="http://www.wolframalpha.com/input/?i=minimize+%28d%2Fdx%28%282-x%2F2+%2B+5+x^2%2F24%29*%281-sqrt%281-x%29%29+-+arcsin%28x%29%29%29+over+[0%2C1]">difference of 1st derivative</a>
+     * <p>
+     * the maximum relative approximation error is at x=1,
+     * see <a href="http://www.wolframalpha.com/input/?i=plot+%28%28%282-x%2F2+%2B+5+x^2%2F24%29*%281-sqrt%281-x%29%29%2Farcsin%28x%29%29%29+x+in+[0%2C1]">maximum relative error</a>
+     * <p>
+     * approximateSteeperArcusSin(1) = 1.08756 * pi/2
+     */
+    static double approximateSteeperArcSin(double x) {
+    	double absX = Math.abs(x);
+    	return Math.copySign((2.-absX*(0.5 - (5d/24d)*absX))*(1d-Math.sqrt(1d-absX)), x);
     }
 
     @Override

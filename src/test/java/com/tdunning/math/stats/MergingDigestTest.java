@@ -568,4 +568,47 @@ public class MergingDigestTest extends TDigestTest {
         final TDigest digest = factory.create();
         nan(digest);
     }
+
+    @Test
+    public void testApproximateSteeperArcSin() {
+    	int numTrials = 100000;
+    	Random random = new Random(0L);
+    	for (int i = 0; i < numTrials; ++i) {
+    		double a = 2*random.nextDouble()-1.;
+    		double b = 2*random.nextDouble()-1.;
+    		if (b < a) {
+    			double c = a;
+    			a = b;
+    			b = c;
+    		}
+    		assertTrue(Math.asin(b) - Math.asin(a) <= MergingDigest.approximateSteeperArcSin(b) - MergingDigest.approximateSteeperArcSin(a));
+    	}
+    }
+
+    @Test
+    public void testPerformanceArcSin() {
+    	int N = 100000000;
+    	double sum = 0.;
+    	long start = System.currentTimeMillis();
+    	for (int i = 0; i < N; ++i) {
+    		sum += Math.asin(((double)i)/N);
+    	}
+    	long end = System.currentTimeMillis();
+    	System.out.println("dummyResult = " + sum);
+    	System.out.println("Avg. computation time = " + (1e6*(end-start))/N + "ns");
+    }
+
+    @Test
+    public void testPerformanceApproximateSteeperArcSin() {
+    	int N = 100000000;
+    	double sum = 0.;
+    	long start = System.currentTimeMillis();
+    	for (int i = 0; i < N; ++i) {
+    		sum += MergingDigest.approximateSteeperArcSin(((double)i)/N);
+    	}
+    	long end = System.currentTimeMillis();
+    	System.out.println("dummyResult = " + sum);
+    	System.out.println("Avg. computation time = " + (1e6*(end-start))/N + "ns");
+    }
+
 }
