@@ -17,6 +17,7 @@
 
 package com.tdunning.math.stats;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.AbstractCollection;
 import java.util.ArrayList;
@@ -755,7 +756,7 @@ public class ArrayDigest extends AbstractTDigest {
     public final static int VERBOSE_ARRAY_DIGEST = 3;
     public final static int SMALL_ARRAY_DIGEST = 4;
 
-    class Index {
+    class Index implements Serializable {
         final int page, subPage;
 
         private Index(int page, int subPage) {
@@ -772,7 +773,7 @@ public class ArrayDigest extends AbstractTDigest {
         }
     }
 
-    private static class Page {
+    private static class Page implements Serializable {
         private final boolean recordAllData;
         private final int pageSize;
 

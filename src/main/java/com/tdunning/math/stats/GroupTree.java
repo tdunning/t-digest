@@ -17,6 +17,7 @@
 
 package com.tdunning.math.stats;
 
+import java.io.Serializable;
 import java.util.AbstractCollection;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -27,7 +28,7 @@ import java.util.NoSuchElementException;
  * A tree containing TDigest.Centroid.  This adds to the normal NavigableSet the
  * ability to sum up the size of elements to the left of a particular group.
  */
-public class GroupTree extends AbstractCollection<Centroid> {
+public class GroupTree extends AbstractCollection<Centroid> implements Serializable {
     private long count;
     private int size;
     private int depth;
