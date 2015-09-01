@@ -69,6 +69,14 @@ The output of these scripts are a collection of PNG image files that can be view
 such as Preview on a Mac.  Many of these images are used as figures in the paper in the same directory with
 the R scripts.
 
+Implementations in Other Languages
+=================
+The t-digest algorithm has been ported to other languages:
+ - Python: [tdigest](https://github.com/CamDavidsonPilon/tdigest)
+ - Go: [github.com/spenczar/tdigest](https://github.com/spenczar/tdigest)
+ - Javascript: [tdigest](https://github.com/welch/tdigest)
+ - C++: [CPP TDigest](https://github.com/gpichot/cpp-tdigest)
+
 Continuous Integration
 =================
 
