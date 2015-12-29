@@ -53,7 +53,7 @@ points(samples, mpSize, lty=5, pch=23)
 
 #box()
 
-legend(9, 22, c("uncompressed", "compressed", "Munro-Paterson"), pch=c(21,22,23)) 
+legend(9, 22, c("uncompressed", "compressed", "Greenwald-Khanna (GK01)"), pch=c(21,22,23)) 
 
 par(old)
 
