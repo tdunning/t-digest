@@ -1,5 +1,9 @@
 *.class
 target/
+.Rhistory
+docs/r-sim-diagrams/*.pdf
+histo.synctex.gz
+log
 
 # Package Files #
 *.jar
