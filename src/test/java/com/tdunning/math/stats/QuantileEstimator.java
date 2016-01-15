@@ -27,6 +27,12 @@ import java.util.List;
 
 /**
  * Quantile estimation removed from DataFu library class StreamingQuantile for comparison.
+ *
+ * Computes approximate quantiles for a (not necessarily sorted) input bag, using the Munro-Paterson algorithm.
+ *
+ * The algorithm is described here: http://www.cs.ucsb.edu/~suri/cs290/MunroPat.pdf
+ *
+ * The implementation is based on the one in Sawzall, available here: szlquantile.cc
  */
 public class QuantileEstimator {
     private static final long MAX_TOT_ELEMS = 1024L * 1024L * 1024L * 1024L;

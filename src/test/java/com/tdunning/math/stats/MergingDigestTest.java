@@ -264,7 +264,7 @@ public class MergingDigestTest extends TDigestTest {
     @Test
     public void compareToQDigest() throws FileNotFoundException {
         Random rand = RandomUtils.getRandom();
-        PrintWriter out = new PrintWriter(new FileOutputStream("qd-tree-comparison.csv"));
+        PrintWriter out = new PrintWriter(new FileOutputStream("qd-merge-comparison.csv"));
         try {
             for (int i = 0; i < repeats(); i++) {
                 compareQD(out, new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
@@ -294,7 +294,6 @@ public class MergingDigestTest extends TDigestTest {
                 double x2 = (double) qd.getQuantile(q) / scale;
                 double e1 = cdf(x1, data) - q;
                 out.printf("%s\t%.0f\t%.8f\t%.10g\t%.10g\t%d\t%d\n", tag, compression, q, e1, cdf(x2, data) - q, dist.smallByteSize(), QDigest.serialize(qd).length);
-
             }
         }
     }
@@ -303,7 +302,8 @@ public class MergingDigestTest extends TDigestTest {
     public void compareToStreamingQuantile() throws FileNotFoundException {
         Random rand = RandomUtils.getRandom();
 
-        PrintWriter out = new PrintWriter(new FileOutputStream("sq-tree-comparison.csv"));
+        PrintWriter out = new PrintWriter(new FileOutputStream("sq-merge-comparison.csv"));
+        out.println("tag,compression,q, error1, error2, td.size, mp.size");
         try {
 
             for (int i = 0; i < repeats(); i++) {
@@ -336,7 +336,7 @@ public class MergingDigestTest extends TDigestTest {
                 double x2 = qz.get((int) (q * 1000 + 0.5));
                 double e1 = cdf(x1, data) - q;
                 double e2 = cdf(x2, data) - q;
-                out.printf("%s\t%.0f\t%.8f\t%.10g\t%.10g\t%d\t%d\n",
+                out.printf("%s,%.0f,%.8f,%.10g,%.10g,%d,%d\n",
                         tag, compression, q, e1, e2, dist.smallByteSize(), sq.serializedSize());
 
             }
@@ -356,7 +356,7 @@ public class MergingDigestTest extends TDigestTest {
 
         final Random gen0 = RandomUtils.getRandom();
         final PrintWriter out = new PrintWriter(new FileOutputStream(name));
-        out.printf("k\tsamples\tcompression\tsize1\tsize2\n");
+        out.printf("k,samples\tcompression\tsize1\tsize2\n");
 
         ExecutorService pool = Executors.newFixedThreadPool(20);
 
