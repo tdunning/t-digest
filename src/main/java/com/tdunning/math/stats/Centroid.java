@@ -28,14 +28,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Centroid implements Comparable<Centroid>, Serializable {
     private static final AtomicInteger uniqueCount = new AtomicInteger(1);
 
+    // Generate a random base for the ID. This will (with high probability) prevent collisions
+    // in the event of Centroids from two different JVM instances being merged (e.g. in a
+    // distributed system or across serialization/deserialization).
+    private static final long ID_BASE = ((long) new java.util.Random().nextInt()) << 32;
+
     private double centroid = 0;
     private int count = 0;
-    private int id;
+    private long id;
 
     private List<Double> actualData = null;
 
     Centroid(boolean record) {
-        id = uniqueCount.getAndIncrement();
+        id = ID_BASE + uniqueCount.getAndIncrement();
         if (record) {
             actualData = new ArrayList<Double>();
         }
@@ -67,7 +72,7 @@ public class Centroid implements Comparable<Centroid>, Serializable {
     }
 
     private void start(double x, int w, int id) {
-        this.id = id;
+        this.id = ID_BASE + id;
         add(x, w);
     }
 
@@ -88,7 +93,7 @@ public class Centroid implements Comparable<Centroid>, Serializable {
     }
 
     public int id() {
-        return id;
+        return ((int) (id & 0xFFFFFFFFL));
     }
 
     @Override
@@ -101,14 +106,21 @@ public class Centroid implements Comparable<Centroid>, Serializable {
 
     @Override
     public int hashCode() {
-        return id;
+        return id();
     }
 
     @Override
     public int compareTo(Centroid o) {
         int r = Double.compare(centroid, o.centroid);
         if (r == 0) {
-            r = id - o.id;
+            long idDiff = id - o.id;
+            if (idDiff < 0L) {
+                r = -1;
+            } else if (idDiff > 0L) {
+                r = 1;
+            } else {
+                r = 0;
+            }
         }
         return r;
     }
