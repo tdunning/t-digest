@@ -50,6 +50,7 @@ import static org.junit.Assert.fail;
  * Common test methods for TDigests
  */
 public class TDigestTest {
+    protected static Integer lock = new Integer(3);
     protected static PrintWriter sizeDump = null;
     protected static PrintWriter errorDump = null;
     protected static PrintWriter deviationDump = null;
@@ -60,21 +61,31 @@ public class TDigestTest {
     }
 
     public static void setup(String digestName) throws IOException {
-        sizeDump = new PrintWriter(new FileWriter("sizes-" + digestName + ".csv"));
-        sizeDump.printf("tag\ti\tq\tk\tactual\n");
+        synchronized (lock) {
+            sizeDump = new PrintWriter(new FileWriter("sizes-" + digestName + ".csv"));
+            sizeDump.printf("tag\ti\tq\tk\tactual\n");
 
-        errorDump = new PrintWriter((new FileWriter("errors-" + digestName + ".csv")));
-        errorDump.printf("dist\ttag\tx\tQ\terror\n");
+            errorDump = new PrintWriter((new FileWriter("errors-" + digestName + ".csv")));
+            errorDump.printf("dist\ttag\tx\tQ\terror\n");
 
-        deviationDump = new PrintWriter((new FileWriter("deviation-" + digestName + ".csv")));
-        deviationDump.printf("tag\tQ\tk\tx\tmean\tleft\tright\tdeviation\n");
+            deviationDump = new PrintWriter((new FileWriter("deviation-" + digestName + ".csv")));
+            deviationDump.printf("tag\tQ\tk\tx\tmean\tleft\tright\tdeviation\n");
+        }
     }
 
     @After
     public void flush() {
-        sizeDump.flush();
-        errorDump.flush();
-        deviationDump.flush();
+        synchronized (lock) {
+            if (sizeDump != null) {
+                sizeDump.flush();
+            }
+            if (errorDump != null) {
+                errorDump.flush();
+            }
+            if (deviationDump != null) {
+                deviationDump.flush();
+            }
+        }
     }
 
     @AfterClass
@@ -229,7 +240,7 @@ public class TDigestTest {
 
         // for this value of the compression, the tree shouldn't have merged any node
         assertEquals(digest.centroids().size(), values.size());
-        for (double q : new double [] {0, 1e-10, r.nextDouble(), 0.5, 1-1e-10, 1}) {
+        for (double q : new double[]{0, 1e-10, r.nextDouble(), 0.5, 1 - 1e-10, 1}) {
             double q1 = quantile(q, values);
             double q2 = digest.quantile(q);
             assertEquals(String.format("At q=%g, expected %.2f vs %.2f", q, q1, q2), q1, q2, 0.03);
