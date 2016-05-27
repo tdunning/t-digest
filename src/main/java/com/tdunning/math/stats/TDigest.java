@@ -17,6 +17,7 @@
 
 package com.tdunning.math.stats;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 
@@ -39,7 +40,7 @@ import java.util.Collection;
  *
  * g) easy to adapt for use with map-reduce
  */
-public abstract class TDigest {
+public abstract class TDigest implements Serializable {
     /**
      * Creates an ArrayDigest with default page size.
      *

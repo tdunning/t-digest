@@ -17,6 +17,7 @@
 
 package com.tdunning.math.stats;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * A single centroid which represents a number of data points.
  */
-public class Centroid implements Comparable<Centroid> {
+public class Centroid implements Comparable<Centroid>, Serializable {
     private static final AtomicInteger uniqueCount = new AtomicInteger(1);
 
     private double centroid = 0;

@@ -1,5 +1,6 @@
 package com.tdunning.math.stats;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
 
@@ -9,7 +10,7 @@ import java.util.Arrays;
  * want to add data to the nodes, typically by using arrays and node
  * identifiers as indices.
  */
-abstract class IntAVLTree {
+abstract class IntAVLTree implements Serializable {
 
     /**
      * We use <tt>0</tt> instead of <tt>-1</tt> so that left(NIL) works without
@@ -507,7 +508,7 @@ abstract class IntAVLTree {
     /**
      * A stack of int values.
      */
-    private static class IntStack {
+    private static class IntStack implements Serializable {
 
         private int[] stack;
         private int size;
@@ -535,7 +536,7 @@ abstract class IntAVLTree {
 
     }
 
-    private static class NodeAllocator {
+    private static class NodeAllocator implements Serializable {
 
         private int nextNode;
         private final IntStack releasedNodes;
