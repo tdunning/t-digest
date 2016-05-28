@@ -25,11 +25,8 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 
-import static org.junit.Assert.*;
-
-public class GroupTreeTest {
+public class GroupTreeTest extends AbstractTest{
     @Test
     public void testSimpleAdds() {
         GroupTree x = new GroupTree();
@@ -182,11 +179,10 @@ public class GroupTreeTest {
 
     @Test
     public void testRandomRebalance() {
-        Random gen = RandomUtils.getRandom();
         GroupTree x = new GroupTree();
         List<Double> y = Lists.newArrayList();
         for (int i = 0; i < 1000; i++) {
-            double v = gen.nextDouble();
+            double v = randomDouble();
             x.add(new Centroid(v));
             y.add(v);
             x.checkBalance();
@@ -200,7 +196,7 @@ public class GroupTreeTest {
         }
 
         for (int j = 0; j < 100; j++) {
-            double v = y.get(gen.nextInt(y.size()));
+            double v = y.get(randomInt(y.size() - 1));
             y.remove(v);
             x.remove(x.floor(new Centroid(v)));
         }
