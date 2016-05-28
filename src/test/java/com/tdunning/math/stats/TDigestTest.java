@@ -608,7 +608,7 @@ public abstract class TDigestTest extends AbstractTest {
         buf.flip();
         TDigest dist2 = fromBytes(buf);
         assertEquals(dist.centroids().size(), dist2.centroids().size());
-        assertEquals(dist.compression(), dist2.compression(), 0);
+        assertEquals(dist.compression(), dist2.compression(), 1e-4);
         assertEquals(dist.size(), dist2.size());
 
         for (double q = 0; q < 1; q += 0.01) {
