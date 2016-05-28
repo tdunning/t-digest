@@ -449,6 +449,16 @@ public class TreeDigestTest extends TDigestTest {
     }
 
     @Test
+    public void testMergeEmpty() {
+        final Random gen0 = RandomUtils.getRandom();
+        List<TDigest> subData = new ArrayList<TDigest>();
+        subData.add(new TreeDigest(10));
+        TreeDigest foo = new TreeDigest(10);
+        AbstractTDigest.merge(subData, gen0, foo);
+        empty(foo);
+    }
+
+    @Test
     public void testSingleValue() {
         singleValue(new TreeDigest(100));
     }
