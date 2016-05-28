@@ -10,10 +10,4 @@ cache:
     - '$HOME/.m2/repository'
 
 install: /bin/true
-script:
-  - mvn clean test -B
-
-  # Tricks to avoid useless S3 cache updates
-  # - mkdir /tmp/cache-trick
-  # - mv $HOME/.m2/repository/ch/alv/sysinfos /tmp/cache-trick/
 
