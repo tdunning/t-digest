@@ -1,5 +1,19 @@
 language: java
+sudo: false
 jdk:
   - oraclejdk7
   - openjdk7
   - oraclejdk8
+
+cache:
+  directories:
+    - '$HOME/.m2/repository'
+
+install: /bin/true
+script:
+  - mvn clean install -B --settings external-config/travis/settings.xml && mvn clean cobertura:cobertura coveralls:report
+
+  # Tricks to avoid useless S3 cache updates
+  # - mkdir /tmp/cache-trick
+  # - mv $HOME/.m2/repository/ch/alv/sysinfos /tmp/cache-trick/
+
