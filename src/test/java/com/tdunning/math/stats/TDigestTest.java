@@ -232,6 +232,7 @@ public abstract class TDigestTest extends AbstractTest {
             out.write(result.get());
         }
         executor.shutdownNow();
+        executor.awaitTermination(5, TimeUnit.SECONDS);
         out.close();
     }
 
@@ -789,6 +790,7 @@ public abstract class TDigestTest extends AbstractTest {
             out.write(result.get());
         }
         executor.shutdown();
+        executor.awaitTermination(5, TimeUnit.SECONDS);
 
         out.close();
     }
@@ -846,7 +848,8 @@ public abstract class TDigestTest extends AbstractTest {
             for (Future<String> result : exec.invokeAll(tasks)) {
                 out.write(result.get());
             }
-            exec.shutdown();
+            exec.shutdownNow();
+            exec.awaitTermination(5, TimeUnit.SECONDS);
         } finally {
             out.close();
         }
