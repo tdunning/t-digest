@@ -231,7 +231,7 @@ public abstract class TDigestTest extends AbstractTest {
         for (Future<String> result : executor.invokeAll(tasks)) {
             out.write(result.get());
         }
-        executor.shutdown();
+        executor.shutdownNow();
         out.close();
     }
 
@@ -612,7 +612,7 @@ public abstract class TDigestTest extends AbstractTest {
         assertEquals(dist.size(), dist2.size());
 
         for (double q = 0; q < 1; q += 0.01) {
-            assertEquals(dist.quantile(q), dist2.quantile(q), 1e-8);
+            assertEquals(dist.quantile(q), dist2.quantile(q), 1e-5);
         }
 
         Iterator<? extends Centroid> ix = dist2.centroids().iterator();
@@ -630,7 +630,7 @@ public abstract class TDigestTest extends AbstractTest {
         buf.flip();
         dist2 = fromBytes(buf);
         assertEquals(dist.centroids().size(), dist2.centroids().size());
-        assertEquals(dist.compression(), dist2.compression(), 0);
+        assertEquals(dist.compression(), dist2.compression(), 1e-4);
         assertEquals(dist.size(), dist2.size());
 
         for (double q = 0; q < 1; q += 0.01) {
@@ -873,7 +873,7 @@ public abstract class TDigestTest extends AbstractTest {
         List<Double> values = Arrays.asList(5., 10., 15., 20., 30., 40., 50., 60., 70.);
         for (int i = 0; i < digest.size(); ++i) {
             final double q = 1.0 / (digest.size() - 1); // a quantile that matches an array index
-            assertEquals(quantile(q, values), digest.quantile(q), 0.01);
+            assertEquals(String.format("q=%.2f ", q),quantile(q, values), digest.quantile(q), 0.01);
         }
     }
 }
