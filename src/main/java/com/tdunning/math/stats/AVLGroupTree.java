@@ -40,6 +40,10 @@ final class AVLGroupTree extends AbstractCollection<Centroid> implements Seriali
     private int[] aggregatedCounts;
     private final IntAVLTree tree;
 
+    AVLGroupTree() {
+        this(false);
+    }
+
     AVLGroupTree(final boolean record) {
         tree = new IntAVLTree() {
 
