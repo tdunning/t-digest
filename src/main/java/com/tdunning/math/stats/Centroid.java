@@ -17,6 +17,8 @@
 
 package com.tdunning.math.stats;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +32,10 @@ public class Centroid implements Comparable<Centroid>, Serializable {
 
     private double centroid = 0;
     private int count = 0;
-    private int id;
+
+    // The ID is transient because it must be unique within a given JVM. A new
+    // ID should be generated from uniqueCount when a Centroid is deserialized.
+    private transient int id;
 
     private List<Double> actualData = null;
 
@@ -105,7 +110,7 @@ public class Centroid implements Comparable<Centroid>, Serializable {
     }
 
     @Override
-    public int compareTo(Centroid o) {
+    public int compareTo(@SuppressWarnings("NullableProblems") Centroid o) {
         int r = Double.compare(centroid, o.centroid);
         if (r == 0) {
             r = id - o.id;
@@ -142,5 +147,10 @@ public class Centroid implements Comparable<Centroid>, Serializable {
         }
         centroid = AbstractTDigest.weightedAverage(centroid, count, x, w);
         count += w;
+    }
+
+    private void readObject(ObjectInputStream in) throws ClassNotFoundException, IOException {
+        in.defaultReadObject();
+        id = uniqueCount.getAndIncrement();
     }
 }
