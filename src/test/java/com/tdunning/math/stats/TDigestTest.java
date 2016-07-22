@@ -429,6 +429,36 @@ public abstract class TDigestTest extends AbstractTest {
         for (double q : quantiles) {
             final double v = digest.quantile(q);
             assertTrue(v >= prev);
+            assertTrue("Unexpectedly low value: " + v, v >= 0.0);
+            assertTrue("Unexpectedly high value: " + v, v <= 1.0);
+            prev = v;
+        }
+    }
+
+    @Test
+    public void testMoreThan4BValues() {
+        final TDigest digest = factory().create();
+        Random gen = getRandom();
+        for (int i = 0; i < 1000; ++i) {
+            final double next = gen.nextDouble();
+            digest.add(next);
+        }
+        for (int i = 0; i < 10; ++i) {
+            final double next = gen.nextDouble();
+            final int count = 1 << 29;
+            digest.add(next, count);
+        }
+        assertEquals(1000 + 10L * (1 << 29), digest.size());
+        assertTrue(digest.size() > 2 * Integer.MAX_VALUE);
+        final double[] quantiles = new double[] { 0, 0.1, 0.5, 0.9, 1, gen.nextDouble() };
+        Arrays.sort(quantiles);
+        double prev = Double.NEGATIVE_INFINITY;
+        for (double q : quantiles) {
+            final double v = digest.quantile(q);
+            System.out.println("q=" + q + ", v=" + v);
+            assertTrue(v >= prev);
+            assertTrue("Unexpectedly low value: " + v, v >= 0.0);
+            assertTrue("Unexpectedly high value: " + v, v <= 1.0);
             prev = v;
         }
     }
