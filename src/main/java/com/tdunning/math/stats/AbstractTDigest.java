@@ -20,6 +20,7 @@ package com.tdunning.math.stats;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -146,5 +147,103 @@ public abstract class AbstractTDigest extends TDigest {
 
     protected Centroid createCentroid(double mean, int id) {
         return new Centroid(mean, id, recordAllData);
+    }
+
+    @Override
+    public double quantile(double q) {
+        if (q < 0 || q > 1) {
+            throw new IllegalArgumentException("q should be in [0,1], got " + q);
+        }
+
+        final int centroidCount = centroids().size();
+        if (centroidCount == 0) {
+            return Double.NaN;
+        } else if (centroidCount == 1) {
+            return centroids().iterator().next().mean();
+        }
+
+        // if values were stored in a sorted array, index would be the offset we are interested in
+        final double index = q * (size() - 1);
+
+        double previousMean = Double.NaN, previousIndex = 0;
+        long total = 0;
+        // Jump over pages until we reach the page containing the quantile we are interested in
+        Iterator<? extends Centroid> it = centroids().iterator();
+        Centroid next;
+        while (true) {
+            next = it.next();
+            final double nextIndex = total + (next.count() - 1.0) / 2;
+            if (nextIndex >= index) {
+                if (Double.isNaN(previousMean)) {
+                    assert total == 0;
+                    // special case 1: the index we are interested in is before the 1st centroid
+                    if (nextIndex == previousIndex) {
+                        return next.mean();
+                    }
+                    // assume values grow linearly between index previousIndex=0 and nextIndex2
+                    Centroid next2 = it.next();
+                    final double nextIndex2 = total + next.count() + (next2.count() - 1.0) / 2;
+                    previousMean = (nextIndex2 * next.mean() - nextIndex * next2.mean()) / (nextIndex2 - nextIndex);
+                }
+                // common case: we found two centroids previous and next so that the desired quantile is
+                // after 'previous' but before 'next'
+                return quantile(previousIndex, index, nextIndex, previousMean, next.mean());
+            } else if (!it.hasNext()) {
+                // special case 2: the index we are interested in is beyond the last centroid
+                // again, assume values grow linearly between index previousIndex and (count - 1)
+                // which is the highest possible index
+                final double nextIndex2 = size() - 1;
+                final double nextMean2 = (next.mean() * (nextIndex2 - previousIndex) - previousMean * (nextIndex2 - nextIndex)) / (nextIndex - previousIndex);
+                return quantile(nextIndex, index, nextIndex2, next.mean(), nextMean2);
+            }
+            total += next.count();
+            previousMean = next.mean();
+            previousIndex = nextIndex;
+        }
+    }
+
+    @Override
+    public double cdf(double x) {
+        if (size() == 0) {
+            return Double.NaN;
+        } else if (size() == 1) {
+            return x < centroids().iterator().next().mean() ? 0 : 1;
+        } else {
+            double r = 0;
+
+            // we scan a across the centroids
+            Iterator<? extends Centroid> it = centroids().iterator();
+            Centroid a = it.next();
+
+            // b is the look-ahead to the next centroid
+            Centroid b = it.next();
+
+            // initially, we set left width equal to right width
+            double left = (b.mean() - a.mean()) / 2;
+            double right = left;
+
+            // scan to next to last element
+            while (it.hasNext()) {
+                if (x < a.mean() + right) {
+                    return (r + a.count() * AbstractTDigest.interpolate(x, a.mean() - left, a.mean() + right)) / size();
+                }
+                r += a.count();
+
+                a = b;
+                b = it.next();
+
+                left = right;
+                right = (b.mean() - a.mean()) / 2;
+            }
+
+            // for the last element, assume right width is same as left
+            left = right;
+            a = b;
+            if (x < a.mean() + right) {
+                return (r + a.count() * AbstractTDigest.interpolate(x, a.mean() - left, a.mean() + right)) / size();
+            } else {
+                return 1;
+            }
+        }
     }
 }
