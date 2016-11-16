@@ -460,7 +460,9 @@ public class JSONArrayTest {
 
     @Test
     public void testListConstructorCopiesContents() throws JSONException {
-        List<Object> contents = Collections.singletonList((Object) 5);
+        // have to use asList instead of Collections.singleton() to allow mutation
+        //noinspection ArraysAsListWithZeroOrOneArgument
+        List<Object> contents = Arrays.<Object>asList(5);
         JSONArray array = new JSONArray(contents);
         contents.set(0, 10);
         assertEquals(5, array.get(0));
