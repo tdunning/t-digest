@@ -18,18 +18,8 @@ package org.json;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
+
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -38,6 +28,17 @@ import static org.junit.Assert.*;
  * This black box test was written without inspecting the non-free org.json sourcecode.
  */
 public class JSONObjectTest {
+    @Test
+    public void testKeyset() throws Exception {
+        JSONObject x = new JSONObject("{'a':1, 'b':2, 'c':3}");
+        Set<String> k = new TreeSet<>();
+        for (String kx : Arrays.asList("a", "b", "c")) {
+            k.add(kx);
+        }
+        assertEquals(x.keySet(), k);
+        x = new JSONObject("{}");
+        assertEquals(x.keySet().size(), 0);
+    }
 
     @Test
     public void testEmptyObject() throws JSONException {
