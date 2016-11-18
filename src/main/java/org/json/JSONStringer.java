@@ -31,14 +31,14 @@ import java.util.List;
  *
  * <p>Stringers only encode well-formed JSON strings. In particular:
  * <ul>
- *   <li>The stringer must have exactly one top-level array or object.
- *   <li>Lexical scopes must be balanced: every call to {@link #array} must
- *       have a matching call to {@link #endArray} and every call to {@link
- *       #object} must have a matching call to {@link #endObject}.
- *   <li>Arrays may not contain keys (property names).
- *   <li>Objects must alternate keys (property names) and values.
- *   <li>Values are inserted with either literal {@link #value(Object) value}
- *       calls, or by nesting arrays or objects.
+ * <li>The stringer must have exactly one top-level array or object.
+ * <li>Lexical scopes must be balanced: every call to {@link #array} must
+ * have a matching call to {@link #endArray} and every call to {@link
+ * #object} must have a matching call to {@link #endObject}.
+ * <li>Arrays may not contain keys (property names).
+ * <li>Objects must alternate keys (property names) and values.
+ * <li>Values are inserted with either literal {@link #value(Object) value}
+ * calls, or by nesting arrays or objects.
  * </ul>
  * Calls that would result in a malformed JSON string will fail with a
  * {@link JSONException}.
@@ -60,7 +60,9 @@ import java.util.List;
  */
 public class JSONStringer {
 
-    /** The output data, containing at most one top-level array or object. */
+    /**
+     * The output data, containing at most one top-level array or object.
+     */
     final StringBuilder out = new StringBuilder();
 
     /**
@@ -134,6 +136,7 @@ public class JSONStringer {
      * a call to {@link #endArray}.
      *
      * @return this stringer.
+     * @throws JSONException On internal errors. Shouldn't happen.
      */
     public JSONStringer array() throws JSONException {
         return open(Scope.EMPTY_ARRAY, "[");
@@ -143,6 +146,7 @@ public class JSONStringer {
      * Ends encoding the current array.
      *
      * @return this stringer.
+     * @throws JSONException On internal errors. Shouldn't happen.
      */
     public JSONStringer endArray() throws JSONException {
         return close(Scope.EMPTY_ARRAY, Scope.NONEMPTY_ARRAY, "]");
@@ -153,6 +157,7 @@ public class JSONStringer {
      * with a call to {@link #endObject}.
      *
      * @return this stringer.
+     * @throws JSONException On internal errors. Shouldn't happen.
      */
     public JSONStringer object() throws JSONException {
         return open(Scope.EMPTY_OBJECT, "{");
@@ -162,6 +167,7 @@ public class JSONStringer {
      * Ends encoding the current object.
      *
      * @return this stringer.
+     * @throws JSONException On internal errors. Shouldn't happen.
      */
     public JSONStringer endObject() throws JSONException {
         return close(Scope.EMPTY_OBJECT, Scope.NONEMPTY_OBJECT, "}");
@@ -220,9 +226,10 @@ public class JSONStringer {
      * Encodes {@code value}.
      *
      * @param value a {@link JSONObject}, {@link JSONArray}, String, Boolean,
-     *     Integer, Long, Double or null. May not be {@link Double#isNaN() NaNs}
-     *     or {@link Double#isInfinite() infinities}.
+     *              Integer, Long, Double or null. May not be {@link Double#isNaN() NaNs}
+     *              or {@link Double#isInfinite() infinities}.
      * @return this stringer.
+     * @throws JSONException On internal errors. Shouldn't happen.
      */
     public JSONStringer value(Object value) throws JSONException {
         if (stack.isEmpty()) {
@@ -258,7 +265,9 @@ public class JSONStringer {
     /**
      * Encodes {@code value} to this stringer.
      *
+     * @param value The value to encode.
      * @return this stringer.
+     * @throws JSONException On internal errors. Shouldn't happen.
      */
     public JSONStringer value(boolean value) throws JSONException {
         if (stack.isEmpty()) {
@@ -273,8 +282,9 @@ public class JSONStringer {
      * Encodes {@code value} to this stringer.
      *
      * @param value a finite value. May not be {@link Double#isNaN() NaNs} or
-     *     {@link Double#isInfinite() infinities}.
+     *              {@link Double#isInfinite() infinities}.
      * @return this stringer.
+     * @throws JSONException On internal errors. Shouldn't happen.
      */
     public JSONStringer value(double value) throws JSONException {
         if (stack.isEmpty()) {
@@ -288,7 +298,9 @@ public class JSONStringer {
     /**
      * Encodes {@code value} to this stringer.
      *
+     * @param value The value to encode.
      * @return this stringer.
+     * @throws JSONException If we have an internal error. Shouldn't happen.
      */
     public JSONStringer value(long value) throws JSONException {
         if (stack.isEmpty()) {
@@ -366,6 +378,7 @@ public class JSONStringer {
      *
      * @param name the name of the forthcoming value. May not be null.
      * @return this stringer.
+     * @throws JSONException on internal errors, shouldn't happen.
      */
     public JSONStringer key(String name) throws JSONException {
         if (name == null) {
@@ -426,7 +439,8 @@ public class JSONStringer {
      * of {@link Object#toString}, this method returns null if the stringer
      * contains no data.
      */
-    @Override public String toString() {
+    @Override
+    public String toString() {
         return out.length() == 0 ? null : out.toString();
     }
 }

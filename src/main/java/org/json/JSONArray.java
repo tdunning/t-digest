@@ -30,16 +30,16 @@ import java.util.List;
  * Values may not be {@link Double#isNaN() NaNs}, {@link Double#isInfinite()
  * infinities}, or of any type not listed here.
  *
- * <p>{@code JSONArray} has the same type coercion behavior and
+ * {@code JSONArray} has the same type coercion behavior and
  * optional/mandatory accessors as {@link JSONObject}. See that class'
  * documentation for details.
  *
- * <p><strong>Warning:</strong> this class represents null in two incompatible
+ * <strong>Warning:</strong> this class represents null in two incompatible
  * ways: the standard Java {@code null} reference, and the sentinel value {@link
  * JSONObject#NULL}. In particular, {@code get} fails if the requested index
  * holds the null reference, but succeeds if it holds {@code JSONObject.NULL}.
  *
- * <p>Instances of this class are not thread safe. Although this class is
+ * Instances of this class are not thread safe. Although this class is
  * non-final, it was not designed for inheritance and should not be subclassed.
  * In particular, self-use by overridable methods is not specified. See
  * <i>Effective Java</i> Item 17, "Design and Document or inheritance or else
@@ -61,8 +61,8 @@ public class JSONArray {
      * collection.
      *
      * @param copyFrom a collection whose values are of supported types.
-     *     Unsupported values are not permitted and will yield an array in an
-     *     inconsistent state.
+     *                 Unsupported values are not permitted and will yield an array in an
+     *                 inconsistent state.
      */
     /* Accept a raw type for API compatibility */
     public JSONArray(Collection copyFrom) {
@@ -79,9 +79,9 @@ public class JSONArray {
      * tokener.
      *
      * @param readFrom a tokener whose nextValue() method will yield a
-     *     {@code JSONArray}.
+     *                 {@code JSONArray}.
      * @throws JSONException if the parse fails or doesn't yield a
-     *     {@code JSONArray}.
+     *                       {@code JSONArray}.
      */
     public JSONArray(JSONTokener readFrom) throws JSONException {
         /*
@@ -101,7 +101,7 @@ public class JSONArray {
      *
      * @param json a JSON-encoded string containing an array.
      * @throws JSONException if the parse fails or doesn't yield a {@code
-     *     JSONArray}.
+     *                       JSONArray}.
      */
     public JSONArray(String json) throws JSONException {
         this(new JSONTokener(json));
@@ -109,6 +109,9 @@ public class JSONArray {
 
     /**
      * Creates a new {@code JSONArray} with values from the given primitive array.
+     *
+     * @param array The values to use.
+     * @throws JSONException if any of the values are non-finite double values (i.e. NaN or infinite)
      */
     public JSONArray(Object array) throws JSONException {
         if (!array.getClass().isArray()) {
@@ -122,7 +125,7 @@ public class JSONArray {
     }
 
     /**
-     * Returns the number of values in this array.
+     * @return Returns the number of values in this array.
      */
     public int length() {
         return values.size();
@@ -131,6 +134,7 @@ public class JSONArray {
     /**
      * Appends {@code value} to the end of this array.
      *
+     * @param value The value to append.
      * @return this array.
      */
     public JSONArray put(boolean value) {
@@ -142,8 +146,9 @@ public class JSONArray {
      * Appends {@code value} to the end of this array.
      *
      * @param value a finite value. May not be {@link Double#isNaN() NaNs} or
-     *     {@link Double#isInfinite() infinities}.
+     *              {@link Double#isInfinite() infinities}.
      * @return this array.
+     * @throws JSONException If the value is unacceptable.
      */
     public JSONArray put(double value) throws JSONException {
         values.add(JSON.checkDouble(value));
@@ -153,6 +158,7 @@ public class JSONArray {
     /**
      * Appends {@code value} to the end of this array.
      *
+     * @param value The value to append.
      * @return this array.
      */
     public JSONArray put(int value) {
@@ -163,6 +169,7 @@ public class JSONArray {
     /**
      * Appends {@code value} to the end of this array.
      *
+     * @param value The value to append.
      * @return this array.
      */
     public JSONArray put(long value) {
@@ -174,10 +181,10 @@ public class JSONArray {
      * Appends {@code value} to the end of this array.
      *
      * @param value a {@link JSONObject}, {@link JSONArray}, String, Boolean,
-     *     Integer, Long, Double, {@link JSONObject#NULL}, or {@code null}. May
-     *     not be {@link Double#isNaN() NaNs} or {@link Double#isInfinite()
-     *     infinities}. Unsupported values are not permitted and will cause the
-     *     array to be in an inconsistent state.
+     *              Integer, Long, Double, {@link JSONObject#NULL}, or {@code null}. May
+     *              not be {@link Double#isNaN() NaNs} or {@link Double#isInfinite()
+     *              infinities}. Unsupported values are not permitted and will cause the
+     *              array to be in an inconsistent state.
      * @return this array.
      */
     public JSONArray put(Object value) {
@@ -187,6 +194,8 @@ public class JSONArray {
 
     /**
      * Same as {@link #put}, with added validity checks.
+     *
+     * @param value The value to append.
      */
     void checkedPut(Object value) throws JSONException {
         if (value instanceof Number) {
@@ -201,7 +210,10 @@ public class JSONArray {
      * to the required length if necessary. If a value already exists at {@code
      * index}, it will be replaced.
      *
+     * @param index Where to put the value.
+     * @param value The value to set.
      * @return this array.
+     * @throws JSONException This should never happen.
      */
     public JSONArray put(int index, boolean value) throws JSONException {
         return put(index, (Boolean) value);
@@ -212,9 +224,11 @@ public class JSONArray {
      * to the required length if necessary. If a value already exists at {@code
      * index}, it will be replaced.
      *
+     * @param index Where to put the value.
      * @param value a finite value. May not be {@link Double#isNaN() NaNs} or
-     *     {@link Double#isInfinite() infinities}.
+     *              {@link Double#isInfinite() infinities}.
      * @return this array.
+     * @throws JSONException If the value is not a finite value.
      */
     public JSONArray put(int index, double value) throws JSONException {
         return put(index, (Double) value);
@@ -225,7 +239,10 @@ public class JSONArray {
      * to the required length if necessary. If a value already exists at {@code
      * index}, it will be replaced.
      *
+     * @param index Where to put the value.
+     * @param value The value to set.
      * @return this array.
+     * @throws JSONException Should never actually happen.
      */
     public JSONArray put(int index, int value) throws JSONException {
         return put(index, (Integer) value);
@@ -236,7 +253,10 @@ public class JSONArray {
      * to the required length if necessary. If a value already exists at {@code
      * index}, it will be replaced.
      *
+     * @param index Where to put the value.
+     * @param value The value to set.
      * @return this array.
+     * @throws JSONException Should never actually happen.
      */
     public JSONArray put(int index, long value) throws JSONException {
         return put(index, (Long) value);
@@ -247,11 +267,13 @@ public class JSONArray {
      * to the required length if necessary. If a value already exists at {@code
      * index}, it will be replaced.
      *
+     * @param index Where to put the value.
      * @param value a {@link JSONObject}, {@link JSONArray}, String, Boolean,
-     *     Integer, Long, Double, {@link JSONObject#NULL}, or {@code null}. May
-     *     not be {@link Double#isNaN() NaNs} or {@link Double#isInfinite()
-     *     infinities}.
+     *              Integer, Long, Double, {@link JSONObject#NULL}, or {@code null}. May
+     *              not be {@link Double#isNaN() NaNs} or {@link Double#isInfinite()
+     *              infinities}.
      * @return this array.
+     * @throws JSONException If the value cannot be represented as a finite double value.
      */
     public JSONArray put(int index, Object value) throws JSONException {
         if (value instanceof Number) {
@@ -268,6 +290,9 @@ public class JSONArray {
     /**
      * Returns true if this array has no value at {@code index}, or if its value
      * is the {@code null} reference or {@link JSONObject#NULL}.
+     *
+     * @param index Which value to check.
+     * @return true if the value is null.
      */
     public boolean isNull(int index) {
         Object value = opt(index);
@@ -277,9 +302,11 @@ public class JSONArray {
     /**
      * Returns the value at {@code index}.
      *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      * @throws JSONException if this array has no value at {@code index}, or if
-     *     that value is the {@code null} reference. This method returns
-     *     normally if the value is {@code JSONObject#NULL}.
+     *                       that value is the {@code null} reference. This method returns
+     *                       normally if the value is {@code JSONObject#NULL}.
      */
     public Object get(int index) throws JSONException {
         try {
@@ -296,6 +323,9 @@ public class JSONArray {
     /**
      * Returns the value at {@code index}, or null if the array has no value
      * at {@code index}.
+     *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      */
     public Object opt(int index) {
         if (index < 0 || index >= values.size()) {
@@ -307,6 +337,9 @@ public class JSONArray {
     /**
      * Removes and returns the value at {@code index}, or null if the array has no value
      * at {@code index}.
+     *
+     * @param index Which value to remove.
+     * @return The value previously at the specified location.
      */
     public Object remove(int index) {
         if (index < 0 || index >= values.size()) {
@@ -319,8 +352,10 @@ public class JSONArray {
      * Returns the value at {@code index} if it exists and is a boolean or can
      * be coerced to a boolean.
      *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      * @throws JSONException if the value at {@code index} doesn't exist or
-     *     cannot be coerced to a boolean.
+     *                       cannot be coerced to a boolean.
      */
     public boolean getBoolean(int index) throws JSONException {
         Object object = get(index);
@@ -334,6 +369,9 @@ public class JSONArray {
     /**
      * Returns the value at {@code index} if it exists and is a boolean or can
      * be coerced to a boolean. Returns false otherwise.
+     *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      */
     public boolean optBoolean(int index) {
         return optBoolean(index, false);
@@ -342,6 +380,10 @@ public class JSONArray {
     /**
      * Returns the value at {@code index} if it exists and is a boolean or can
      * be coerced to a boolean. Returns {@code fallback} otherwise.
+     *
+     * @param index    Which value to get.
+     * @param fallback the fallback value to return if no value exists.
+     * @return the value at the specified location or the fallback value.
      */
     public boolean optBoolean(int index, boolean fallback) {
         Object object = opt(index);
@@ -353,8 +395,10 @@ public class JSONArray {
      * Returns the value at {@code index} if it exists and is a double or can
      * be coerced to a double.
      *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      * @throws JSONException if the value at {@code index} doesn't exist or
-     *     cannot be coerced to a double.
+     *                       cannot be coerced to a double.
      */
     public double getDouble(int index) throws JSONException {
         Object object = get(index);
@@ -368,6 +412,9 @@ public class JSONArray {
     /**
      * Returns the value at {@code index} if it exists and is a double or can
      * be coerced to a double. Returns {@code NaN} otherwise.
+     *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      */
     public double optDouble(int index) {
         return optDouble(index, Double.NaN);
@@ -376,6 +423,10 @@ public class JSONArray {
     /**
      * Returns the value at {@code index} if it exists and is a double or can
      * be coerced to a double. Returns {@code fallback} otherwise.
+     *
+     * @param index    Which value to get.
+     * @param fallback The fallback value to use if no value is at the specified location.
+     * @return the value at the specified location or the fallback value.
      */
     public double optDouble(int index, double fallback) {
         Object object = opt(index);
@@ -387,8 +438,10 @@ public class JSONArray {
      * Returns the value at {@code index} if it exists and is an int or
      * can be coerced to an int.
      *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      * @throws JSONException if the value at {@code index} doesn't exist or
-     *     cannot be coerced to a int.
+     *                       cannot be coerced to a int.
      */
     public int getInt(int index) throws JSONException {
         Object object = get(index);
@@ -402,6 +455,9 @@ public class JSONArray {
     /**
      * Returns the value at {@code index} if it exists and is an int or
      * can be coerced to an int. Returns 0 otherwise.
+     *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      */
     public int optInt(int index) {
         return optInt(index, 0);
@@ -410,6 +466,10 @@ public class JSONArray {
     /**
      * Returns the value at {@code index} if it exists and is an int or
      * can be coerced to an int. Returns {@code fallback} otherwise.
+     *
+     * @param index    Which value to get.
+     * @param fallback The fallback value to use if no value is at the specified location.
+     * @return the value at the specified location or the fallback value.
      */
     public int optInt(int index, int fallback) {
         Object object = opt(index);
@@ -421,8 +481,10 @@ public class JSONArray {
      * Returns the value at {@code index} if it exists and is a long or
      * can be coerced to a long.
      *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      * @throws JSONException if the value at {@code index} doesn't exist or
-     *     cannot be coerced to a long.
+     *                       cannot be coerced to a long.
      */
     public long getLong(int index) throws JSONException {
         Object object = get(index);
@@ -436,6 +498,9 @@ public class JSONArray {
     /**
      * Returns the value at {@code index} if it exists and is a long or
      * can be coerced to a long. Returns 0 otherwise.
+     *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      */
     public long optLong(int index) {
         return optLong(index, 0L);
@@ -444,6 +509,10 @@ public class JSONArray {
     /**
      * Returns the value at {@code index} if it exists and is a long or
      * can be coerced to a long. Returns {@code fallback} otherwise.
+     *
+     * @param index    Which value to get.
+     * @param fallback The fallback value to use if no value is at the specified location.
+     * @return the value at the specified location or the fallback value.
      */
     public long optLong(int index, long fallback) {
         Object object = opt(index);
@@ -455,6 +524,8 @@ public class JSONArray {
      * Returns the value at {@code index} if it exists, coercing it if
      * necessary.
      *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      * @throws JSONException if no such value exists.
      */
     public String getString(int index) throws JSONException {
@@ -469,6 +540,9 @@ public class JSONArray {
     /**
      * Returns the value at {@code index} if it exists, coercing it if
      * necessary. Returns the empty string if no such value exists.
+     *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      */
     public String optString(int index) {
         return optString(index, "");
@@ -477,6 +551,10 @@ public class JSONArray {
     /**
      * Returns the value at {@code index} if it exists, coercing it if
      * necessary. Returns {@code fallback} if no such value exists.
+     *
+     * @param index    Which value to get.
+     * @param fallback The fallback value to use if no value is at the specified location.
+     * @return the value at the specified location or the fallback value.
      */
     public String optString(int index, String fallback) {
         Object object = opt(index);
@@ -488,8 +566,10 @@ public class JSONArray {
      * Returns the value at {@code index} if it exists and is a {@code
      * JSONArray}.
      *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      * @throws JSONException if the value doesn't exist or is not a {@code
-     *     JSONArray}.
+     *                       JSONArray}.
      */
     public JSONArray getJSONArray(int index) throws JSONException {
         Object object = get(index);
@@ -503,6 +583,9 @@ public class JSONArray {
     /**
      * Returns the value at {@code index} if it exists and is a {@code
      * JSONArray}. Returns null otherwise.
+     *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      */
     public JSONArray optJSONArray(int index) {
         Object object = opt(index);
@@ -513,8 +596,10 @@ public class JSONArray {
      * Returns the value at {@code index} if it exists and is a {@code
      * JSONObject}.
      *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      * @throws JSONException if the value doesn't exist or is not a {@code
-     *     JSONObject}.
+     *                       JSONObject}.
      */
     public JSONObject getJSONObject(int index) throws JSONException {
         Object object = get(index);
@@ -528,6 +613,9 @@ public class JSONArray {
     /**
      * Returns the value at {@code index} if it exists and is a {@code
      * JSONObject}. Returns null otherwise.
+     *
+     * @param index Which value to get.
+     * @return the value at the specified location.
      */
     public JSONObject optJSONObject(int index) {
         Object object = opt(index);
@@ -540,6 +628,10 @@ public class JSONArray {
      * index from 0 through to the shorter array's length. Names that are not
      * strings will be coerced to strings. This method returns null if either
      * array is empty.
+     *
+     * @param names The names to apply to the returned values.
+     * @return the newly constructed object.
+     * @throws JSONException Should not be possible.
      */
     public JSONObject toJSONObject(JSONArray names) throws JSONException {
         JSONObject result = new JSONObject();
@@ -560,6 +652,10 @@ public class JSONArray {
      * characters escaped. For example, the array containing the strings '12"
      * pizza', 'taco' and 'soda' joined on '+' returns this:
      * <pre>"12\" pizza"+"taco"+"soda"</pre>
+     *
+     * @param separator The string used to separate the returned values.
+     * @return the conjoined values.
+     * @throws JSONException Only if there is a coding error.
      */
     public String join(String separator) throws JSONException {
         JSONStringer stringer = new JSONStringer();
@@ -577,8 +673,11 @@ public class JSONArray {
     /**
      * Encodes this array as a compact JSON string, such as:
      * <pre>[94043,90210]</pre>
+     *
+     * @return The string form of this array.
      */
-    @Override public String toString() {
+    @Override
+    public String toString() {
         try {
             JSONStringer stringer = new JSONStringer();
             writeTo(stringer);
@@ -598,7 +697,9 @@ public class JSONArray {
      * ]</pre>
      *
      * @param indentSpaces the number of spaces to indent for each level of
-     *     nesting.
+     *                     nesting.
+     * @return The string form of this array.
+     * @throws JSONException Only if there is a coding error.
      */
     public String toString(int indentSpaces) throws JSONException {
         JSONStringer stringer = new JSONStringer(indentSpaces);
@@ -614,11 +715,13 @@ public class JSONArray {
         stringer.endArray();
     }
 
-    @Override public boolean equals(Object o) {
+    @Override
+    public boolean equals(Object o) {
         return o instanceof JSONArray && ((JSONArray) o).values.equals(values);
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
         // diverge from the original, which doesn't implement hashCode
         return values.hashCode();
     }

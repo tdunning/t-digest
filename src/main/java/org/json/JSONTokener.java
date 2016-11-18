@@ -38,18 +38,18 @@ package org.json;
  * input string was valid JSON. All of the following syntax errors will be
  * ignored:
  * <ul>
- *   <li>End of line comments starting with {@code //} or {@code #} and ending
- *       with a newline character.
- *   <li>C-style comments starting with {@code /*} and ending with
- *       {@code *}{@code /}. Such comments may not be nested.
- *   <li>Strings that are unquoted or {@code 'single quoted'}.
- *   <li>Hexadecimal integers prefixed with {@code 0x} or {@code 0X}.
- *   <li>Octal integers prefixed with {@code 0}.
- *   <li>Array elements separated by {@code ;}.
- *   <li>Unnecessary array separators. These are interpreted as if null was the
- *       omitted value.
- *   <li>Key-value pairs separated by {@code =} or {@code =>}.
- *   <li>Key-value pairs separated by {@code ;}.
+ * <li>End of line comments starting with {@code //} or {@code #} and ending
+ * with a newline character.
+ * <li>C-style comments starting with {@code /*} and ending with
+ * {@code *}{@code /}. Such comments may not be nested.
+ * <li>Strings that are unquoted or {@code 'single quoted'}.
+ * <li>Hexadecimal integers prefixed with {@code 0x} or {@code 0X}.
+ * <li>Octal integers prefixed with {@code 0}.
+ * <li>Array elements separated by {@code ;}.
+ * <li>Unnecessary array separators. These are interpreted as if null was the
+ * omitted value.
+ * <li>Key-value pairs separated by {@code =} or {@code =>}.
+ * <li>Key-value pairs separated by {@code ;}.
  * </ul>
  *
  * <p>Each tokener may be used to parse a single JSON string. Instances of this
@@ -61,7 +61,9 @@ package org.json;
  */
 public class JSONTokener {
 
-    /** The input JSON. */
+    /**
+     * The input JSON.
+     */
     private final String in;
 
     /**
@@ -72,8 +74,8 @@ public class JSONTokener {
 
     /**
      * @param in JSON encoded string. Null is not permitted and will yield a
-     *     tokener that throws {@code NullPointerExceptions} when methods are
-     *     called.
+     *           tokener that throws {@code NullPointerExceptions} when methods are
+     *           called.
      */
     public JSONTokener(String in) {
         // consume an optional byte order mark (BOM) if it exists
@@ -87,7 +89,7 @@ public class JSONTokener {
      * Returns the next value from the input.
      *
      * @return a {@link JSONObject}, {@link JSONArray}, String, Boolean,
-     *     Integer, Long, Double or {@link JSONObject#NULL}.
+     * Integer, Long, Double or {@link JSONObject#NULL}.
      * @throws JSONException if the input is malformed.
      */
     public Object nextValue() throws JSONException {
@@ -188,6 +190,8 @@ public class JSONTokener {
      * not include it in the returned string.
      *
      * @param quote either ' or ".
+     * @return The unescaped string.
+     * @throws JSONException if the string isn't terminated by a closing quote correctly.
      */
     public String nextString(char quote) throws JSONException {
         /*
@@ -446,6 +450,9 @@ public class JSONTokener {
     /**
      * Returns an exception containing the given message plus the current
      * position and the entire input string.
+     *
+     * @param message The message we want to include.
+     * @return An exception that we can throw.
      */
     public JSONException syntaxError(String message) {
         return new JSONException(message + this);
@@ -454,7 +461,8 @@ public class JSONTokener {
     /**
      * Returns the current position and the entire input string.
      */
-    @Override public String toString() {
+    @Override
+    public String toString() {
         // consistent with the original implementation
         return " at character " + pos + " of " + in;
     }
@@ -469,6 +477,8 @@ public class JSONTokener {
 
     /**
      * Returns true until the input has been exhausted.
+     *
+     * @return true if more input exists.
      */
     public boolean more() {
         return pos < in.length();
@@ -478,6 +488,8 @@ public class JSONTokener {
      * Returns the next available character, or the null character '\0' if all
      * input has been exhausted. The return value of this method is ambiguous
      * for JSON strings that contain the character '\0'.
+     *
+     * @return the next character.
      */
     public char next() {
         return pos < in.length() ? in.charAt(pos++) : '\0';
@@ -486,6 +498,10 @@ public class JSONTokener {
     /**
      * Returns the next available character if it equals {@code c}. Otherwise an
      * exception is thrown.
+     *
+     * @param c The character we are looking for.
+     * @return the next character.
+     * @throws JSONException If the next character isn't {@code c}
      */
     public char next(char c) throws JSONException {
         char result = next();
@@ -500,6 +516,9 @@ public class JSONTokener {
      * a comment. If the input is exhausted before such a character can be
      * found, the null character '\0' is returned. The return value of this
      * method is ambiguous for JSON strings that contain the character '\0'.
+     *
+     * @return The next non-whitespace character.
+     * @throws JSONException Should not be possible.
      */
     public char nextClean() throws JSONException {
         int nextCleanInt = nextCleanInternal();
@@ -514,8 +533,10 @@ public class JSONTokener {
      * indefinitely, you should use {@code new String(result)} to copy it first
      * to avoid memory leaks.
      *
+     * @param length The desired number of characters to return.
+     * @return The next few characters.
      * @throws JSONException if the remaining input is not long enough to
-     *     satisfy this request.
+     *                       satisfy this request.
      */
     public String next(int length) throws JSONException {
         if (pos + length > in.length()) {
@@ -530,9 +551,9 @@ public class JSONTokener {
      * Returns the {@link String#trim trimmed} string holding the characters up
      * to but not including the first of:
      * <ul>
-     *   <li>any character in {@code excluded}
-     *   <li>a newline character '\n'
-     *   <li>a carriage return '\r'
+     * <li>any character in {@code excluded}
+     * <li>a newline character '\n'
+     * <li>a carriage return '\r'
      * </ul>
      *
      * <p>The returned string shares its backing character array with this
@@ -540,6 +561,7 @@ public class JSONTokener {
      * indefinitely, you should use {@code new String(result)} to copy it first
      * to avoid memory leaks.
      *
+     * @param excluded The limiting string where the search should stop.
      * @return a possibly-empty string
      */
     public String nextTo(String excluded) {
@@ -551,6 +573,9 @@ public class JSONTokener {
 
     /**
      * Equivalent to {@code nextTo(String.valueOf(excluded))}.
+     *
+     * @param excluded The limiting character.
+     * @return a possibly-empty string
      */
     public String nextTo(char excluded) {
         return nextToInternal(String.valueOf(excluded)).trim();
@@ -560,6 +585,8 @@ public class JSONTokener {
      * Advances past all input up to and including the next occurrence of
      * {@code thru}. If the remaining input doesn't contain {@code thru}, the
      * input is exhausted.
+     *
+     * @param thru The string to skip over.
      */
     public void skipPast(String thru) {
         int thruStart = in.indexOf(thru, pos);
@@ -570,6 +597,9 @@ public class JSONTokener {
      * Advances past all input up to but not including the next occurrence of
      * {@code to}. If the remaining input doesn't contain {@code to}, the input
      * is unchanged.
+     *
+     * @param to The character we want to skip to.
+     * @return The value of {@code to} or null.
      */
     public char skipTo(char to) {
         int index = in.indexOf(to, pos);
@@ -596,7 +626,8 @@ public class JSONTokener {
      * for non-hex input.
      *
      * @param hex a character in the ranges [0-9], [A-F] or [a-f]. Any other
-     *     character will yield a -1 result.
+     *            character will yield a -1 result.
+     * @return The decoded integer.
      */
     public static int dehexchar(char hex) {
         if (hex >= '0' && hex <= '9') {
