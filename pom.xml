@@ -22,10 +22,10 @@
     </licenses>
 
     <scm>
-        <connection>scm:git:https://github.com/tdunning/t-digest.git</connection>
-        <developerConnection>scm:git:https://github.com/tdunning/t-digest.git</developerConnection>
+        <connection>scm:git:https://github.com/tdunning/open-json.git</connection>
+        <developerConnection>scm:git:https://github.com/tdunning/open-json.git</developerConnection>
         <tag>HEAD</tag>
-        <url>https://github.com/tdunning/t-digest</url>
+        <url>https://github.com/tdunning/open-json</url>
     </scm>
 
     <developers>
@@ -33,7 +33,7 @@
             <id>tdunning</id>
             <name>Ted</name>
             <email>ted.dunning@gmail.com</email>
-            <url>https://github.com/tdunning/t-digest</url>
+            <url>https://github.com/tdunning/open-json</url>
             <roles>
                 <role>developer</role>
             </roles>
