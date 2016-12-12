@@ -18,9 +18,7 @@
 package com.tdunning.math.stats;
 
 import org.apache.commons.lang3.SerializationUtils;
-import org.junit.*;
-
-import java.io.ByteArrayOutputStream;
+import org.junit.Test;
 
 import static org.junit.Assert.assertNotNull;
 
