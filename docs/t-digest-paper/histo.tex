@@ -54,27 +54,29 @@ On the other hand, two problems with the Q-digest are that it depends on the set
 \subsection{The $t$-digest}
 This work describes a novel algorithm that provides on-line estimates of arbitrary quantiles for  values in $\mathbb R$ without the complexity of apportioning counts during tree rebalancing as with the Q-digest. This new algorithm eliminates the idea of a tree as used for the Q-digest for storing the original samples, maintaining only the concept of collapsing groups of samples in a way that preserves accuracy of quantile estimates.  This new algorithm, known as $t$-digest, has well-defined and easily proven error bounds for input in random order and allows parallel on-line operation.  A particularly novel aspect of the variant of $t$-digest described here is that accuracy for estimating the $q$ quantile is constant relative to $q(1-q)$ or to $\max(q,1-q)$.  This is in contrast to earlier algorithms which had errors independent of $q$.  The relative error bound of the $t$-digest is convenient when computing quantiles for very small $q$ or for $q$ near $1$.  As with the Q-digest algorithm, the accuracy/size trade-off can be controlled by setting a single compression parameter $\delta$ with the amount of memory required proportional only to $\Omega(\delta)$. 
 
-Alternately, if the bounds on the sizes of the groups of samples is made somewhat tighter, the size of the $t$-digest will instead be $\Omega(\delta \log N)$, but it can be guaranteed when $t$-digests  computed on sub-samples of a dataset can be combined to produce a $t$-digest with the same bounds no matter how the sub-samples are chosen. The currently used sizing strategies that give a digest size independent of $N$ cannot guarantee this for pathological choice of sub-samples, but it is not yet clear if there is a sizing strategy that would allow fixed digest size and parallel computation with guaranteed accuracy. 
+Alternately, if the bounds on the sizes of the groups of samples is made somewhat tighter, the size of the $t$-digest will instead be $\Omega(\delta \log N)$, but it can be guaranteed when $t$-digests  computed on sub-samples of a dataset can be combined to produce a $t$-digest with the same bounds no matter how the sub-samples are chosen. The currently used sizing strategies that bound relative error with a digest size independent of $N$ cannot guarantee these bounds on both error and size for pathological choice of sub-samples. It is not yet clear if there is a sizing strategy that would allow both fixed digest size and parallel computation with guaranteed relative accuracy. It is trivial, however, to have both fixed digest size and bounded absolutely accuracy in parallel computation.
 
 %The accuracy bounds are tight regardless of data ordering for the non-parallel on-line case.  In the case of parallel execution, the error bound is somewhere between the constant error bound and the relative error bound except in the case of highly ordered input data.  For randomly ordered data, parallel execution has expected error bounded by the same bound as for sequential execution.
 
 \section{The Algorithm}
-The $t$-digest has two important formulations. One version keeps an array of samples which are periodically shuffled and merged with an array of centroids, each of which represents the average of one or more samples. This merging version has the virtue of allowing all memory structures to be allocated statically, but it requires more copying of internal data. The other version of the algorithm is more akin to a clustering algorithm in which new samples are selectively added to the nearest centroid.  Both versions are described here and implementations for both are available.
+The $t$-digest has two important formulations. One version keeps an array of samples which are periodically shuffled and merged with an array of centroids, each of which represents the average of one or more samples. This merging version has the virtue of allowing all memory structures to be allocated statically, but it requires more copying of internal data. The other version of the algorithm is more akin to a clustering algorithm in which new samples are selectively added to the nearest centroid or used to create a new centroid.  Both versions are described here and implementations for both are available as open source.
 
 \subsection{Preliminaries}
-Suppose first, for argument's sake, that all of the samples $x_1 \ldots x_n$ are presented in sorted order. Take the following as a mapping from quantile $q$ to an index $k$ with compression parameter $\delta$
+Suppose first, for argument's sake, that all of the samples $X = \left \lbrace x_1 \ldots x_n \right \rbrace$ are presented in sorted order. Take the following as a mapping from quantile $q$ to an index $k$ with compression parameter $\delta$
 \[
 k(q) = \delta \left( {\frac {\sin^{-1} (2q-1)} \pi}   + 0.5 \right)
 \]
-The mapping $k$ is monotonic with minimum value  $k(0)=0$ and maximum value  $k(1)=\delta$.
+This mapping $k$ is monotonic with minimum value  $k(0)=0$ and maximum value  $k(1)=\delta$. 
 
-If we group all of the samples $x_1 \ldots x_n$ into sub-sequences of samples $c_i = \lbrace x_{\mathtt {left}(i)} \ldots x_{\mathtt{right}(i)} \rbrace$ specified by the indices $\mathtt{left}(i)$ and $\mathtt{right}(i)$ of the first and last members of the sub-sequences and require that
+To form a $t$-digest of $X$ we group all of the samples $x_1 \ldots x_n$ into sub-sequences of samples $c_i = \lbrace x_{\mathtt {left}(i)} \ldots x_{\mathtt{right}(i)} \rbrace$ specified by the indices $\mathtt{left}(i)$ and $\mathtt{right}(i)$ of the first and last members of the sub-sequences. We define the index size of $c_i$ as
 \[
-K(i) = k(\mathtt{right}(i)/n) - k((\mathtt{left}(i)-1)/n) \le 1
+K(i) = k \left (\mathtt{right}(i)/n \right) - k \left ((\mathtt{left}(i)-1)/n \right) 
 \]
-If we further assume that no adjacent sub-sequences can be merged without violating this last constraint, then we also know that the mean value of $ K(i)$ is greater than $1/2$. This implies that the number of such maximally merged groups cannot be more than $2 \delta$ nor less than $\delta$. 
+And we require that $K(i) \le 1$ for all sub-sequences.
 
-In terms of quantile $q$, sample $i$ can be thought of as spanning the range from $q=(i-1)/n$ to $q=i/n$. 
+Finally, we merge any adjacent sub-sequences that can be merged without violating the constraint on $K(i)$.
+ 
+We know that the mean value of $ K(i)$ is greater than $1/2$ because if it were equal or less, there would be sub-sequences to merge. Therefore the number of sequences in a $t$-digest cannot be more than $2 \delta$ nor less than $\delta$. 
 
 \subsection{The merging variant}
 
