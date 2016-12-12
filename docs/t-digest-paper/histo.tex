@@ -73,9 +73,11 @@ Suppose first, for argument's sake, that all of the samples $X=x_1 \ldots x_n$ a
 A $t$-digest is formed from the sequence of points by grouping all of the samples into sub-sequences of samples, $X = \lbrace s_1 | s_2 | \ldots | s_m \rbrace$ where $s_i = \lbrace x_{\mathtt {left}(i)} \ldots x_{\mathtt{right}(i)} \rbrace$.  The beginning and end of each sub-sequence is chosen so that the sub-sequence is small enough to get accurate quantile estimates by interpolation, but large enough so that we don't wind up with too many sub-sequences. Importantly, we force sub-sequences near the ends to be small while allowing sub-sequences in middle to be larger in order to get fairly constant relative accuracy.
 
 To limit the sub-sequence size in this way, we define a mapping from quantile $q$ to a notional index $k$ with compression parameter $\delta$. This mapping is known as the scaling function and a preferred choice of function for the $t$-digest is 
+
 \[
 k(q, \delta) = \delta \left( {\frac {\sin^{-1} (2q-1)} \pi}   + {1 \over 2} \right)
 \]
+
 The mapping $k$ is monotonic with minimum value  $k(0)=0$ and maximum value  $k(1)=\delta$.  Figure \ref{fig:k-q-plot} shows the relationship between $k$ and $q$ for $\delta=10$. In this figure, the horizontal lines are spaced uniformly at integer values of $k$ which puts the corresponding vertical lines much closer together near $q=0$ and $q=1$.
 
 Next we require that the $k$-size of each sub-sequence be less than $1$,
@@ -155,6 +157,7 @@ $C'\mathtt{.append}(\sigma)$\;
 \Return $ C' $\\
 \caption{Merging new data into a $t$-digest}
 \end{algorithm}
+
 
 The run-time cost of the merge variant of the $t$-digest is a mixture of the frequent buffer inserts  and the rare periodic merges. The buffer inserts are very fast since they consist of an array write, index increment and an overflow test. The merges consist of the buffer sort and the merge itself. The merge involves a scan through both the buffer and the existing centroids plus a number of calls to $\sin^{-1}$ roughly equal to the size of the result and thus bounded by $2 \lceil \delta \rceil$. If $k_1$ is the input buffer size, the dominant costs are the sort and the $\sin^{-1}$ calls so the amortized cost per input value is roughly $C_1 \log k_1 + C_2 \lceil \delta \rceil / k_1$ where $C_1$ and $C_2$ are parameters representing the sort and $\sin^{-1}$ costs respectively. This overall amortized cost has a minimum where $k_1 \approx \delta\, C_2  / C_1$. The constant of proportionality should be determined by experiment, but micro-benchmarks indicate that $C_2 / C_1$ is in the range from $5$ to $20$ for a single core of an Intel i7 processor. In micro-benchmarks, increasing the buffer size to $10 \lceil \delta \rceil$ dramatically improves the average speed but further buffer size increases have much less effect.
 
