@@ -132,8 +132,8 @@ public class MergingDigest extends AbstractTDigest {
      * @param bufferSize  How many samples to retain before merging.
      */
     public MergingDigest(double compression, int bufferSize) {
-        // should only need ceiling(compression * PI / 2).  Double the allocation for now for safety
-        this(compression, bufferSize, (int) (Math.PI * compression + 0.5));
+        // we can guarantee that we only need 2 * ceiling(compression).  
+        this(compression, bufferSize, (int) (2 * Math.ceil(compression)));
     }
 
     /**
