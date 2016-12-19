@@ -1,5 +1,5 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
+ * Licensed to Ted Dunning under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
@@ -22,7 +22,7 @@ import java.nio.LongBuffer;
 /**
  * Maintains histogram buckets that are constant width
  * in base-2 floating point representation space. This is close
- * to exponential binning, but should be faster.
+ * to exponential binning, but should be much faster.
  */
 public class FloatHistogram extends Histogram {
     private final long[] counts;
