@@ -336,9 +336,7 @@ public abstract class TDigestTest extends AbstractTest {
         for (double x : data) {
             dist.add(x);
             sumW++;
-            assertEquals(String.format("Lost count at %d", sumW), sumW, dist.size());
         }
-        dist.compress();
         System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 100000);
         System.out.printf("# %d centroids\n", dist.centroids().size());
         Collections.sort(data);
@@ -683,7 +681,7 @@ public abstract class TDigestTest extends AbstractTest {
     }
 
     private void compareQD(PrintWriter out, AbstractContinousDistribution gen, String tag, long scale) {
-        for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000}) {
+        for (double compression : new double[]{10, 20, 50, 100, 200, 500, 1000, 2000}) {
             QDigest qd = new QDigest(compression);
             TDigest dist = factory(compression).create();
             List<Double> data = Lists.newArrayList();
@@ -724,7 +722,7 @@ public abstract class TDigestTest extends AbstractTest {
 
     private void compareSQ(PrintWriter out, AbstractContinousDistribution gen, String tag, long scale) {
         double[] quantiles = {0.001, 0.01, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99, 0.999};
-        for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000}) {
+        for (double compression : new double[]{10, 20, 50, 100, 200, 500, 1000, 2000}) {
             QuantileEstimator sq = new QuantileEstimator(1001);
             TDigest dist = factory(compression).create();
             List<Double> data = Lists.newArrayList();
@@ -824,7 +822,7 @@ public abstract class TDigestTest extends AbstractTest {
                         }
                         Collections.sort(data);
 
-                        for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
+                        for (double compression : new double[]{10, 20, 50, 100, 200, 500, 1000}) {
                             TDigest dist = factory(compression).create();
                             for (Double x : data) {
                                 dist.add(x);
@@ -847,16 +845,19 @@ public abstract class TDigestTest extends AbstractTest {
             }
 
             ExecutorService exec = Executors.newFixedThreadPool(16);
-            for (Future<String> result : exec.invokeAll(tasks)) {
-                out.write(result.get());
-            }
-            exec.shutdown();
             try {
+                for (Future<String> result : exec.invokeAll(tasks)) {
+                    out.write(result.get());
+                }
+                exec.shutdown();
                 if (exec.awaitTermination(5, TimeUnit.SECONDS)) {
                     return;
                 }
+
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+            } catch (Throwable e) {
+                e.printStackTrace();
             }
             exec.shutdownNow();
             assertTrue("Dangling executor thread", exec.awaitTermination(5, TimeUnit.SECONDS));

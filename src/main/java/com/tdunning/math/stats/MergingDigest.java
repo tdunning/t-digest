@@ -20,7 +20,6 @@ package com.tdunning.math.stats;
 import java.nio.ByteBuffer;
 import java.util.AbstractCollection;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -111,18 +110,7 @@ public class MergingDigest extends AbstractTDigest {
      * @param compression The compression factor
      */
     public MergingDigest(double compression) {
-        // magic formula created by regressing against known sizes for sample compression values
-        this(compression, estimateBufferSize(compression));
-    }
-
-    private static int estimateBufferSize(double compression) {
-        if (compression < 20) {
-            compression = 20;
-        }
-        if (compression > 1000) {
-            compression = 1000;
-        }
-        return (int) (7.5 + 0.37 * compression - 2e-4 * compression * compression);
+        this(compression, -1);
     }
 
     /**
@@ -133,7 +121,7 @@ public class MergingDigest extends AbstractTDigest {
      */
     public MergingDigest(double compression, int bufferSize) {
         // we can guarantee that we only need 2 * ceiling(compression).  
-        this(compression, bufferSize, (int) (2 * Math.ceil(compression)));
+        this(compression, bufferSize, -1);
     }
 
     /**
@@ -144,6 +132,13 @@ public class MergingDigest extends AbstractTDigest {
      * @param size        Size of main buffer
      */
     public MergingDigest(double compression, int bufferSize, int size) {
+        if (size == -1) {
+            size = (int) (2 * Math.ceil(compression));
+        }
+        if (bufferSize == -1) {
+            // having a big buffer is good for speed
+            bufferSize = (int) (8 * Math.ceil(compression));
+        }
         this.compression = compression;
 
         weight = new double[size];
@@ -212,13 +207,9 @@ public class MergingDigest extends AbstractTDigest {
         if (unmergedWeight > 0) {
             Sort.sort(order, tempMean, tempUsed);
 
-            double wSoFar = 0;
-            double k1 = 0;
-            int i = 0;
-            int j = 0;
             int n = 0;
             if (totalWeight > 0) {
-                if (weight[lastUsedCell] > 0) {
+                if (lastUsedCell < weight.length && weight[lastUsedCell] > 0) {
                     n = lastUsedCell + 1;
                 } else {
                     n = lastUsedCell;
@@ -229,38 +220,84 @@ public class MergingDigest extends AbstractTDigest {
             unmergedWeight = 0;
 
             // merge tempWeight,tempMean and weight,mean into mergeWeight,mergeMean
+            int i = 0;
+            int j = 0;
+            double wSoFar = 0;
+            double k1 = 0;
+            // mergeWeight will contain all zeros
             while (i < tempUsed && j < n) {
-                int ix = order[i];
-                if (tempMean[ix] <= mean[j]) {
-                    wSoFar += tempWeight[ix];
-                    k1 = mergeCentroid(wSoFar, k1, tempWeight[ix], tempMean[ix], tempData != null ? tempData.get(ix) : null);
-                    i++;
-                } else {
-                    wSoFar += weight[j];
-                    k1 = mergeCentroid(wSoFar, k1, weight[j], mean[j], data != null ? data.get(j) : null);
-                    j++;
+                double wLimit = totalWeight * integratedQ(k1 + 1);
+                boolean first = true;
+                while (i < tempUsed && j < n) {
+                    int ix = order[i];
+                    if (tempMean[ix] <= mean[j]) {
+                        double projectedW = wSoFar + tempWeight[ix];
+                        if (projectedW > wLimit && !first) {
+                            break;
+                        }
+                        wSoFar = quickMerge(ix, wSoFar, tempWeight, tempMean, tempData);
+                        i++;
+                    } else {
+                        double projectedW = wSoFar + weight[j];
+                        if (projectedW > wLimit && !first) {
+                            break;
+                        }
+                        wSoFar = quickMerge(j, wSoFar, weight, mean, data);
+                        j++;
+                    }
+                    first = false;
                 }
+                lastUsedCell++;
+                k1 = integratedLocation(wSoFar / totalWeight);
             }
 
+            // merge the tails of each side
             while (i < tempUsed) {
-                int ix = order[i];
-                wSoFar += tempWeight[ix];
-                k1 = mergeCentroid(wSoFar, k1, tempWeight[ix], tempMean[ix], tempData != null ? tempData.get(ix) : null);
-                i++;
+                double wLimit = totalWeight * integratedQ(k1 + 1);
+                boolean first = true;
+                while (i < tempUsed) {
+                    int ix = order[i];
+                    double projectedW = wSoFar + tempWeight[order[i]];
+                    if (projectedW > wLimit && !first) {
+                        break;
+                    }
+
+                    wSoFar = quickMerge(ix, wSoFar, tempWeight, tempMean, tempData);
+                    tempWeight[ix] = 0;
+                    i++;
+                    first = false;
+                }
+
+                lastUsedCell++;
+                k1 = integratedLocation(wSoFar / totalWeight);
             }
 
             while (j < n) {
                 wSoFar += weight[j];
-                k1 = mergeCentroid(wSoFar, k1, weight[j], mean[j], data != null ? data.get(j) : null);
-                j++;
+                double wLimit = totalWeight * integratedQ(k1 + 1);
+                boolean first = true;
+                while (j < n) {
+                    double projectedW = wSoFar + weight[j];
+                    if (projectedW > wLimit && !first) {
+                        break;
+                    }
+
+                    wSoFar = quickMerge(j, wSoFar, weight, mean, data);
+                    j++;
+                    first = false;
+                }
+
+                lastUsedCell++;
+                k1 = integratedLocation(wSoFar / totalWeight);
             }
+
             tempUsed = 0;
+            // tempWeight will have been zeroed by now
 
             // swap pointers for working space and merge space
             double[] z = weight;
             weight = mergeWeight;
             mergeWeight = z;
-            Arrays.fill(mergeWeight, 0);
 
             z = mean;
             mean = mergeMean;
@@ -268,7 +305,7 @@ public class MergingDigest extends AbstractTDigest {
 
             if (totalWeight > 0) {
                 min = Math.min(min, mean[0]);
-                if (weight[lastUsedCell] > 0) {
+                if (lastUsedCell < weight.length && weight[lastUsedCell] > 0) {
                     max = Math.max(max, mean[lastUsedCell]);
                 } else {
                     max = Math.max(max, mean[lastUsedCell - 1]);
@@ -283,28 +320,28 @@ public class MergingDigest extends AbstractTDigest {
         }
     }
 
-    private double mergeCentroid(double wSoFar, double k1, double w, double m, List<Double> newData) {
-        double k2 = integratedLocation(wSoFar / totalWeight);
-        if (k2 - k1 <= 1 || mergeWeight[lastUsedCell] == 0) {
-            // merge into existing centroid
-            mergeWeight[lastUsedCell] += w;
-            mergeMean[lastUsedCell] = mergeMean[lastUsedCell] + (m - mergeMean[lastUsedCell]) * w / mergeWeight[lastUsedCell];
-        } else {
-            // create new centroid
-            lastUsedCell++;
-            mergeMean[lastUsedCell] = m;
-            mergeWeight[lastUsedCell] = w;
-
-            k1 = integratedLocation((wSoFar - w) / totalWeight);
+    private void checkZero(double[] mergeWeight) {
+        for (int i = 0; i < mergeWeight.length; i++) {
+            if (mergeWeight[i] != 0) {
+                System.out.printf("Found non-zero at %d\n", i);
+            }
         }
+    }
+
+    private double quickMerge(int j, double wSoFar, double[] weight, double[] mean, List<List<Double>> data) {
+        wSoFar += weight[j];
+        List<Double> newData = data != null ? data.get(j) : null;
+        // merge into existing centroid
+        mergeWeight[lastUsedCell] += weight[j];
+        mergeMean[lastUsedCell] = mergeMean[lastUsedCell] + (mean[j] - mergeMean[lastUsedCell]) * weight[j] / mergeWeight[lastUsedCell];
+        weight[j] = 0;
         if (mergeData != null) {
             while (mergeData.size() <= lastUsedCell) {
                 mergeData.add(new ArrayList<Double>());
             }
             mergeData.get(lastUsedCell).addAll(newData);
         }
-
-        return k1;
+        return wSoFar;
     }
 
     /**
@@ -360,6 +397,10 @@ public class MergingDigest extends AbstractTDigest {
      */
     private double integratedLocation(double q) {
         return compression * (Math.asin(2 * q - 1) + Math.PI / 2) / Math.PI;
+    }
+
+    private double integratedQ(double k) {
+        return (Math.sin(Math.min(k, compression) * Math.PI / compression - Math.PI / 2) + 1) / 2;
     }
 
     @Override
@@ -519,14 +560,6 @@ public class MergingDigest extends AbstractTDigest {
     public Collection<Centroid> centroids() {
         // we don't actually keep centroid structures around so we have to fake it
         compress();
-        List<Centroid> r = new ArrayList<Centroid>();
-        for (int i = 0; i <= lastUsedCell; i++) {
-            if (weight[i] > 0) {
-                r.add(new Centroid(mean[i], (int) weight[i], data != null ? data.get(i) : null));
-            } else {
-                break;
-            }
-        }
         return new AbstractCollection<Centroid>() {
             @Override
             public Iterator<Centroid> iterator() {
