@@ -28,9 +28,9 @@ public abstract class Histogram {
         if (min <= 0 || max <= 0) {
             throw new IllegalArgumentException("Min and max must be positive");
         }
-        if (binsPerDecade < 5 || binsPerDecade > 500) {
+        if (binsPerDecade < 5 || binsPerDecade > 10000) {
             throw new IllegalArgumentException(
-                    String.format("Unreasonable number of bins per decade %.2g. Expected value in range [5,500]",
+                    String.format("Unreasonable number of bins per decade %.2g. Expected value in range [5,10000]",
                             binsPerDecade));
         }
     }
