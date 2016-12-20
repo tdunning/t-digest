@@ -1,5 +1,5 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
+ * Licensed to Ted Dunning under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
@@ -27,22 +27,22 @@ import java.util.Random;
 
 /**
  * Adaptive histogram based on something like streaming k-means crossed with Q-digest.
- * <p/>
+ *
  * The special characteristics of this algorithm are:
- * <p/>
- * a) smaller summaries than Q-digest
- * <p/>
- * b) works on doubles as well as integers.
- * <p/>
- * c) provides part per million accuracy for extreme quantiles and typically <1000 ppm accuracy for middle quantiles
- * <p/>
- * d) fast
- * <p/>
- * e) simple
- * <p/>
- * f) test coverage > 90%
- * <p/>
- * g) easy to adapt for use with map-reduce
+ *
+ * - smaller summaries than Q-digest
+ *
+ * - works on doubles as well as integers.
+ *
+ * - provides part per million accuracy for extreme quantiles and typically <1000 ppm accuracy for middle quantiles
+ *
+ * - fast
+ *
+ * - simple
+ *
+ * - test coverage roughly at 90%
+ *
+ * - easy to adapt for use with map-reduce
  */
 public class TreeDigest extends AbstractTDigest {
 

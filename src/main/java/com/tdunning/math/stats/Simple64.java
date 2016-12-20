@@ -1,5 +1,5 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
+ * Licensed to Ted Dunning under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
@@ -24,10 +24,9 @@ import java.nio.LongBuffer;
  * Very simple variable byte encoding that always uses 64bit units.  The idea is that the next few values
  * are smashed into 64 bits using a few bits to indicate how they are fitted in and the rest of the bits
  * to fit each value into equal-sized chunks.
- * <p>
+ *
  * In this encoding, 4 bits are used to indicate how the remaining 60 bits are divided. The possible ways are shown
  * in the following table:
- * <p>
  * <table>
  * <tr><th>Code</th><th>Arrangement</th></tr>
  * <tr><td>14</td>  </td><td>1 X 60BITS</tr>
