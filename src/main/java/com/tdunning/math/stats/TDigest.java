@@ -1,5 +1,5 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
+ * Licensed to Ted Dunning under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
@@ -26,19 +26,19 @@ import java.util.Collection;
  *
  * The special characteristics of this algorithm are:
  *
- * a) smaller summaries than Q-digest
+ * - smaller summaries than Q-digest
  *
- * b) works on doubles as well as integers.
+ * - works on doubles as well as integers.
  *
- * c) provides part per million accuracy for extreme quantiles and typically <1000 ppm accuracy for middle quantiles
+ * - provides part per million accuracy for extreme quantiles and typically <1000 ppm accuracy for middle quantiles
  *
- * d) fast
+ * - fast
  *
- * e) simple
+ * - simple
  *
- * f) test coverage > 90%
+ * - test coverage roughly at 90%
  *
- * g) easy to adapt for use with map-reduce
+ * - easy to adapt for use with map-reduce
  */
 public abstract class TDigest implements Serializable {
     /**
