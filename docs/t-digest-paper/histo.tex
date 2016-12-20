@@ -85,9 +85,12 @@ Next we require that the $k$-size of each sub-sequence be less than $1$,
 K(i) = k \left (\mathtt{right}(i)/n \right) - k \left ((\mathtt{left}(i)-1)/n \right) \le 1
 \]
 and that adjacent sub-sequences cannot be merged by forcing
+
+To form a $t$-digest of $X$ we group all of the samples $x_1 \ldots x_n$ into sub-sequences of samples $c_i = \lbrace x_{\mathtt {left}(i)} \ldots x_{\mathtt{right}(i)} \rbrace$ specified by the indices $\mathtt{left}(i)$ and $\mathtt{right}(i)$ of the first and last members of the sub-sequences. We define the index size of $c_i$ as
 \[
 K(i) + K(i+1) > 1
 \]
+
 for all $i=1\ldots m-1$. These conditions imply that the mean value of $K(i)$ is in $(1/2, 1]$ which means that the number $m$ of such maximally merged groups is bounded according to $ \lfloor\delta\rfloor \le m < 2\left \lceil\delta \right \rceil$. 
 
 \begin{figure}[htbp] %  figure placement: here, top, bottom, or page
@@ -158,6 +161,26 @@ $C'\mathtt{.append}(\sigma)$\;
 \caption{Merging new data into a $t$-digest}
 \end{algorithm}
 
+If we further assume that no adjacent sub-sequences can be merged without violating this constraint, that is
+\[
+K(i) + K(i+1) > 1
+\]
+for all $i$. This implies that the mean value of $K(i)$ is greater than $1/2$ and therefore that the number of such maximally merged groups must be no less than $ \lfloor\delta\rfloor$ and no more than $2 \lceil\delta\rceil$. 
+
+In terms of quantiles, sub-sequence $c_i$ can be thought of as spanning the range $q \in \left\lbrack (\mathtt{left}(i)-1)/n, \mathtt{right}(i)/n\right\rbrack$. The constraint on $K(i)$ that limits the size of each sub-sequence can be written as 
+\[
+K(i) =  \int_{(\mathtt{left}(i)-1)/n}^{\mathtt{right}(i)/n}\sqrt {q (1-q)}\,\, dq \le 1
+\]
+
+The size of the sub-sequence $c_i$ is thus bounded by 
+\[
+\mathtt{right}(i) - \mathtt{left}(i) + 1 \le n \max_j  \sqrt{j(1-j/n)/n } 
+\]
+where ${\mathtt{left}(i) \le j \le \mathtt{right}(i)}$. This size limit gives the desired accuracy bounds.
+
+Once we have formed at $t$-digest by partitioning the original sequence into sub-sequences that satisfy the size limits, we can use the sub-sequences to estimate quantiles using interpolation between the end-points of each sub-sequence. This is similar to what is done in other quantile estimation algorithms such as Greenwald-Khanna and will give errors quadratic in the number of samples in each sub-sequence. With the $t$-digest, we keep the centroids of each sub-sequence instead of the end-points and get similar accuracy in estimated quantiles by estimating the locations of the end-points and interpolating. Since the sub-sequences are smaller near $q=0$ or $q=1$, the accuracy of quantile estimates is better nearly the extremes of $q$ as desired. 
+
+If we form independent $t$-digests from separate sequences, each $t$-digests can be used to estimate quantiles with equal or better relative accuracy by computing quantiles for each different sequence separately and combining the results. Interestingly, we can also take the union of the $t$-digests' centroids and get similar results. We can also reduce this union to form a new, composite $t$-digest by combining centroids subject to the size limits. Note that the centroids that result will come from points that may well overlap. That this does not impair the accuracy of the method is one of the two key innovations of the $t$-digest (together with the non-constant size limit). The assertion that $t$-digests formed by combination produce accurate quantile estimates has substantial empirical support, but remains still to be proved rigorously.
 
 The run-time cost of the merge variant of the $t$-digest is a mixture of the frequent buffer inserts  and the rare periodic merges. The buffer inserts are very fast since they consist of an array write, index increment and an overflow test. The merges consist of the buffer sort and the merge itself. The merge involves a scan through both the buffer and the existing centroids plus a number of calls to $\sin^{-1}$ roughly equal to the size of the result and thus bounded by $2 \lceil \delta \rceil$. If $k_1$ is the input buffer size, the dominant costs are the sort and the $\sin^{-1}$ calls so the amortized cost per input value is roughly $C_1 \log k_1 + C_2 \lceil \delta \rceil / k_1$ where $C_1$ and $C_2$ are parameters representing the sort and $\sin^{-1}$ costs respectively. This overall amortized cost has a minimum where $k_1 \approx \delta\, C_2  / C_1$. The constant of proportionality should be determined by experiment, but micro-benchmarks indicate that $C_2 / C_1$ is in the range from $5$ to $20$ for a single core of an Intel i7 processor. In micro-benchmarks, increasing the buffer size to $10 \lceil \delta \rceil$ dramatically improves the average speed but further buffer size increases have much less effect.
 
