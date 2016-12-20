@@ -19,15 +19,16 @@ log
 .project
 .settings/
 
-# Latex related files
+# Latex and R related files
 _region_.prv/
 _region_*
-docs/t-digest-paper/*.log
-docs/t-digest-paper/*.aux
-docs/t-digest-paper/*.blg
-docs/t-digest-paper/*.bbl
-docs/t-digest-paper/Rplots.pdf
-docs/t-digest-paper/.Rhistory
+*.log
+*.aux
+*.blg
+*.bbl
+*.synctex.gz
+Rplots.pdf
+.Rhistory
 *.ini
 
 # diagnostic outputs
