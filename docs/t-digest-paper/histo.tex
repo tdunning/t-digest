@@ -165,20 +165,26 @@ If we further assume that no adjacent sub-sequences can be merged without violat
 \[
 K(i) + K(i+1) > 1
 \]
-for all $i$. This implies that the mean value of $K(i)$ is greater than $1/2$ and therefore that the number of such maximally merged groups must be no less than $ \lfloor\delta\rfloor$ and no more than $2 \lceil\delta\rceil$. 
+for all $i=1\ldots m-1$. These conditions imply that the mean value of $K(i)$ is greater than $1/2$ and therefore that the number of such maximally merged groups must be no less than $ \lfloor\delta\rfloor$ and no more than $2\left \lceil\delta \right \rceil$. Figure \ref{fig:k-q-plot} shows the relationship between $k$ and $q$ for $\delta=10$. In this figure, the horizontal lines are spaced uniformly at integer values of $k$ which means that the corresponding vertical lines are spaced much closer together near $q=0$ and $q=1$.
 
-In terms of quantiles, sub-sequence $c_i$ can be thought of as spanning the range $q \in \left\lbrack (\mathtt{left}(i)-1)/n, \mathtt{right}(i)/n\right\rbrack$. The constraint on $K(i)$ that limits the size of each sub-sequence can be written as 
-\[
-K(i) =  \int_{(\mathtt{left}(i)-1)/n}^{\mathtt{right}(i)/n}\sqrt {q (1-q)}\,\, dq \le 1
-\]
+\begin{figure}[htbp] %  figure placement: here, top, bottom, or page
+   \centering
+   \includegraphics[width=2.3in]{k-q-plot.pdf} 
+   \caption{Unit steps in $k$ give variable size steps in $q$ thus allowing better accuracy near $q=0$ or $q=1$. }
+   \label{fig:k-q-plot}
+\end{figure}
 
-The size of the sub-sequence $c_i$ is thus bounded by 
-\[
-\mathtt{right}(i) - \mathtt{left}(i) + 1 \le n \max_j  \sqrt{j(1-j/n)/n } 
-\]
-where ${\mathtt{left}(i) \le j \le \mathtt{right}(i)}$. This size limit gives the desired accuracy bounds.
+Once we have formed a $t$-digest by partitioning the original sequence into sub-sequences that satisfy the size limits, we can use the sub-sequences to estimate quantiles using interpolation between the end-points of each sub-sequence. This is similar to what is done in other quantile estimation algorithms such as Greenwald-Khanna and will give errors that scale quadratically in the number of samples in each sub-sequence. With the $t$-digest, we keep the centroids of each sub-sequence instead of the end-points and get similar accuracy in estimated quantiles by estimating the boundaries of the bins and interpolating. Since the sub-sequences are smaller near $q=0$ or $q=1$, the accuracy of quantile estimates is better near the extremes of $q$.  
 
-Once we have formed at $t$-digest by partitioning the original sequence into sub-sequences that satisfy the size limits, we can use the sub-sequences to estimate quantiles using interpolation between the end-points of each sub-sequence. This is similar to what is done in other quantile estimation algorithms such as Greenwald-Khanna and will give errors quadratic in the number of samples in each sub-sequence. With the $t$-digest, we keep the centroids of each sub-sequence instead of the end-points and get similar accuracy in estimated quantiles by estimating the locations of the end-points and interpolating. Since the sub-sequences are smaller near $q=0$ or $q=1$, the accuracy of quantile estimates is better nearly the extremes of $q$ as desired. 
+Figure \ref{fig:linear-interpolation} shows an example of how these improved error bounds arise. In the left panel, the use of equal sized bins means that the interpolated value of $q$ on the left side of the plot has a substantial and unavoidable error. The right panel, on the other hand, shows how the data can be partitioned differently into the same number of bins but now only putting two data points into the left-most bin. In this example, the value of $\delta=10$ is quite small; in realistic examples, $\delta=100$ or $\delta=200$ are more commonly used and the effect on accuracy is more pronounced. An interesting side-node is that making  sub-sequences smaller has a large effect on decreasing errors, but increasing other sub-sequence sizes to keep the same number of sub-sequences has a much weaker effect on accuracy. The overall effect is that quantile estimation accuracy is dramatically improved at the extremes while only modestly decreasing accuracy in the middle of the distribution.
+\begin{figure}[h] %  figure placement: here, top, bottom, or page
+   \centering
+   \includegraphics[height=2.7in, clip]{linear-interpolation.pdf} 
+   \caption{The left panel shows linear interpolation of a cumulative distribution function near $q=0$ with equal sized bins. The right panel shows the same interpolation with variable size bins as given by a $t$-digest with $\delta=10$. The numbers above the data points represent the number of points in each bin. }
+   \label{fig:linear-interpolation}
+\end{figure}
+
+If we form independent $t$-digests from separate sequences $X$ and $Y$, each $t$-digest can be used to estimate quantiles by computing quantiles for $X$ and $Y$ separately and combining the results. Interestingly, we can also take the union of the $t$-digests' centroids and get similar results even though the sub-sequences contributing to each centroid may well overlap. We can also reduce this union to form a new, composite $t$-digest by combining centroids subject to the size limits, but the resulting $t$-digest is no longer the same as if it had been created from the $X$ and $Y$ because of the way that bins may overlap. 
 
 If we form independent $t$-digests from separate sequences, each $t$-digests can be used to estimate quantiles with equal or better relative accuracy by computing quantiles for each different sequence separately and combining the results. Interestingly, we can also take the union of the $t$-digests' centroids and get similar results. We can also reduce this union to form a new, composite $t$-digest by combining centroids subject to the size limits. Note that the centroids that result will come from points that may well overlap. That this does not impair the accuracy of the method is one of the two key innovations of the $t$-digest (together with the non-constant size limit). The assertion that $t$-digests formed by combination produce accurate quantile estimates has substantial empirical support, but remains still to be proved rigorously.
 
