@@ -1,4 +1,6 @@
 \documentclass[11pt]{amsart}
+\usepackage{enumitem}
+
 \usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
 \geometry{letterpaper}                   % ... or a4paper or a5paper or ... 
 %\geometry{landscape}                % Activate for for rotated page geometry
@@ -15,6 +17,7 @@
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 \DeclareMathOperator*{\argmax}{arg\,max}
 \DeclareMathOperator{\argmin}{arg\,min}
+\setlength{\parskip}{0.5 em}
 
 \title{Computing Extremely Accurate Quantiles Using $t$-Digests}
 \author{Ted Dunning}
@@ -25,101 +28,116 @@
 \date{}                                           % Activate to display a given date or no date
 \begin{document}
 \begin{abstract}
-Several variants of an on-line algorithm for computing approximations of rank-based statistics are presented that allow controllable accuracy, particularly near the tails of the distribution.  Moreover, this new algorithm can be used to compute hybrid statistics such as trimmed means in additional to computing arbitrary quantiles.  An unusual property of the method is that it allows a quantile $q$ to be computed with an accuracy relative to $\max(q, 1-q)$ rather than with an absolute accuracy as with most methods.  This new algorithm is robust with respect to highly skewed distributions or highly ordered datasets and allows separately computed summaries to be combined with no loss in accuracy.
+Two variants of an on-line algorithm for computing approximations of rank-based statistics are presented that allow controllable accuracy, particularly near the tails of the distribution.  Moreover, this new algorithm can be used to compute hybrid statistics such as trimmed means in addition to computing arbitrary quantiles.  An unusual property of the method is that it allows a quantile $q$ to be computed with an accuracy relative to $q\,( 1-q)$ rather than with an absolute accuracy as with most methods.  This new algorithm is robust with respect to highly skewed distributions or highly ordered datasets and allows separately computed summaries to be combined with no loss in accuracy.
 
 An open-source Java implementation of this algorithm is available from the author. Implementations in Go and Python are also available.
 \end{abstract}
 \maketitle
 \section{Introduction}
-Given a set of numbers, it is often desirable to compute rank-based statistics such as the median, 95-th percentile or trimmed means in an on-line fashion. In many cases, there is an additional requirement that only a small data structure in memory as data is processed in a streaming fashion.  Traditionally, such statistics have been computed by sorting the data and then either finding the quantile of interest by interpolation or by re-processing all samples within particular quantile ranges.  This sorting approach can be infeasible for very large datasets or when quantiles of many subsets must be calculated. This infeasibility has led to interest in on-line approximate algorithms. Previous algorithms can compute approximate values of quantiles using constant or only weakly increasing memory footprint, but these previous algorithms cannot provide constant relative accuracy.  The new algorithm described here provides constant memory bounds and constant relative accuracy while operating in a strictly on-line fashion.
+Given a set of numbers, it is often desirable to compute rank-based statistics such as the median, 95-th percentile or trimmed means in an on-line fashion. In many cases, there is an additional requirement that only a small data structure needs to be kept in memory as data is processed in a streaming fashion.  Traditionally, such statistics have been computed by sorting the data and then either finding the quantile of interest by interpolation or by re-processing all samples within particular quantile ranges.  This sorting approach can be infeasible for very large datasets or when quantiles of many subsets must be calculated. This infeasibility has led to interest in on-line approximate algorithms. Previous algorithms can compute approximate values of quantiles using constant or only weakly increasing memory footprint, but these previous algorithms cannot provide constant relative accuracy.  The new algorithm described here, the $t$-digest, provides constant memory bounds and constant relative accuracy while operating in a strictly on-line fashion.
 
 \subsection{Previous work}
 
 One early algorithm for computing on-line quantiles is described by Chen, Lambert and Pinheiro in \cite{Chen2000}.  In that work specific quantiles were computed by incrementing or decrementing an estimate by a value proportional to the simultaneously estimated probability density at the desired quantile.  This method is plagued by a circularity in that estimating density is only possible by estimating yet more quantiles.  Moreover, this work did not allow the computation of hybrid quantities such as trimmed means.
 
-Munro and Paterson\cite{munro1980} provided an alternative algorithm to get a precise estimate of the median.  This is done by keeping $s$ samples from the $N$ samples seen so far where $s << N$ by the time the entire data set has been seen.  If the data are presented in random order and if $s = \theta(N^{1/2} \log N)$, then Munro and Paterson's algorithm has a high probability being able to retain a set of samples that contains the median.  This algorithm can be adapted to find a number of pre-specified quantiles at the same time at proportional cost in memory.  The memory consumption of Munro-Paterson algorithm is, however, excessive if precise results are desired.  Approximate results can be had with less memory, however.  
+Munro and Paterson\cite{munro1980} provided an alternative algorithm to get a precise estimate of the median.  This is done by keeping $s$ samples from the $N$ samples seen so far where $s << N$ by the time the entire data set has been seen.  If the data are presented in random order and if $s = \theta(N^{1/2} \log N)$, then Munro and Paterson's algorithm has a high probability of being able to retain a set of samples that contains the median.  This algorithm can be adapted to find a number of pre-specified quantiles at the same time at proportional cost in memory.  The memory consumption of Munro-Paterson algorithm is, however, excessive if precise results are desired.  Approximate results can be had with less memory, however.  
 
 A more subtle problem is that the implementation of Munro and Paterson's algorithm in Sawzall\cite{sawzall} and the Datafu library\cite{datafu} uses a number of buckets computed from the GCD of the desired quantiles.  This means that if you want to compute the $99$-th, $99.9$-th and $99.99$-th percentiles, a thousand buckets are required, each of which requires the retention of many samples. We will refer to this implementation of Munro and Paterson's algorithm as MP01 in results presented here.
 
-One of the most important results of the work by Munro and Paterson was a proof that computing any particular quantile exactly in $p$ passes through the data requires $\Omega(N^{1/p})$ memory. For the on-line case, $p=1$ which implies that on-line algorithms cannot guarantee to produce the precise value of a particular quantile. This result together with the importance of the on-line case drove subsequent work to focus on algorithms to produce approximate values of quantiles.
+One of the most important results of the work by Munro and Paterson was a proof that computing any particular quantile exactly in $p$ passes through the data requires $\Omega(N^{1/p})$ memory. For the on-line case, $p=1$, which implies that on-line algorithms cannot guarantee to produce the precise value of any particular quantile. This result together with the importance of the on-line case drove subsequent work to focus on algorithms to produce approximate values of quantiles.
 
 Greenwald and Khanna\cite{Greenwald-space-efficient-online-quantiles} provided just such an approximation algorithm that is able to provide estimates of quantiles with controllable accuracy. This algorithm (which we shall refer to as GK01 subsequently in this paper) requires less memory than Munro and Paterson's algorithm and provides approximate values for pre-specified quantiles.
 
-An alternative approach is described in \cite{qdigest}.  In this work, incoming values are assumed to be integers of fixed size. Such integers can trivially be arranged in a perfectly balanced binary tree where the leaves correspond to the integers and the interior nodes correspond to bit-wise prefixes. This tree forms the basis of the data structure known as a Q-digest.  The idea behind a Q-digest is that in the uncompressed case, counts for various values are assigned to leaves of the tree.  To compress this tree, sub-trees are collapsed and counts from the leaves are aggregated into a single node representing the sub-tree such that the maximum count for any collapsed sub-tree is less than a threshold that is a small fraction of the total number of integers seen so far.  Any quantile can be computed by traversing the tree in left prefix order, adding up counts until the desired fraction of the total is reached.  At that point, count for the last sub-tree traversed can be used to interpolate to the desired quantile within a small and controllable error.  The error is bounded because the count for each collapsed sub-tree is bounded.
+An alternative approach is described by Shrivastava and others in \cite{qdigest}.  In this work, incoming values are assumed to be integers of fixed size. Such integers can trivially be arranged in a perfectly balanced binary tree where the leaves correspond to the integers and the interior nodes correspond to bit-wise prefixes. This tree forms the basis of the data structure known as a Q-digest.  The idea behind a Q-digest is that in the uncompressed case, counts for various values are assigned to leaves of the tree.  To compress this tree, sub-trees are collapsed and counts from the leaves are aggregated into a single node representing the sub-tree such that the maximum count for any collapsed sub-tree is less than a threshold that is a small fraction of the total number of integers seen so far.  Any quantile can be computed by traversing the tree in left prefix order, adding up counts until the desired fraction of the total is reached.  At that point, the count for the last sub-tree traversed can be used to interpolate to the desired quantile within a small and controllable error.  The error is bounded because the count for each collapsed sub-tree is bounded.
 
-The great virtues of the Q-digest are a) that the space required is bounded proportional to a compression factor $k$, b) the maximum error of any quantile estimate is proportional to $1/k$ and c) the desired quantiles do not have to be specified in advance.
+The salient virtues of the Q-digest are
+\begin{itemize}[nosep, topsep=-10pt]
+\item the space required is bounded proportional to a compression factor $k$
+\item the maximum error of any quantile estimate is proportional to $1/k$ and
+\item the desired quantiles do not have to be specified in advance.
+\vspace{10pt}
+\end{itemize}
 
 On the other hand, two problems with the Q-digest are that it depends on the set of possible values being known in advance and produces quantile estimates with constant error in $q$. In practice, this limits application of the Q-digest to samples which can be identified with the integers. Adapting the Q-digest to use an balanced tree over arbitrary elements of an ordered set is difficult.  This difficulty arises because rebalancing the tree involves sub-tree rotations and these rotations may require reapportionment of previously collapsed counts in complex ways.  This reapportionment could have substantial effects on the accuracy of the algorithm and in any case make the implementation much more complex because the concerns of counting cannot be separated from the concerns of maintaining a balanced tree.  
+\subsection{New contributions}
+The work described here introduces a new data structure known as the $t$-digest. The $t$-digest differs from previous structures designed for computing approximate quantiles in several important respects. First, although data is binned and summarized in the $t$-digest, the range of data included in different bins may overlap. Second, the bins are summarized by a centroid value and an accumulated weight representing the number of samples contributing to a bin. Third, the samples are accumulated in such a way that only a few samples contribute to bins corresponding to extreme quantiles so that relative error is bounded instead of maintaining constant absolute error as with previous methods.
 
-\subsection{The $t$-digest}
-<<<<<<< Updated upstream
-This work describes a novel algorithm that provides on-line estimates of arbitrary quantiles for  values in $\mathbb R$ without the complexity of apportioning counts during tree rebalancing as with the Q-digest. This new algorithm eliminates the idea of a tree as used for the Q-digest for storing the original samples, maintaining only the concept of collapsing groups of samples in a way that preserves accuracy of quantile estimates.  This new algorithm, known as $t$-digest, has well-defined and easily proven error bounds for input in random order and allows parallel on-line operation.  A particularly novel aspect of the variant of $t$-digest described here is that accuracy for estimating the $q$ quantile is constant relative to $q(1-q)$ or to $\max(q,1-q)$.  This is in contrast to earlier algorithms which had errors independent of $q$.  The relative error bound of the $t$-digest is convenient when computing quantiles for very small $q$ or for $q$ near $1$.  As with the Q-digest algorithm, the accuracy/size trade-off can be controlled by setting a single compression parameter $\delta$ with the amount of memory required proportional only to $\Omega(\delta)$. 
+With the $t$-digest, accuracy for estimating the $q$ quantile is constant relative to $q(1-q)$.  This is in contrast to earlier algorithms which had errors independent of $q$.  The relative error bound of the $t$-digest is convenient when computing quantiles for $q$ near $0$ or $1$ as is commonly required.  As with the Q-digest algorithm, the accuracy/size trade-off for the $t$-digest can be controlled by setting a single compression parameter $\delta$ with the amount of memory required proportional only to $\Omega(\delta)$. 
+\section{The $t$-digest}
+A $t$-digest represents the empirical distribution of a set of numbers by retaining centroids of sub-sets of numbers. Algorithmically, there are two important ways to form a $t$-digest from a set of numbers. One version keeps a buffer of incoming samples. Periodically, this buffer is sorted and merged with the centroids computed from previous samples. This merging form of the $t$-digest algorithm has the virtue of allowing all memory structures to be allocated statically. On an amortized basis, this buffer-and-merge algorithm can be very fast especially if the input buffer is large. The other major $t$-digest algorithm is more akin to a clustering algorithm in which new samples are selectively added to the nearest centroid.  Both algorithms are described here and implementations for both are available. 
 
-Alternately, if the bounds on the sizes of the groups of samples is made somewhat tighter, the size of the $t$-digest will instead be $\Omega(\delta \log N)$, but it can be guaranteed when $t$-digests  computed on sub-samples of a dataset can be combined to produce a $t$-digest with the same bounds no matter how the sub-samples are chosen. The currently used sizing strategies that bound relative error with a digest size independent of $N$ cannot guarantee these bounds on both error and size for pathological choice of sub-samples. It is not yet clear if there is a sizing strategy that would allow both fixed digest size and parallel computation with guaranteed relative accuracy. It is trivial, however, to have both fixed digest size and bounded absolutely accuracy in parallel computation.
+\subsection{The basic ideas}
+Suppose first, for argument's sake, that all of the samples $X=x_1 \ldots x_n$ are presented in ascending order. Since the samples are ordered, we can use interpolation on the indexes of each sample to determine the value of the empirical quantile for any new value. 
 
-%The accuracy bounds are tight regardless of data ordering for the non-parallel on-line case.  In the case of parallel execution, the error bound is somewhere between the constant error bound and the relative error bound except in the case of highly ordered input data.  For randomly ordered data, parallel execution has expected error bounded by the same bound as for sequential execution.
+A $t$-digest is formed from the sequence of points by grouping all of the samples into sub-sequences of samples, $X = \lbrace s_1 | s_2 | \ldots | s_m \rbrace$ where $s_i = \lbrace x_{\mathtt {left}(i)} \ldots x_{\mathtt{right}(i)} \rbrace$.  The beginning and end of each sub-sequence is chosen so that the sub-sequence is small enough to get accurate quantile estimates by interpolation, but large enough so that we don't wind up with too many sub-sequences. Importantly, we force sub-sequences near the ends to be small while allowing sub-sequences in middle to be larger in order to get fairly constant relative accuracy.
 
-\section{The Algorithm}
-The $t$-digest has two important formulations. One version keeps an array of samples which are periodically shuffled and merged with an array of centroids, each of which represents the average of one or more samples. This merging version has the virtue of allowing all memory structures to be allocated statically, but it requires more copying of internal data. The other version of the algorithm is more akin to a clustering algorithm in which new samples are selectively added to the nearest centroid or used to create a new centroid.  Both versions are described here and implementations for both are available as open source.
-
-\subsection{Preliminaries}
-Suppose first, for argument's sake, that all of the samples $X = \left \lbrace x_1 \ldots x_n \right \rbrace$ are presented in sorted order. Take the following as a mapping from quantile $q$ to an index $k$ with compression parameter $\delta$
+To limit the sub-sequence size, we define a mapping from quantile $q$ to a notional index $k$ with compression parameter $\delta$
 \[
 k(q) = \delta \left( {\frac {\sin^{-1} (2q-1)} \pi}   + 0.5 \right)
 \]
-This mapping $k$ is monotonic with minimum value  $k(0)=0$ and maximum value  $k(1)=\delta$. 
+The mapping $k$ is monotonic with minimum value  $k(0)=0$ and maximum value  $k(1)=\delta$.  
 
-To form a $t$-digest of $X$ we group all of the samples $x_1 \ldots x_n$ into sub-sequences of samples $c_i = \lbrace x_{\mathtt {left}(i)} \ldots x_{\mathtt{right}(i)} \rbrace$ specified by the indices $\mathtt{left}(i)$ and $\mathtt{right}(i)$ of the first and last members of the sub-sequences. We define the index size of $c_i$ as
-=======
-This work describes a novel algorithm that provides on-line estimates of arbitrary quantiles for  values in $\mathbb R$ without the complexity of apportioning counts during tree rebalancing as with the Q-digest. This new algorithm eliminates the idea of a tree as used for the Q-digest for storing the original samples, maintaining only the concept of collapsing groups of samples in a way that preserves accuracy of quantile estimates.  This new algorithm, known as $t$-digest, has well-defined and easily proven error bounds for input in random order and allows parallel on-line operation. Empirically, these bounds are maintained for common pathological inputs such as ordered data or highly repetitive.  A particularly novel aspect of the variant of $t$-digest described here is that accuracy for estimating the $q$ quantile is constant relative to $q(1-q)$ or to $\max(q,1-q)$.  This is in contrast to earlier algorithms which had errors independent of $q$.  The relative error bound of the $t$-digest is convenient when computing quantiles for very small $q$ or for $q$ near $1$.  As with the Q-digest algorithm, the accuracy/size trade-off can be controlled by setting a single compression parameter $\delta$ with the amount of memory required proportional only to $\Omega(\delta)$. 
-
-\section{The Algorithm}
-A $t$-digest represents the empirical distribution of a set of numbers by retaining centroids of sub-sets of numbers. Algorithmically, there are two important ways to form a $t$-digest from a set of numbers. One version keeps an buffer of incoming samples. Periodically, this buffer is sorted and merged with the centroids computed from previous samples. This merging form of the $t$-digest algorithm has the virtue of allowing all memory structures to be allocated statically and can be very fast, on an amortized basis, especially if the input buffer is large. The other version of the algorithm is more akin to a clustering algorithm in which new samples are selectively added to the nearest centroid.  Both versions are described here and implementations for both are available.
-
-\subsection{Preliminaries}
-Suppose first, for argument's sake, that all of the samples $X=x_1 \ldots x_n$ are presented in ascending order. Due to this ordering, we can use interpolation on the indexes of each sample to determine the value of the empirical quantile for any new value. A $t$-digest is formed from the sequence of points by grouping all of the samples $x_1 \ldots x_n$ into sub-sequences of samples $s_i = \lbrace x_{\mathtt {left}(i)} \ldots x_{\mathtt{right}(i)} \rbrace$ specified by the indices $\mathtt{left}(i)$ and $\mathtt{right}(i)$ of the first and last members of the sub-sequences.  The beginning and end of each sub-sequence is chosen so that it is small enough to get accurate quantile estimates by interpolation, but large enough so that we don't wind up with too many sub-sequences.
-
-To limit the sub-sequence size, define a mapping from quantile $q$ to a notional index $k$ with compression parameter $\delta$
+Next we require that the $k$-size of each sub-sequence be less than $1$,
 \[
-k(q) = \delta \left( {\frac {\sin^{-1} (2q-1)} \pi}   + 0.5 \right)
+K(i) = k \left (\mathtt{right}(i)/n \right) - k \left ((\mathtt{left}(i)-1)/n \right) \le 1
 \]
-The mapping $k$ is monotonic with minimum value  $k(0)=0$ and maximum value  $k(1)=\delta$. 
-
-Then require that the $k$-size of each sub-sequence is less than $1$,
->>>>>>> Stashed changes
-\[
-K(i) = k \left (\mathtt{right}(i)/n \right) - k \left ((\mathtt{left}(i)-1)/n \right) 
-\]
-<<<<<<< Updated upstream
-And we require that $K(i) \le 1$ for all sub-sequences.
-
-Finally, we merge any adjacent sub-sequences that can be merged without violating the constraint on $K(i)$.
- 
-We know that the mean value of $ K(i)$ is greater than $1/2$ because if it were equal or less, there would be sub-sequences to merge. Therefore the number of sequences in a $t$-digest cannot be more than $2 \delta$ nor less than $\delta$. 
-=======
-If we further assume that no adjacent sub-sequences can be merged without violating this constraint, that is
+and that adjacent sub-sequences cannot be merged by forcing
 \[
 K(i) + K(i+1) > 1
 \]
-for all $i$. This implies that the mean value of $K(i)$ is greater than $1/2$ and therefore that the number of such maximally merged groups must be no less than $ \lfloor\delta\rfloor$ and no more than $2 \lceil\delta\rceil$. 
+for all $i=1\ldots m-1$. These conditions imply that the mean value of $K(i)$ is greater than $1/2$ and therefore that the number of such maximally merged groups must be no less than $ \lfloor\delta\rfloor$ and no more than $2\left \lceil\delta \right \rceil$. Figure \ref{fig:k-q-plot} shows the relationship between $k$ and $q$ for $\delta=10$. In this figure, the horizontal lines are spaced uniformly at integer values of $k$ which means that the corresponding vertical lines are spaced much closer together near $q=0$ and $q=1$.
 
-In terms of quantiles, sub-sequence $c_i$ can be thought of as spanning the range $q \in \left\lbrack (\mathtt{left}(i)-1)/n, \mathtt{right}(i)/n\right\rbrack$. The constraint on $K(i)$ that limits the size of each sub-sequence can be written as 
-\[
-K(i) =  \int_{(\mathtt{left}(i)-1)/n}^{\mathtt{right}(i)/n}\sqrt {q (1-q)}\,\, dq \le 1
-\]
+\begin{figure}[htbp] %  figure placement: here, top, bottom, or page
+   \centering
+   \includegraphics[width=2.3in]{k-q-plot.pdf} 
+   \caption{Unit steps in $k$ give variable size steps in $q$ thus allowing better accuracy near $q=0$ or $q=1$. }
+   \label{fig:k-q-plot}
+\end{figure}
 
-The size of the sub-sequence $c_i$ is thus bounded by 
-\[
-\mathtt{right}(i) - \mathtt{left}(i) + 1 \le n \max_j  \sqrt{j(1-j/n)/n } 
-\]
-where ${\mathtt{left}(i) \le j \le \mathtt{right}(i)}$. This size limit gives the desired accuracy bounds.
+Once we have formed a $t$-digest by partitioning the original sequence into sub-sequences that satisfy the size limits, we can use the sub-sequences to estimate quantiles using interpolation between the end-points of each sub-sequence. This is similar to what is done in other quantile estimation algorithms such as Greenwald-Khanna and will give errors that scale quadratically in the number of samples in each sub-sequence. With the $t$-digest, we keep the centroids of each sub-sequence instead of the end-points and get similar accuracy in estimated quantiles by estimating the boundaries of the bins and interpolating. Since the sub-sequences are smaller near $q=0$ or $q=1$, the accuracy of quantile estimates is better near the extremes of $q$.  
 
-Once we have formed at $t$-digest by partitioning the original sequence into sub-sequences that satisfy the size limits, we can use the sub-sequences to estimate quantiles using interpolation between the end-points of each sub-sequence. This is similar to what is done in other quantile estimation algorithms such as Greenwald-Khanna and will give errors quadratic in the number of samples in each sub-sequence. With the $t$-digest, we keep the centroids of each sub-sequence instead of the end-points and get similar accuracy in estimated quantiles by estimating the locations of the end-points and interpolating. Since the sub-sequences are smaller near $q=0$ or $q=1$, the accuracy of quantile estimates is better nearly the extremes of $q$ as desired. 
+Figure \ref{fig:linear-interpolation} shows an example of how these improved error bounds arise. In the left panel, the use of equal sized bins means that the interpolated value of $q$ on the left side of the plot has a substantial and unavoidable error. The right panel, on the other hand, shows how the data can be partitioned differently into the same number of bins but now only putting two data points into the left-most bin. In this example, the value of $\delta=10$ is quite small; in realistic examples, $\delta=100$ or $\delta=200$ are more commonly used and the effect on accuracy is more pronounced. An interesting side-node is that making  sub-sequences smaller has a large effect on decreasing errors, but increasing other sub-sequence sizes to keep the same number of sub-sequences has a much weaker effect on accuracy. The overall effect is that quantile estimation accuracy is dramatically improved at the extremes while only modestly decreasing accuracy in the middle of the distribution.
+\begin{figure}[h] %  figure placement: here, top, bottom, or page
+   \centering
+   \includegraphics[height=2.7in, clip]{linear-interpolation.pdf} 
+   \caption{The left panel shows linear interpolation of a cumulative distribution function near $q=0$ with equal sized bins. The right panel shows the same interpolation with variable size bins as given by a $t$-digest with $\delta=10$. The numbers above the data points represent the number of points in each bin. }
+   \label{fig:linear-interpolation}
+\end{figure}
 
-If we form independent $t$-digests from separate sequences, each $t$-digests can be used to estimate quantiles with equal or better relative accuracy by computing quantiles for each different sequence separately and combining the results. Interestingly, we can also take the union of the $t$-digests' centroids and get similar results. We can also reduce this union to form a new, composite $t$-digest by combining centroids subject to the size limits. Note that the centroids that result will come from points that may well overlap. That this does not impair the accuracy of the method is one of the two key innovations of the $t$-digest (together with the non-constant size limit). The assertion that $t$-digests formed by combination produce accurate quantile estimates has substantial empirical support, but remains still to be proved rigorously.
->>>>>>> Stashed changes
+If we form independent $t$-digests from separate sequences $X$ and $Y$, each $t$-digest can be used to estimate quantiles by computing quantiles for $X$ and $Y$ separately and combining the results. Interestingly, we can also take the union of the $t$-digests' centroids and get similar results even though the sub-sequences contributing to each centroid may well overlap. We can also reduce this union to form a new, composite $t$-digest by combining centroids subject to the size limits, but the resulting $t$-digest is no longer the same as if it had been created from the $X$ and $Y$ because of the way that bins may overlap. 
+
+The assertion that $t$-digests formed by combination produce accurate quantile estimates has substantial empirical support, but has not been proved rigorously. 
 
 \subsection{The merging variant}
+The previous section suggests an algorithm for constructing a $t$-digest from a large amount of data. The basic idea is that you collect data in a buffer. When the buffer fills, you merge the buffered data with the existing centroids, merging centroids whenever the size limits can be satisfied by the merged value.
+
+The operation of merging a buffer into an existing set of centroids is shown in Algorithm \ref{alg:merge}. Note that, in practice, the check on the size bound is optimized to only require at most $2 \left \lceil \delta \right \rceil$ evaluations of $k(q)$  during the merge. This is done by computing the bounding value $q_{limit} = k^{-1}(k(q) + 1)$ that can be used to limit an inner loop that merges as many values as possible without recomputing $q_{limit}$. If $n \gg 2 \left \lceil \delta \right \rceil$, this can result in a considerable speedup since computing $\sin^{-1}$ is expensive. Note also that all data can be statically allocated as arrays of primitives, avoiding any dynamic allocation or structure boxing/unboxing.
+\begin{algorithm}[ht]
+\SetKw{KwTo}{in}\SetKwFor{For}{for}{\string:}{}
+\SetKwIF{If}{ElseIf}{Else}{if}{:}{elif}{else:}{}
+\SetKwFor{While}{while}{:}{fintq}
+\SetKwFor{For}{for}{\string:}{}
+ \label{alg:merge}
+\SetNoFillComment
+\KwIn{Sequence $C = [c_1 \ldots c_m]$ of real-valued, weighted centroids with components $\mathtt{sum}$ and $\mathtt{count}$ arranged in ascending order by mean, data buffer  $X = { x_1,\ldots x_n}$ of real-valued, weighted points, and compression factor $\delta$}
+\KwOut{New ordered set $C'=[c'_1 \ldots c'_m]$ of weighted centroids} 
+$X \gets \mathtt{sort}(X)$\;
+$C' = \lbrack \, \rbrack$\;
+$\sigma = (\mathtt {sum}:0, \mathtt{count}:0), q = 0, s = n + \sum_j c_j.\mathtt{count}$\;
+\For{$(x, w) \in \mathtt{merge}(X,C)$} {
+  \If {$\sigma.\mathtt{count} = 0 \lor k(q + (\sigma.\mathtt {count}+w)/n) - k(q) \le 1$} {
+      $\sigma \gets \sigma + (\mathtt {sum}:x, \mathtt {count}:w)$\;
+  } \Else {
+      $\mathtt{C'.append}(\sigma)$\;
+      $\sigma \gets (\mathtt {sum}:x, \mathtt {count}:w)$\;
+  }
+} 
+\If {$\sigma.\mathtt{count} > 0$} {
+     $\mathtt{C'.append}(\sigma)$\;
+ }
+\Return $ C' $\\
+\caption{Merging new data into a $t$-digest}
+\end{algorithm}
 
 \subsection{The clustering variant}
 
