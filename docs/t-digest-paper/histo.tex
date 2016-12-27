@@ -107,9 +107,12 @@ In general, there are many partitions of $X$ that valid result in a $t$-digest. 
 
 Figure \ref{fig:linear-interpolation} shows an example of how error bounds are improved by the strategy of keeping bins small near extreme values of $q$. 
 
+Figure \ref{fig:linear-interpolation} shows an example of how these improved error bounds arise. In the left panel, the use of equal sized bins means that the interpolated value of $q$ on the left side of the plot has a substantial and unavoidable error. The right panel, on the other hand, shows how the data can be partitioned differently into nearly the same number of bins, but with many fewer points near the beginning or end. The value of $\delta=100$ is quite typical. 
+
+Of course, since we have to put all the samples into some bin, filling some bins with fewer than $100$ samples requires that other bins must have more than $100$ samples. It is to be noted that having fewer samples in the bins near the ends has a large effect on the corresponding errors, but increasing other bin sizes in the middle has a much weaker effect on accuracy. In this particular example, the first and last bins have only 2 samples giving 2500 times smaller error (actually the errors are even smaller since the errors go to zero with only 1 or 2 points) while the central bins are only about $1.6$ times larger, increasing errors by about two and a half times larger relative to equal sized bins. The overall effect is that quantile estimation accuracy is dramatically improved at the extremes but only modestly impaired in the middle of the distribution.
 \begin{figure}[h] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[height=2.in, clip]{linear-interpolation.pdf} 
+   \includegraphics[height=2.7in, clip]{linear-interpolation.pdf} 
    \caption{The left panel shows linear interpolation of a cumulative distribution function near $q=0$ with $100$ equal sized bins applied to $10,000$ data points sampled from an exponential distribution. The right panel shows the same interpolation with variable size bins as given by a $t$-digest with $\delta=100$. The numbers above the data points represent the number of points in each bin. }
    \label{fig:linear-interpolation}
 \end{figure}
@@ -131,6 +134,7 @@ A similar divide and conquer strategy can be used to allow $t$-digests to be use
 The observation that merging $t$-digests gives good accuracy suggests a practical algorithm for constructing a $t$-digest from a large amount of data. The basic idea is to collect data in a buffer. When the buffer fills, or when a final result is required, sort the buffer and the existing centroids together, and pass through the combined set of points and centroids, merging points or centroids together whenever the size limits can be satisfied by the merged value. With an arbitrarily large buffer, this algorithm reduces to the original approach for constructing a $t$-digest from sorted data since the overall effect is simply a single merging pass through all the data. For smaller buffer sizes, however, many merge passes are required to process a large amount of data. This is essentially equivalent to forming independent $t$-digests on buffers of data and then sequentially merging them to get the final result.
 
 The operation of merging a buffer's worth of samples into an existing set of centroids is shown in Algorithm \ref{alg:merge}. Note that the check on the size bound is optimized to only require only as many evaluations of $k(q)$ during the merge as there are output values in $C'$. This is done by computing the bounding value $q_{limit} = k^{-1}(k(q, \delta) + 1, \delta)$ each time a new centroid is emitted. This allows the conditional to be triggered based on comparisons of $q$ so that if many points are merged, no additional calls to $k$ are needed. If $n \gg 2 \left \lceil \delta \right \rceil$, this can result in a considerable speedup since computing $\sin^{-1}$ is expensive. Note also that this algorithm allows static allocation of all data structures as four arrays of primitive values, avoiding any dynamic allocation or structure boxing/unboxing.
+
 \begin{algorithm}[ht]
 \SetKw{KwTo}{in}\SetKwFor{For}{for}{\string:}{}
 \SetKwIF{If}{ElseIf}{Else}{if}{:}{elif}{else:}{}
