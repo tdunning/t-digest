@@ -82,11 +82,6 @@ public class MergingDigest extends AbstractTDigest {
     // history of all data added to centroids (for testing purposes)
     private List<List<Double>> data = null;
 
-    // buffers for merging
-    private double[] mergeWeight;
-    private double[] mergeMean;
-    private List<List<Double>> mergeData = null;
-
     // sum_i tempWeight[i]
     private double unmergedWeight = 0;
 
@@ -146,9 +141,6 @@ public class MergingDigest extends AbstractTDigest {
         min = Double.MAX_VALUE;
         max = -Double.MAX_VALUE;
 
-        mergeWeight = new double[size];
-        mergeMean = new double[size];
-
         tempWeight = new double[bufferSize];
         tempMean = new double[bufferSize];
         order = new int[bufferSize];
@@ -163,7 +155,7 @@ public class MergingDigest extends AbstractTDigest {
     public TDigest recordAllData() {
         super.recordAllData();
         data = new ArrayList<List<Double>>();
-        mergeData = new ArrayList<List<Double>>();
+        tempData = new ArrayList<List<Double>>();
         return this;
     }
 
@@ -181,7 +173,7 @@ public class MergingDigest extends AbstractTDigest {
         if (Double.isNaN(x)) {
             throw new IllegalArgumentException("Cannot add NaN to t-digest");
         }
-        if (tempUsed >= tempWeight.length) {
+        if (tempUsed >= tempWeight.length - lastUsedCell - 1) {
             mergeNewValues();
         }
         int where = tempUsed++;
@@ -205,143 +197,95 @@ public class MergingDigest extends AbstractTDigest {
 
     private void mergeNewValues() {
         if (unmergedWeight > 0) {
+            System.arraycopy(mean, 0, tempMean, tempUsed, lastUsedCell);
+            System.arraycopy(weight, 0, tempWeight, tempUsed, lastUsedCell);
+            tempUsed += lastUsedCell;
+
+            if (tempData != null) {
+                for (int i = 0; i < lastUsedCell; i++) {
+                    assert data != null;
+                    tempData.add(data.get(i));
+                }
+                data = new ArrayList<List<Double>>();
+            }
             Sort.sort(order, tempMean, tempUsed);
 
-            int n = 0;
-            if (totalWeight > 0) {
-                if (lastUsedCell < weight.length && weight[lastUsedCell] > 0) {
-                    n = lastUsedCell + 1;
-                } else {
-                    n = lastUsedCell;
-                }
-            }
             lastUsedCell = 0;
             totalWeight += unmergedWeight;
             unmergedWeight = 0;
 
-            // merge tempWeight,tempMean and weight,mean into mergeWeight,mergeMean
-            int i = 0;
-            int j = 0;
-            double wSoFar = 0;
+            assert tempUsed > 0;
+            mean[lastUsedCell] = tempMean[order[0]];
+            weight[lastUsedCell] = tempWeight[order[0]];
+            double wSoFar = weight[lastUsedCell];
+            if (data != null) {
+                assert data != null;
+                data.add(tempData.get(0));
+            }
+
             double k1 = 0;
-            // mergeWeight will contain all zeros
-            while (i < tempUsed && j < n) {
-                double wLimit = totalWeight * integratedQ(k1 + 1);
-                boolean first = true;
-                while (i < tempUsed && j < n) {
-                    int ix = order[i];
-                    if (tempMean[ix] <= mean[j]) {
-                        double projectedW = wSoFar + tempWeight[ix];
-                        if (projectedW > wLimit && !first) {
-                            break;
-                        }
-                        wSoFar = quickMerge(ix, wSoFar, tempWeight, tempMean, tempData);
-                        i++;
-                    } else {
-                        double projectedW = wSoFar + weight[j];
-                        if (projectedW > wLimit && !first) {
-                            break;
-                        }
-                        wSoFar = quickMerge(j, wSoFar, weight, mean, data);
-                        j++;
-                    }
-                    first = false;
-                }
-                lastUsedCell++;
-                k1 = integratedLocation(wSoFar / totalWeight);
-            }
 
-            // merge the tails of each side
-            while (i < tempUsed) {
-                double wLimit = totalWeight * integratedQ(k1 + 1);
-                boolean first = true;
-                while (i < tempUsed) {
-                    int ix = order[i];
-                    double projectedW = wSoFar + tempWeight[order[i]];
-                    if (projectedW > wLimit && !first) {
-                        break;
-                    }
+            // weight will contain all zeros
+            double wLimit = totalWeight * integratedQ(k1 + 1);
+            for (int i = 1; i < tempUsed; i++) {
+                int ix = order[i];
+                double projectedW = wSoFar + tempWeight[ix];
+                if (projectedW <= wLimit) {
+                    // next point will fit
+                    wSoFar = projectedW;
 
-                    wSoFar = quickMerge(ix, wSoFar, tempWeight, tempMean, tempData);
+                    // merge into existing centroid
+                    weight[lastUsedCell] += tempWeight[ix];
+                    mean[lastUsedCell] = mean[lastUsedCell] + (tempMean[ix] - mean[lastUsedCell]) * tempWeight[ix] / weight[lastUsedCell];
                     tempWeight[ix] = 0;
-                    i++;
-                    first = false;
-                }
 
-                lastUsedCell++;
-                k1 = integratedLocation(wSoFar / totalWeight);
-            }
-
-            while (j < n) {
-                wSoFar += weight[j];
-                double wLimit = totalWeight * integratedQ(k1 + 1);
-                boolean first = true;
-                while (j < n) {
-                    double projectedW = wSoFar + weight[j];
-                    if (projectedW > wLimit && !first) {
-                        break;
+                    if (data != null) {
+                        while (data.size() <= lastUsedCell) {
+                            data.add(new ArrayList<Double>());
+                        }
+                        assert tempData != null;
+                        assert data.get(lastUsedCell) != tempData.get(ix);
+                        data.get(lastUsedCell).addAll(tempData.get(ix));
                     }
+                } else {
+                    // didn't fit ... move to next output, copy out first centroid
+                    k1 = integratedLocation(wSoFar / totalWeight);
+                    wLimit = totalWeight * integratedQ(k1 + 1);
+                    lastUsedCell++;
+                    wSoFar += tempWeight[ix];
+                    mean[lastUsedCell] = tempMean[ix];
+                    weight[lastUsedCell] = tempWeight[ix];
+                    tempWeight[ix] = 0;
 
-                    wSoFar = quickMerge(j, wSoFar, weight, mean, data);
-                    j++;
-                    first = false;
+                    if (data != null) {
+                        assert tempData != null;
+                        assert data.size() == lastUsedCell;
+                        data.add(tempData.get(ix));
+                    }
                 }
-
-                lastUsedCell++;
-                k1 = integratedLocation(wSoFar / totalWeight);
             }
+            // points to next empty cell
+            lastUsedCell++;
+
+            double sum = 0;
+            for (int i = 0; i < lastUsedCell; i++) {
+                sum += weight[i];
+            }
+            assert sum == totalWeight;
 
             tempUsed = 0;
-            // tempWeight will have been zeroed by now
-
-            // swap pointers for working space and merge space
-            double[] z = weight;
-            weight = mergeWeight;
-            mergeWeight = z;
-
-            z = mean;
-            mean = mergeMean;
-            mergeMean = z;
-
-            if (totalWeight > 0) {
-                min = Math.min(min, mean[0]);
-                if (lastUsedCell < weight.length && weight[lastUsedCell] > 0) {
-                    max = Math.max(max, mean[lastUsedCell]);
-                } else {
-                    max = Math.max(max, mean[lastUsedCell - 1]);
-                }
-            }
-
             if (data != null) {
-                data = mergeData;
-                mergeData = new ArrayList<List<Double>>();
                 tempData = new ArrayList<List<Double>>();
             }
-        }
-    }
 
-    private void checkZero(double[] mergeWeight) {
-        for (int i = 0; i < mergeWeight.length; i++) {
-            if (mergeWeight[i] != 0) {
-                System.out.printf("Found non-zero at %d\n", i);
+            // contents of tempWeight will have been entirely zeroed by now
+
+            // swap pointers for working space and merge space
+            if (totalWeight > 0) {
+                min = Math.min(min, mean[0]);
+                max = Math.max(max, mean[lastUsedCell - 1]);
             }
         }
-    }
-
-    private double quickMerge(int j, double wSoFar, double[] weight, double[] mean, List<List<Double>> data) {
-        wSoFar += weight[j];
-        List<Double> newData = data != null ? data.get(j) : null;
-        // merge into existing centroid
-        mergeWeight[lastUsedCell] += weight[j];
-        mergeMean[lastUsedCell] = mergeMean[lastUsedCell] + (mean[j] - mergeMean[lastUsedCell]) * weight[j] / mergeWeight[lastUsedCell];
-        weight[j] = 0;
-        if (mergeData != null) {
-            while (mergeData.size() <= lastUsedCell) {
-                mergeData.add(new ArrayList<Double>());
-            }
-            mergeData.get(lastUsedCell).addAll(newData);
-        }
-        return wSoFar;
     }
 
     /**
@@ -510,9 +454,6 @@ public class MergingDigest extends AbstractTDigest {
         // we know that there are at least two centroids now
 
         int n = lastUsedCell;
-        if (weight[n] > 0) {
-            n++;
-        }
 
         // if values were stored in a sorted array, index would be the offset we are interested in
         final double index = q * totalWeight;
@@ -568,7 +509,7 @@ public class MergingDigest extends AbstractTDigest {
 
                     @Override
                     public boolean hasNext() {
-                        return i < lastUsedCell || (i <= lastUsedCell && weight[lastUsedCell] > 0);
+                        return i < lastUsedCell;
                     }
 
                     @Override
@@ -587,7 +528,7 @@ public class MergingDigest extends AbstractTDigest {
 
             @Override
             public int size() {
-                return lastUsedCell + (weight[lastUsedCell] > 0 ? 1 : 0);
+                return lastUsedCell;
             }
         };
     }
@@ -602,7 +543,7 @@ public class MergingDigest extends AbstractTDigest {
         compress();
         // format code, compression(float), buffer-size(int), temp-size(int), #centroids-1(int),
         // then two doubles per centroid
-        return (lastUsedCell + 1) * 16 + 40;
+        return lastUsedCell * 16 + 40;
     }
 
     @Override
@@ -610,7 +551,7 @@ public class MergingDigest extends AbstractTDigest {
         compress();
         // format code(int), compression(float), buffer-size(short), temp-size(short), #centroids-1(short),
         // then two floats per centroid
-        return lastUsedCell * 8 + 38;
+        return lastUsedCell * 8 + 30;
     }
 
     /**
@@ -642,7 +583,7 @@ public class MergingDigest extends AbstractTDigest {
         buf.putInt(mean.length);
         buf.putInt(tempMean.length);
         buf.putInt(lastUsedCell);
-        for (int i = 0; i <= lastUsedCell; i++) {
+        for (int i = 0; i < lastUsedCell; i++) {
             buf.putDouble(weight[i]);
             buf.putDouble(mean[i]);
         }
@@ -651,14 +592,14 @@ public class MergingDigest extends AbstractTDigest {
     @Override
     public void asSmallBytes(ByteBuffer buf) {
         compress();
-        buf.putInt(Encoding.SMALL_ENCODING.code);
-        buf.putDouble(min);
-        buf.putDouble(max);
-        buf.putFloat((float) compression);
-        buf.putShort((short) mean.length);
-        buf.putShort((short) tempMean.length);
-        buf.putShort((short) lastUsedCell);
-        for (int i = 0; i <= lastUsedCell; i++) {
+        buf.putInt(Encoding.SMALL_ENCODING.code);    // 4
+        buf.putDouble(min);                          // + 8
+        buf.putDouble(max);                          // + 8
+        buf.putFloat((float) compression);           // + 4
+        buf.putShort((short) mean.length);           // + 2
+        buf.putShort((short) tempMean.length);       // + 2
+        buf.putShort((short) lastUsedCell);          // + 2 = 30
+        for (int i = 0; i < lastUsedCell; i++) {
             buf.putFloat((float) weight[i]);
             buf.putFloat((float) mean[i]);
         }
@@ -676,7 +617,7 @@ public class MergingDigest extends AbstractTDigest {
             r.min = min;
             r.max = max;
             r.lastUsedCell = buf.getInt();
-            for (int i = 0; i <= r.lastUsedCell; i++) {
+            for (int i = 0; i < r.lastUsedCell; i++) {
                 r.weight[i] = buf.getDouble();
                 r.mean[i] = buf.getDouble();
 
@@ -693,7 +634,7 @@ public class MergingDigest extends AbstractTDigest {
             r.min = min;
             r.max = max;
             r.lastUsedCell = buf.getShort();
-            for (int i = 0; i <= r.lastUsedCell; i++) {
+            for (int i = 0; i < r.lastUsedCell; i++) {
                 r.weight[i] = buf.getFloat();
                 r.mean[i] = buf.getFloat();
 
