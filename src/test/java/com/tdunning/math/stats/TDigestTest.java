@@ -426,7 +426,7 @@ public abstract class TDigestTest extends AbstractTest {
         double prev = Double.NEGATIVE_INFINITY;
         for (double q : quantiles) {
             final double v = digest.quantile(q);
-            assertTrue(v >= prev);
+            assertTrue(String.format("q=%.1f, v=%.4f, pref=%.4f", q, v, prev), v >= prev);
             prev = v;
         }
     }
