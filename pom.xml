@@ -63,6 +63,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- pass -DrunSlowTests=true on the command line to override -->
         <runSlowTests>false</runSlowTests>
+        <tests>**/*Test.class</tests>
     </properties>
 
     <dependencies>
@@ -138,7 +139,7 @@
                         </goals>
                         <configuration>
                             <includes>
-                                <include>**/*Test.class</include>
+                                <include>${tests}</include>
                             </includes>
                             <systemProperties>
                                 <runSlowTests>${runSlowTests}</runSlowTests>
