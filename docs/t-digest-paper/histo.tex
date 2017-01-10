@@ -73,11 +73,9 @@ Suppose first, for argument's sake, that all of the samples $X=x_1 \ldots x_n$ a
 A $t$-digest is formed from the sequence of points by grouping all of the samples into sub-sequences of samples, $X = \lbrace s_1 | s_2 | \ldots | s_m \rbrace$ where $s_i = \lbrace x_{\mathtt {left}(i)} \ldots x_{\mathtt{right}(i)} \rbrace$.  The beginning and end of each sub-sequence is chosen so that the sub-sequence is small enough to get accurate quantile estimates by interpolation, but large enough so that we don't wind up with too many sub-sequences. Importantly, we force sub-sequences near the ends to be small while allowing sub-sequences in middle to be larger in order to get fairly constant relative accuracy.
 
 To limit the sub-sequence size in this way, we define a mapping from quantile $q$ to a notional index $k$ with compression parameter $\delta$. This mapping is known as the scaling function and a preferred choice of function for the $t$-digest is 
-
 \[
 k(q, \delta) = \delta \left( {\frac {\sin^{-1} (2q-1)} \pi}   + {1 \over 2} \right)
 \]
-
 The mapping $k$ is monotonic with minimum value  $k(0)=0$ and maximum value  $k(1)=\delta$.  Figure \ref{fig:k-q-plot} shows the relationship between $k$ and $q$ for $\delta=10$. In this figure, the horizontal lines are spaced uniformly at integer values of $k$ which puts the corresponding vertical lines much closer together near $q=0$ and $q=1$.
 
 Next we require that the $k$-size of each sub-sequence be less than $1$,
@@ -90,7 +88,6 @@ To form a $t$-digest of $X$ we group all of the samples $x_1 \ldots x_n$ into su
 \[
 K(i) + K(i+1) > 1
 \]
-
 for all $i=1\ldots m-1$. These conditions imply that the mean value of $K(i)$ is in $(1/2, 1]$ which means that the number $m$ of such maximally merged groups is bounded according to $ \lfloor\delta\rfloor \le m < 2\left \lceil\delta \right \rceil$. 
 
 \begin{figure}[htbp] %  figure placement: here, top, bottom, or page
@@ -107,12 +104,12 @@ In general, there are many partitions of $X$ that valid result in a $t$-digest. 
 
 Figure \ref{fig:linear-interpolation} shows an example of how error bounds are improved by the strategy of keeping bins small near extreme values of $q$. 
 
-Figure \ref{fig:linear-interpolation} shows an example of how these improved error bounds arise. In the left panel, the use of equal sized bins means that the interpolated value of $q$ on the left side of the plot has a substantial and unavoidable error. The right panel, on the other hand, shows how the data can be partitioned differently into nearly the same number of bins, but with many fewer points near the beginning or end. The value of $\delta=100$ is quite typical. 
 
-Of course, since we have to put all the samples into some bin, filling some bins with fewer than $100$ samples requires that other bins must have more than $100$ samples. It is to be noted that having fewer samples in the bins near the ends has a large effect on the corresponding errors, but increasing other bin sizes in the middle has a much weaker effect on accuracy. In this particular example, the first and last bins have only 2 samples giving 2500 times smaller error (actually the errors are even smaller since the errors go to zero with only 1 or 2 points) while the central bins are only about $1.6$ times larger, increasing errors by about two and a half times larger relative to equal sized bins. The overall effect is that quantile estimation accuracy is dramatically improved at the extremes but only modestly impaired in the middle of the distribution.
+Figure \ref{fig:linear-interpolation} shows an example of how error bounds are improved by the strategy of keeping bins small near extreme values of $q$. 
+
 \begin{figure}[h] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[height=2.7in, clip]{linear-interpolation.pdf} 
+   \includegraphics[height=2.in, clip]{linear-interpolation.pdf} 
    \caption{The left panel shows linear interpolation of a cumulative distribution function near $q=0$ with $100$ equal sized bins applied to $10,000$ data points sampled from an exponential distribution. The right panel shows the same interpolation with variable size bins as given by a $t$-digest with $\delta=100$. The numbers above the data points represent the number of points in each bin. }
    \label{fig:linear-interpolation}
 \end{figure}
@@ -191,6 +188,7 @@ Figure \ref{fig:linear-interpolation} shows an example of how these improved err
 If we form independent $t$-digests from separate sequences $X$ and $Y$, each $t$-digest can be used to estimate quantiles by computing quantiles for $X$ and $Y$ separately and combining the results. Interestingly, we can also take the union of the $t$-digests' centroids and get similar results even though the sub-sequences contributing to each centroid may well overlap. We can also reduce this union to form a new, composite $t$-digest by combining centroids subject to the size limits, but the resulting $t$-digest is no longer the same as if it had been created from the $X$ and $Y$ because of the way that bins may overlap. 
 
 If we form independent $t$-digests from separate sequences, each $t$-digests can be used to estimate quantiles with equal or better relative accuracy by computing quantiles for each different sequence separately and combining the results. Interestingly, we can also take the union of the $t$-digests' centroids and get similar results. We can also reduce this union to form a new, composite $t$-digest by combining centroids subject to the size limits. Note that the centroids that result will come from points that may well overlap. That this does not impair the accuracy of the method is one of the two key innovations of the $t$-digest (together with the non-constant size limit). The assertion that $t$-digests formed by combination produce accurate quantile estimates has substantial empirical support, but remains still to be proved rigorously.
+
 
 The run-time cost of the merge variant of the $t$-digest is a mixture of the frequent buffer inserts  and the rare periodic merges. The buffer inserts are very fast since they consist of an array write, index increment and an overflow test. The merges consist of the buffer sort and the merge itself. The merge involves a scan through both the buffer and the existing centroids plus a number of calls to $\sin^{-1}$ roughly equal to the size of the result and thus bounded by $2 \lceil \delta \rceil$. If $k_1$ is the input buffer size, the dominant costs are the sort and the $\sin^{-1}$ calls so the amortized cost per input value is roughly $C_1 \log k_1 + C_2 \lceil \delta \rceil / k_1$ where $C_1$ and $C_2$ are parameters representing the sort and $\sin^{-1}$ costs respectively. This overall amortized cost has a minimum where $k_1 \approx \delta\, C_2  / C_1$. The constant of proportionality should be determined by experiment, but micro-benchmarks indicate that $C_2 / C_1$ is in the range from $5$ to $20$ for a single core of an Intel i7 processor. In micro-benchmarks, increasing the buffer size to $10 \lceil \delta \rceil$ dramatically improves the average speed but further buffer size increases have much less effect.
 
