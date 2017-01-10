@@ -20,6 +20,8 @@ title(ylab='q', line=1.5, cex.lab=1.5)
 left.end = x[1] - (x[2]-x[1])
 
 lines(c(left.end, x[100]), c(0, 0.01), lwd=2)
+lines(c(left.end, left.end), c(-0.0005, 0.0005), lt=1, col='black', lwd=0.5)
+lines(c(x[100], x[100]), c(0.0085, 0.015), lt=1, col='black', lwd=0.5)
 text(-7, 0.006, "100")
 
 ###text(-5, 0.4, adj=0, "Constant size bins result in large")
@@ -61,7 +63,7 @@ for (i in 1:m) {
     y.offset = dy * (1 + 500*y.text)
     x.pos = x.text - x.offset
     y.pos = y.text + y.offset
-    lines(c(x.bin[i],x.bin[i]), c(F.bin[i]-dy+0.000, F.bin[i]+dy+y.offset*0.6-0.0005), lt=1, col=fade)
+    lines(c(x.bin[i],x.bin[i]), c(F.bin[i]-dy+0.000, F.bin[i]+dy+y.offset*0.6-0.0005), lt=1, lwd=0.5, col='black')
     text(x.text - x.offset, y.text + y.offset, i.right[i]-i.bin[i]+1)
 }
 ###text(-5, 0.35, adj=0, "Variable size bins keep errors")

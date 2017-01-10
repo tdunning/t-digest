@@ -1,6 +1,7 @@
 \documentclass[11pt]{amsart}
 \usepackage{enumitem}
-
+\usepackage{setspace}
+\onehalfspacing
 \usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
 \geometry{letterpaper}                   % ... or a4paper or a5paper or ... 
 %\geometry{landscape}                % Activate for for rotated page geometry
@@ -62,20 +63,20 @@ On the other hand, two problems with the Q-digest are that it depends on the set
 \subsection{New contributions}
 The work described here introduces a new data structure known as the $t$-digest. The $t$-digest differs from previous structures designed for computing approximate quantiles in several important respects. First, although data is binned and summarized in the $t$-digest, the range of data included in different bins may overlap. Second, the bins are summarized by a centroid value and an accumulated weight representing the number of samples contributing to a bin. Third, the samples are accumulated in such a way that only a few samples contribute to bins corresponding to extreme quantiles so that relative error is bounded instead of maintaining constant absolute error as with previous methods.
 
-With the $t$-digest, accuracy for estimating the $q$ quantile is constant relative to $q(1-q)$.  This is in contrast to earlier algorithms which had errors independent of $q$.  The relative error bound of the $t$-digest is convenient when computing quantiles for $q$ near $0$ or $1$ as is commonly required.  As with the Q-digest algorithm, the accuracy/size trade-off for the $t$-digest can be controlled by setting a single compression parameter $\delta$ with the amount of memory required proportional only to $\Omega(\delta)$. 
+With the $t$-digest, accuracy for estimating the $q$ quantile is constant relative to $q(1-q)$.  This is in contrast to earlier algorithms which had errors independent of $q$.  The relative error bound of the $t$-digest is convenient when computing quantiles for $q$ near $0$ or $1$ as is commonly required.  As with the Q-digest algorithm, the accuracy/size trade-off for the $t$-digest can be controlled by setting a single compression parameter $\delta$ with the amount of memory required proportional only to $\Theta(\delta)$. 
 \section{The $t$-digest}
-A $t$-digest represents the empirical distribution of a set of numbers by retaining centroids of sub-sets of numbers. Algorithmically, there are two important ways to form a $t$-digest from a set of numbers. One version keeps a buffer of incoming samples. Periodically, this buffer is sorted and merged with the centroids computed from previous samples. This merging form of the $t$-digest algorithm has the virtue of allowing all memory structures to be allocated statically. On an amortized basis, this buffer-and-merge algorithm can be very fast especially if the input buffer is large. The other major $t$-digest algorithm is more akin to a clustering algorithm in which new samples are selectively added to the nearest centroid.  Both algorithms are described here and implementations for both are available. 
+A $t$-digest represents the empirical distribution of a set of numbers by retaining centroids of sub-sets of numbers. Algorithmically, there are two important ways to form a $t$-digest from a set of numbers. One version keeps a buffer of incoming samples. Periodically, this buffer is sorted and merged with the centroids computed from previous samples. This merging form of the $t$-digest algorithm has the virtue of allowing all memory structures to be allocated statically. On an amortized basis, this buffer-and-merge algorithm can be very fast especially if the input buffer is large. The other major $t$-digest algorithm is more akin to a clustering algorithm in which new samples are selectively added to the nearest centroid.  Both algorithms are described here and implementations for both widely are available. 
 
-\subsection{The basic ideas}
+\subsection{The basic concept}
 Suppose first, for argument's sake, that all of the samples $X=x_1 \ldots x_n$ are presented in ascending order. Since the samples are ordered, we can use interpolation on the indexes of each sample to determine the value of the empirical quantile for any new value. 
 
 A $t$-digest is formed from the sequence of points by grouping all of the samples into sub-sequences of samples, $X = \lbrace s_1 | s_2 | \ldots | s_m \rbrace$ where $s_i = \lbrace x_{\mathtt {left}(i)} \ldots x_{\mathtt{right}(i)} \rbrace$.  The beginning and end of each sub-sequence is chosen so that the sub-sequence is small enough to get accurate quantile estimates by interpolation, but large enough so that we don't wind up with too many sub-sequences. Importantly, we force sub-sequences near the ends to be small while allowing sub-sequences in middle to be larger in order to get fairly constant relative accuracy.
 
-To limit the sub-sequence size, we define a mapping from quantile $q$ to a notional index $k$ with compression parameter $\delta$
+To limit the sub-sequence size in this way, we define a mapping from quantile $q$ to a notional index $k$ with compression parameter $\delta$. This mapping is known as the scaling function and a preferred choice of function for the $t$-digest is 
 \[
-k(q) = \delta \left( {\frac {\sin^{-1} (2q-1)} \pi}   + 0.5 \right)
+k(q, \delta) = \delta \left( {\frac {\sin^{-1} (2q-1)} \pi}   + {1 \over 2} \right)
 \]
-The mapping $k$ is monotonic with minimum value  $k(0)=0$ and maximum value  $k(1)=\delta$.  
+The mapping $k$ is monotonic with minimum value  $k(0)=0$ and maximum value  $k(1)=\delta$.  Figure \ref{fig:k-q-plot} shows the relationship between $k$ and $q$ for $\delta=10$. In this figure, the horizontal lines are spaced uniformly at integer values of $k$ which puts the corresponding vertical lines much closer together near $q=0$ and $q=1$.
 
 Next we require that the $k$-size of each sub-sequence be less than $1$,
 \[
@@ -85,35 +86,46 @@ and that adjacent sub-sequences cannot be merged by forcing
 \[
 K(i) + K(i+1) > 1
 \]
-for all $i=1\ldots m-1$. These conditions imply that the mean value of $K(i)$ is greater than $1/2$ and therefore that the number of such maximally merged groups must be no less than $ \lfloor\delta\rfloor$ and no more than $2\left \lceil\delta \right \rceil$. Figure \ref{fig:k-q-plot} shows the relationship between $k$ and $q$ for $\delta=10$. In this figure, the horizontal lines are spaced uniformly at integer values of $k$ which means that the corresponding vertical lines are spaced much closer together near $q=0$ and $q=1$.
+for all $i=1\ldots m-1$. These conditions imply that the mean value of $K(i)$ is in $(1/2, 1]$ which means that the number $m$ of such maximally merged groups is bounded according to $ \lfloor\delta\rfloor \le m < 2\left \lceil\delta \right \rceil$. 
 
 \begin{figure}[htbp] %  figure placement: here, top, bottom, or page
    \centering
    \includegraphics[width=2.3in]{k-q-plot.pdf} 
-   \caption{Unit steps in $k$ give variable size steps in $q$ thus allowing better accuracy near $q=0$ or $q=1$. }
+   \caption{The scaling function translates the quantile $q$ to the scaling factor $k$ in order to give variable size steps in $q$. Limiting sizes in terms of maximum values of $k$ allows better accuracy near $q=0$ or $q=1$ because bins near there will be smaller. The scaling function is carefully chosen to adjust bin sizes for best relative accuracy. Conventional quantile algorithms can be viewed as using a linear scaling function which results in bin sizes that are constant with respect to $q$.}
    \label{fig:k-q-plot}
 \end{figure}
+The introduction of the concept of a scaling function provides a useful way to see the core distinction between conventional percentile approximation algorithms that use equal-sized bins and the $t$-digest with its non-equal bin sizes. The only really necessary characteristics of a scaling function is that be monotonic and satisfy the constraints that $k(0)=0$ and $k(1)=\delta$. The linear function $k(q) = \delta q$ clearly meets these requirements and thus would be an acceptable scaling function. Using a linear scaling function results in uniform bin sizes and constant absolute error just as in previously reported quantile approximation algorithms. The $t$-digest, in contrast, has a non-linear scaling function which was chosen to give non-equal bin sizes and constant relative accuracy.
 
-Once we have formed a $t$-digest by partitioning the original sequence into sub-sequences that satisfy the size limits, we can use the sub-sequences to estimate quantiles using interpolation between the end-points of each sub-sequence. This is similar to what is done in other quantile estimation algorithms such as Greenwald-Khanna and will give errors that scale quadratically in the number of samples in each sub-sequence. With the $t$-digest, we keep the centroids of each sub-sequence instead of the end-points and get similar accuracy in estimated quantiles by estimating the boundaries of the bins and interpolating. Since the sub-sequences are smaller near $q=0$ or $q=1$, the accuracy of quantile estimates is better near the extremes of $q$.  
+Once we have formed a $t$-digest by binning the original sequence into sub-sequences that satisfy the size limit, we can estimate quantiles using interpolation between the end-points of each bin. This is similar to what is done in other quantile estimation algorithms such as Greenwald-Khanna and will give errors that scale roughly quadratically in the number of samples in each sub-sequence. The $t$-digest, having smaller number of samples in bins near $q=0$ or $q=1$ will obviously have better accuracy there. The only wrinkle is that with a $t$-digest contains the centroids of the samples in a bin instead of the end-points. Estimating quantiles requires that the boundaries of the bins be estimated first and then used to interpolate as before. 
 
-Figure \ref{fig:linear-interpolation} shows an example of how these improved error bounds arise. In the left panel, the use of equal sized bins means that the interpolated value of $q$ on the left side of the plot has a substantial and unavoidable error. The right panel, on the other hand, shows how the data can be partitioned differently into nearly the same number of bins, but with many fewer points near the beginning or end. The value of $\delta=100$ is quite typical. 
+In general, there are many partitions of $X$ that valid result in a $t$-digest. As long as the result is subject to the size contraint, however, any such $t$-digest will perform similarly in terms of accuracy.
 
-Of course, since we have to put all the samples into some bin, filling some bins with fewer than $100$ samples requires that other bins must have more than $100$ samples. It is to be noted that having fewer samples in the bins near the ends has a large effect on the corresponding errors, but increasing other bin sizes in the middle has a much weaker effect on accuracy. In this particular example, the first and last bins have only 2 samples giving 2500 times smaller error (actually the errors are even smaller since the errors go to zero with only 1 or 2 points) while the central bins are only about $1.6$ times larger, increasing errors by about two and a half times larger relative to equal sized bins. The overall effect is that quantile estimation accuracy is dramatically improved at the extremes but only modestly impaired in the middle of the distribution.
+Figure \ref{fig:linear-interpolation} shows an example of how error bounds are improved by the strategy of keeping bins small near extreme values of $q$. 
+
 \begin{figure}[h] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[height=2.7in, clip]{linear-interpolation.pdf} 
+   \includegraphics[height=2.in, clip]{linear-interpolation.pdf} 
    \caption{The left panel shows linear interpolation of a cumulative distribution function near $q=0$ with $100$ equal sized bins applied to $10,000$ data points sampled from an exponential distribution. The right panel shows the same interpolation with variable size bins as given by a $t$-digest with $\delta=100$. The numbers above the data points represent the number of points in each bin. }
    \label{fig:linear-interpolation}
 \end{figure}
+This figure shows roughly the first percentile of $10,000$ data points sampled using $x \sim \log u$ where $u \sim \mathrm{Uniform}(0,1)$. In the left panel, the data points have been divided into 100 bins, each with 100 data points, of which only the left-most bin is visible. The use of equal sized bins means that the interpolated value of $q$ in the left panel of the figure has a substantial and unavoidable error. The right panel, on the other hand, shows a $t$-digest with roughly the same number of bins ($102$ instead of $100$), but with many fewer points in bins near the $q=0$. A value of $\delta=100$ is used here which is quite typical in practical use. 
 
-If we form independent $t$-digests from separate sequences $X$ and $Y$, each $t$-digest can be used to estimate quantiles by computing quantiles for $X$ and $Y$ separately and combining the results. Interestingly, we can also take the union of the $t$-digests' centroids and get similar results even though the sub-sequences contributing to each centroid may well overlap. We can also reduce this union to form a new, composite $t$-digest by combining centroids subject to the size limits, but the resulting $t$-digest is no longer the same as if it had been created from the $X$ and $Y$ because of the way that bins may overlap. 
+Of course, since we have to put every sample into some bin, filling some bins with fewer than $100$ samples requires that other bins must have more than $100$ samples or we have to have more bins. Importantly, having fewer samples in the bins near the ends improves accuracy substantially, but increasing the bin sizes near $q=1/2$ has a much weaker effect on accuracy. In this particular example, the first bin has only 2 samples and thus zero error and the second bin has only 10 samples giving 100 times smaller error while the central bins in the $t$-digest have about $1.6$ times more samples than the uniform case, increasing errors by about two and a half times relative to equal sized bins. The overall effect is that quantile estimation accuracy is dramatically improved at the extremes but only modestly impaired in the middle of the distribution.
+\subsection{Merging independent $t$-digests}
+In the previous section, the algorithm for forming a $t$-digest took a set of unweighted points as inputs. Nothing, however, would prevent the algorithm from being applied to a set of weighted points. As long as individual weights are smaller than the size limit imposed by the scaling function, the result will still be a well-formed $t$-digest.
 
-The assertion that $t$-digests formed by combination produce accurate quantile estimates has substantial empirical support, but has not been proved rigorously. 
+If we form independent $t$-digests $t_x$ and $t_y$ from separate sequences $X$ and $Y$, these $t$-digests can clearly be used to estimate quantiles of $X \cup Y$ by separately computing quantiles for $X$ and $Y$ and combining the results. More usefully, we can form a new $t$-digest by taking the union of the centroids from $t_x$ and $t_y$ and merging the centroids whenever they meet the size criterion. The resulting $t$-digest will not be the same as if we had computed a $t$-digest $t_{X \cup Y}$ from all of the original data at once even though it will meet the same size constraint. In practice, perhaps surprisingly, a merged $t$-digest gives accuracy comparable to what we would get from $t_{X\cup Y}$.
 
-\subsection{The merging algorithm}
-The previous section suggests an algorithm for constructing a $t$-digest from a large amount of data. The basic idea is that you collect data in a buffer. When the buffer fills, or when you want a final result, you sort the buffer and combine the buffered data with the existing centroids, merging points or centroids together whenever the size limits can be satisfied by the merged value. With an arbitrarily large buffer, this algorithm reduces to the approach described in the previous section since it would make a single merging pass through all the data. For smaller buffer sizes, however, many merge passes would be done.
+The observation that $t$-digests formed by merging other digests will produce accurate quantile estimates has substantial empirical support, even with highly structured data sets such as ordered data or data with large numbers of repeated values, but there is, as yet, no rigorous proof of any accuracy guarantees. The size bounds are, nevertheless, are well established.
 
-The operation of merging a buffer's worth of samples into an existing set of centroids is shown in Algorithm \ref{alg:merge}. Note that, in practice, the check on the size bound is optimized to only require at most $2 \left \lceil \delta \right \rceil$ evaluations of $k(q)$  during the merge. This is done by computing the bounding value $q_{limit} = k^{-1}(k(q) + 1)$ that can be used to limit an inner loop that merges as many values as possible without recomputing $q_{limit}$. If $n \gg 2 \left \lceil \delta \right \rceil$, this can result in a considerable speedup since computing $\sin^{-1}$ is expensive. Note also that all data can be statically allocated as arrays of primitives, avoiding any dynamic allocation or structure boxing/unboxing.
+The ability to merge $t$-digests makes parallel processing of large data-sets relatively simple since independent $t$-digests can be formed from disjoint partitions of the input data and then combined to get a $t$-digest representing the complete data-set.
+
+A similar divide and conquer strategy can be used to allow $t$-digests to be used in OLAP systems. The idea is that queries involving quantiles of subsets of data can be approximated quickly by breaking the input data set into subsets corresponding to each unique combination of selection factors. A single $t$-digest is then pre-computed for each unique combination of selection factors. To the extent that all interesting queries can be satisfied by disjoint unions of such primitive subsets, the corresponding $t$-digests can be combined to compute the desired result.
+
+\subsection{Progressive merging algorithm}
+The observation that merging $t$-digests gives good accuracy suggests a practical algorithm for constructing a $t$-digest from a large amount of data. The basic idea is to collect data in a buffer. When the buffer fills, or when a final result is required, sort the buffer and the existing centroids together, and pass through the combined set of points and centroids, merging points or centroids together whenever the size limits can be satisfied by the merged value. With an arbitrarily large buffer, this algorithm reduces to the original approach for constructing a $t$-digest from sorted data since the overall effect is simply a single merging pass through all the data. For smaller buffer sizes, however, many merge passes are required to process a large amount of data. This is essentially equivalent to forming independent $t$-digests on buffers of data and then sequentially merging them to get the final result.
+
+The operation of merging a buffer's worth of samples into an existing set of centroids is shown in Algorithm \ref{alg:merge}. Note that the check on the size bound is optimized to only require only as many evaluations of $k(q)$ during the merge as there are output values in $C'$. This is done by computing the bounding value $q_{limit} = k^{-1}(k(q, \delta) + 1, \delta)$ each time a new centroid is emitted. This allows the conditional to be triggered based on comparisons of $q$ so that if many points are merged, no additional calls to $k$ are needed. If $n \gg 2 \left \lceil \delta \right \rceil$, this can result in a considerable speedup since computing $\sin^{-1}$ is expensive. Note also that this algorithm allows static allocation of all data structures as four arrays of primitive values, avoiding any dynamic allocation or structure boxing/unboxing.
 \begin{algorithm}[ht]
 \SetKw{KwTo}{in}\SetKwFor{For}{for}{\string:}{}
 \SetKwIF{If}{ElseIf}{Else}{if}{:}{elif}{else:}{}
@@ -122,32 +134,35 @@ The operation of merging a buffer's worth of samples into an existing set of cen
  \label{alg:merge}
 \SetNoFillComment
 \KwIn{Sequence $C = [c_1 \ldots c_m]$ a $t$-digest containing real-valued, weighted centroids with components $\mathtt{sum}$ and $\mathtt{count}$ arranged in ascending order by mean, data buffer  $X = { x_1,\ldots x_n}$ of real-valued, weighted points, and compression factor $\delta$}
-\KwOut{New ordered set $C'=[c'_1 \ldots c'_m]$ of weighted centroids forming a $t$-digest} 
-$X \gets \mathtt{sort}(X)$\;
-$C' = \lbrack \, \rbrack$\;
-$\sigma = (\mathtt {sum}:0, \mathtt{count}:0), q = 0, s = n + \sum_j c_j.\mathtt{count}$\;
-\For{$(x, w) \in \mathtt{merge}(X,C)$} {
-  \If {$\sigma.\mathtt{count} = 0 \lor k(q + (\sigma.\mathtt {count}+w)/n) - k(q) \le 1$} {
-      $\sigma \gets \sigma + (\mathtt {sum}:x, \mathtt {count}:w)$\;
+\KwOut{New ordered set $C'$ of weighted centroids forming a $t$-digest} 
+$X \gets \mathtt{sort}(C | X)$\;
+$ S = \sum_i x_i.\mathtt{count}$\;
+$C' = \lbrack \, \rbrack, q_0 = 0$\;
+$q_{limit}=k^{-1}(k(q_0, \delta)+1, \delta)$\;
+$\sigma = x_1$\;
+\For{$i \in 2\ldots(m+n)$} {
+  $q = q_0 + (\sigma.\mathtt{count} + x_i.\mathtt{count})/S$\;
+  \If {$q \le q_{limit}$} {
+      $\sigma \gets \sigma + x_i$\;
   } \Else {
       $\mathtt{C'.append}(\sigma)$\;
-      $\sigma \gets (\mathtt {sum}:x, \mathtt {count}:w)$\;
+      $q_0 \gets q_0 + \sigma.\mathtt{count}/S$\;
+      $q_{limit} \gets k^{-1}(k(q_0, \delta)+1, \delta)$\;
+      $\sigma \gets x_i$\;
   }
 } 
-\If {$\sigma.\mathtt{count} > 0$} {
-     $\mathtt{C'.append}(\sigma)$\;
- }
+$C'\mathtt{.append}(\sigma)$\;
 \Return $ C' $\\
 \caption{Merging new data into a $t$-digest}
 \end{algorithm}
 
-The run-time costs of the merge variant of the $t$-digest are a mix of the frequent buffer inserts  and the rare periodic merges. The buffer inserts are very fast since they consist of an array write, index increment and an overflow test. The merges consist of the buffer sort and the merge itself. The merge involves a scan through both the buffer and the existing centroids plus a number of calls to $\sin^{-1}$ roughly equal to the size of the result and thus bounded by $2 \lceil \delta \rceil$. If $k_1$ is the buffer size, the dominant costs are the sort and the $\sin^{-1}$ calls so the amortized input is $C_1 \log k_1 + C_2 2 \lceil \delta \rceil / k_1$ where $C_1$ and $C_2$ are parameters representing the sort and $\sin^{-1}$ costs respectively. This overall cost has a minimum where $k_1 = 2 \lceil \delta \rceil C_2  / C_1$, indicating that  maximum throughput will be achieved when the input buffer size should be proportional to the compression parameter. The constant of proportion should be determined by experiment, but early experiments indicate that $C_2 / C_1$ is in the range from $10$ to $100$ with very substantial degradation in speed below this range. 
+The run-time cost of the merge variant of the $t$-digest is a mixture of the frequent buffer inserts  and the rare periodic merges. The buffer inserts are very fast since they consist of an array write, index increment and an overflow test. The merges consist of the buffer sort and the merge itself. The merge involves a scan through both the buffer and the existing centroids plus a number of calls to $\sin^{-1}$ roughly equal to the size of the result and thus bounded by $2 \lceil \delta \rceil$. If $k_1$ is the input buffer size, the dominant costs are the sort and the $\sin^{-1}$ calls so the amortized cost per input value is roughly $C_1 \log k_1 + C_2 \lceil \delta \rceil / k_1$ where $C_1$ and $C_2$ are parameters representing the sort and $\sin^{-1}$ costs respectively. This overall amortized cost has a minimum where $k_1 \approx \delta\, C_2  / C_1$. The constant of proportionality should be determined by experiment, but micro-benchmarks indicate that $C_2 / C_1$ is in the range from $5$ to $20$ for a single core of an Intel i7 processor. In micro-benchmarks, increasing the buffer size to $10 \lceil \delta \rceil$ dramatically improves the average speed but further buffer size increases have much less effect.
 
 \subsection{The clustering variant}
 
 % boundary 
 
-The basic outline of the algorithm for constructing a $t$-digest is quite simple.  An initially empty ordered list of centroids, $C = [ c_1 \ldots c_m ]$ is kept.  Each centroid consists of a mean and a count.  To add a new value $x_n$ with a weight $w_n$, the set of centroids is found that have minimum distance to $x_n$.  This set is reduced by retaining only centroids with a count less than $4\delta q (1-q) n $ where $\delta$ controls the accuracy of quantile estimates and $q$ is the estimated quantile for the mean of the centroid.  If more than one centroid remains, one is selected at random.  If a centroid is found, then $(x_n,w_n)$ is added to that centroid.  It may happen that the weight $w_n$ is larger than can be added to the selected centroid.  If so, as much weight as possible is allocated to the selected centroid and the selection is repeated with the remaining weight.  If no satisfactory centroid is found or if there is additional weight to be added after all centroids with minimum distance are considered, then $x_n$ is used to form a new centroid and the next point is considered.  This procedure is shown more formally as Algorithm \ref{alg:full}.
+The basic outline of the clustering algorithm for constructing a $t$-digest is quite simple.  An initially empty ordered list of centroids, $C = [ c_1 \ldots c_m ]$ is kept.  Each centroid consists of a mean and a count.  To add a new value $x_n$ with a weight $w_n$, the set of centroids is found that have minimum distance to $x_n$.  This set is reduced by retaining only centroids with a count less than $4\delta q (1-q) n $ where $\delta$ controls the accuracy of quantile estimates and $q$ is the estimated quantile for the mean of the centroid.  If more than one centroid remains, one is selected at random.  If a centroid is found, then $(x_n,w_n)$ is added to that centroid.  It may happen that the weight $w_n$ is larger than can be added to the selected centroid.  If so, as much weight as possible is allocated to the selected centroid and the selection is repeated with the remaining weight.  If no satisfactory centroid is found or if there is additional weight to be added after all centroids with minimum distance are considered, then $x_n$ is used to form a new centroid and the next point is considered.  This procedure is shown more formally as Algorithm \ref{alg:full}.
  \begin{algorithm}[tb]
 \SetKw{KwTo}{in}\SetKwFor{For}{for}{\string:}{}
 \SetKwIF{If}{ElseIf}{Else}{if}{:}{elif}{else:}{}
