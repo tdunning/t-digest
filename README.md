@@ -5,7 +5,7 @@ A new data structure for accurate on-line accumulation of rank-based statistics 
 and trimmed means.  The t-digest algorithm is also very parallel friendly making it useful in
 map-reduce and parallel streaming applications.
 
-The t-digest construction algorithm uses a variant of 1-dimensional k-means clustering to product a
+The t-digest construction algorithm uses a variant of 1-dimensional k-means clustering to produce a
 data structure that is related to the Q-digest.  This t-digest data structure can be used to estimate
 quantiles or compute other rank statistics.  The advantage of the t-digest over the Q-digest is that
 the t-digest can handle floating point values while the Q-digest is limited to integers.  With small
