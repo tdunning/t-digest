@@ -31,7 +31,7 @@ so you should be able to adapt it to use with Java 6 relatively easily.  You wil
 to compile and test this software.  In order to build the images that go into the theory paper, you will need R.
 In order to format the paper, you will need latex.  A pre-built pdf version of the paper is provided.
 
-On ubuntu, you can get the necessary pre-requisites with the following:
+On Ubuntu, you can get the necessary pre-requisites with the following:
 
     sudo apt-get install  openjdk-7-jdk git maven
 
@@ -80,7 +80,7 @@ The t-digest algorithm has been ported to other languages:
 Continuous Integration
 =================
 
-The t-digest project makes use of Travis integration with github for testing whenever a change is made.
+The t-digest project makes use of Travis integration with Github for testing whenever a change is made.
 
 You can see the reports at:
 
