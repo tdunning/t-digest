@@ -26,8 +26,8 @@ In summary, the particularly interesting characteristics of the t-digest are tha
 Compile and Test
 ================
 
-You have to have java 1.7 to compile and run this code.  The special features of Java 1.7 are only lightly used
-so you should be able to adapt it to use with Java6 relatively easily.  You will also need maven (3+ preferred)
+You have to have Java 1.7 to compile and run this code.  The special features of Java 1.7 are only lightly used
+so you should be able to adapt it to use with Java 6 relatively easily.  You will also need maven (3+ preferred)
 to compile and test this software.  In order to build the images that go into the theory paper, you will need R.
 In order to format the paper, you will need latex.  A pre-built pdf version of the paper is provided.
 
