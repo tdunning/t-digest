@@ -28,12 +28,6 @@ import static org.junit.Assert.assertNotNull;
  * Serializability is important, for example, if we want to use t-digests with Spark.
  */
 public class TDigestSerializationTest {
-
-    @Test
-    public void testTreeDigest() {
-        assertSerializesAndDeserializes(new TreeDigest(100));
-    }
-
     @Test
     public void testMergingDigest() {
         assertSerializesAndDeserializes(new MergingDigest(100));
@@ -44,12 +38,7 @@ public class TDigestSerializationTest {
         assertSerializesAndDeserializes(new AVLTreeDigest(100));
     }
 
-    @Test
-    public void testArrayDigest() {
-        assertSerializesAndDeserializes(new ArrayDigest(32, 100));
-    }
-
-    protected void assertSerializesAndDeserializes(TDigest tdigest) {
+    private void assertSerializesAndDeserializes(TDigest tdigest) {
         assertNotNull(SerializationUtils.deserialize(SerializationUtils.serialize(tdigest)));
 
         tdigest.add(1);

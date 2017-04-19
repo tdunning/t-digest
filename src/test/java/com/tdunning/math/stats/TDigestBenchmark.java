@@ -35,16 +35,10 @@ public class TDigestBenchmark extends Benchmark {
     private static final int ARRAY_PAGE_SIZE = 32;
 
     enum TDigestFactory {
-        ARRAY {
+        MERGE {
             @Override
             TDigest create(double compression) {
-                return new ArrayDigest(ARRAY_PAGE_SIZE, compression);
-            }
-        },
-        TREE {
-            @Override
-            TDigest create(double compression) {
-                return new TreeDigest(compression);
+                return new MergingDigest(compression);
             }
         },
         AVL_TREE {
@@ -106,17 +100,17 @@ public class TDigestBenchmark extends Benchmark {
     }
 
     @Param({"10", "100", "1000"})
-    double compression;
+    private double compression;
 
     @Param
-    TDigestFactory tdigestFactory;
+    private TDigestFactory tdigestFactory;
 
     @Param
-    DistributionFactory distributionFactory;
+    private DistributionFactory distributionFactory;
 
-    Random random;
-    TDigest tdigest;
-    AbstractDistribution distribution;
+    private Random random;
+    private TDigest tdigest;
+    private AbstractDistribution distribution;
 
     @Override
     public void setUp() throws Exception {
