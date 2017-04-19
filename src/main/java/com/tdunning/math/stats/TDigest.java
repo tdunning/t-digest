@@ -41,59 +41,25 @@ import java.util.Collection;
  * - easy to adapt for use with map-reduce
  */
 public abstract class TDigest implements Serializable {
-    /**
-     * Creates an ArrayDigest with default page size.
-     *
-     * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
-     *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
-     * @return the ArrayDigest
-     */
-    public static ArrayDigest createArrayDigest(double compression) {
-        return new ArrayDigest(32, compression);
-    }
-
-    /**
-     * Creates an ArrayDigest with specified page size.
-     *
-     * @param pageSize    The internal page size to use.  This should be about sqrt(10*compression)
-     * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
-     *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
-     * @return the ArrayDigest
-     */
-    public static ArrayDigest createArrayDigest(int pageSize, double compression) {
-        return new ArrayDigest(pageSize, compression);
-    }
-
-    /**
-     * Creates a TreeDigest.  Going forward, AVLTreeDigest should be preferred to the TreeDigest since they are
-     * uniformly faster and require less memory while producing nearly identical results.
-     *
-     * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
-     *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
-     * @return the TreeDigest
-     */
-    public static TDigest createTreeDigest(double compression) {
-        return new TreeDigest(compression);
-    }
 
     /**
      * Creates an AVLTreeDigest.  AVLTreeDigest is generally the best known implementation right now.
      *
      * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
      *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
-     * @return the TreeDigest
+     * @return the digest
      */
-    public static TDigest createAvlTreeDigest(double compression) {
+    private static TDigest createAvlTreeDigest(double compression) {
         return new AVLTreeDigest(compression);
     }
 
     /**
-     * Creates a TreeDigest of whichever type is the currently recommended type.  AVLTreeDigest is generally the best
+     * Creates a AvlTreeDigest of whichever type is the currently recommended type.  AVLTreeDigest is generally the best
      * known implementation right now.
      *
      * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
      *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
-     * @return the TreeDigest
+     * @return the AvlTreeDigest
      */
     public static TDigest createDigest(double compression) {
         return createAvlTreeDigest(compression);
@@ -107,7 +73,7 @@ public abstract class TDigest implements Serializable {
      */
     public abstract void add(double x, int w);
 
-    protected final void checkValue(double x) {
+    final void checkValue(double x) {
         if (Double.isNaN(x)) {
             throw new IllegalArgumentException("Cannot add NaN");
         }
