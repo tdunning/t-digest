@@ -64,9 +64,7 @@ import java.util.List;
 public class MergingDigest extends AbstractTDigest {
     private final double compression;
 
-    // points to the centroid that is currently being merged
-    // if weight[lastUsedCell] == 0, then this is the number of centroids
-    // else the number is lastUsedCell+1
+    // points to the first unused centroid
     private int lastUsedCell;
 
     // sum_i weight[i]  See also unmergedWeight
@@ -104,6 +102,7 @@ public class MergingDigest extends AbstractTDigest {
      *
      * @param compression The compression factor
      */
+    @SuppressWarnings("WeakerAccess")
     public MergingDigest(double compression) {
         this(compression, -1);
     }
@@ -114,6 +113,7 @@ public class MergingDigest extends AbstractTDigest {
      * @param compression Compression factor for t-digest.  Same as 1/\delta in the paper.
      * @param bufferSize  How many samples to retain before merging.
      */
+    @SuppressWarnings("WeakerAccess")
     public MergingDigest(double compression, int bufferSize) {
         // we can guarantee that we only need 2 * ceiling(compression).  
         this(compression, bufferSize, -1);
@@ -126,6 +126,7 @@ public class MergingDigest extends AbstractTDigest {
      * @param bufferSize  Number of temporary centroids
      * @param size        Size of main buffer
      */
+    @SuppressWarnings("WeakerAccess")
     public MergingDigest(double compression, int bufferSize, int size) {
         if (size == -1) {
             size = (int) (2 * Math.ceil(compression));
@@ -154,8 +155,8 @@ public class MergingDigest extends AbstractTDigest {
     @Override
     public TDigest recordAllData() {
         super.recordAllData();
-        data = new ArrayList<List<Double>>();
-        tempData = new ArrayList<List<Double>>();
+        data = new ArrayList<>();
+        tempData = new ArrayList<>();
         return this;
     }
 
@@ -183,7 +184,7 @@ public class MergingDigest extends AbstractTDigest {
 
         if (data != null) {
             if (tempData == null) {
-                tempData = new ArrayList<List<Double>>();
+                tempData = new ArrayList<>();
             }
             while (tempData.size() <= where) {
                 tempData.add(new ArrayList<Double>());
@@ -195,96 +196,165 @@ public class MergingDigest extends AbstractTDigest {
         }
     }
 
+    public void add(double[] m, double[] w, int count, List<List<Double>> data) {
+        if (m.length != w.length) {
+            throw new IllegalArgumentException("Arrays not same length");
+        }
+        if (m.length < count + lastUsedCell) {
+            // make room to add existing centroids
+            double[] m1 = new double[count + lastUsedCell];
+            System.arraycopy(m, 0, m1, 0, count);
+            m = m1;
+            double[] w1 = new double[count + lastUsedCell];
+            System.arraycopy(w, 0, w1, 0, count);
+            w = w1;
+        }
+        double total = 0;
+        for (int i = 0; i < count; i++) {
+            total += w[i];
+        }
+        merge(m, w, count, data, null, total);
+    }
+
+    @Override
+    public void add(List<? extends TDigest> others) {
+        if (others.size() == 0) {
+            return;
+        }
+        int size = lastUsedCell;
+        for (TDigest other : others) {
+            other.compress();
+            size += other.centroidCount();
+        }
+
+        double[] m = new double[size];
+        double[] w = new double[size];
+        List<List<Double>> data;
+        if (recordAllData) {
+            data = new ArrayList<>();
+        } else {
+            data = null;
+        }
+        int offset = 0;
+        for (TDigest other : others) {
+            if (other instanceof MergingDigest) {
+                MergingDigest md = (MergingDigest) other;
+                System.arraycopy(md.mean, 0, m, offset, md.lastUsedCell);
+                System.arraycopy(md.weight, 0, w, offset, md.lastUsedCell);
+                if (data != null) {
+                    for (Centroid centroid : other.centroids()) {
+                        data.add(centroid.data());
+                    }
+                }
+                offset += md.lastUsedCell;
+            } else {
+                for (Centroid centroid : other.centroids()) {
+                    m[offset] = centroid.mean();
+                    w[offset] = centroid.count();
+                    if (recordAllData){
+                        data.add(centroid.data());
+                    }
+                    offset++;
+                }
+            }
+        }
+        add(m, w, size, data);
+    }
+
     private void mergeNewValues() {
         if (unmergedWeight > 0) {
-            System.arraycopy(mean, 0, tempMean, tempUsed, lastUsedCell);
-            System.arraycopy(weight, 0, tempWeight, tempUsed, lastUsedCell);
-            tempUsed += lastUsedCell;
-
-            if (tempData != null) {
-                for (int i = 0; i < lastUsedCell; i++) {
-                    assert data != null;
-                    tempData.add(data.get(i));
-                }
-                data = new ArrayList<List<Double>>();
-            }
-            Sort.sort(order, tempMean, tempUsed);
-
-            lastUsedCell = 0;
-            totalWeight += unmergedWeight;
-            unmergedWeight = 0;
-
-            assert tempUsed > 0;
-            mean[lastUsedCell] = tempMean[order[0]];
-            weight[lastUsedCell] = tempWeight[order[0]];
-            double wSoFar = weight[lastUsedCell];
-            if (data != null) {
-                assert data != null;
-                data.add(tempData.get(0));
-            }
-
-            double k1 = 0;
-
-            // weight will contain all zeros
-            double wLimit = totalWeight * integratedQ(k1 + 1);
-            for (int i = 1; i < tempUsed; i++) {
-                int ix = order[i];
-                double projectedW = wSoFar + tempWeight[ix];
-                if (projectedW <= wLimit) {
-                    // next point will fit
-                    wSoFar = projectedW;
-
-                    // merge into existing centroid
-                    weight[lastUsedCell] += tempWeight[ix];
-                    mean[lastUsedCell] = mean[lastUsedCell] + (tempMean[ix] - mean[lastUsedCell]) * tempWeight[ix] / weight[lastUsedCell];
-                    tempWeight[ix] = 0;
-
-                    if (data != null) {
-                        while (data.size() <= lastUsedCell) {
-                            data.add(new ArrayList<Double>());
-                        }
-                        assert tempData != null;
-                        assert data.get(lastUsedCell) != tempData.get(ix);
-                        data.get(lastUsedCell).addAll(tempData.get(ix));
-                    }
-                } else {
-                    // didn't fit ... move to next output, copy out first centroid
-                    k1 = integratedLocation(wSoFar / totalWeight);
-                    wLimit = totalWeight * integratedQ(k1 + 1);
-                    lastUsedCell++;
-                    wSoFar += tempWeight[ix];
-                    mean[lastUsedCell] = tempMean[ix];
-                    weight[lastUsedCell] = tempWeight[ix];
-                    tempWeight[ix] = 0;
-
-                    if (data != null) {
-                        assert tempData != null;
-                        assert data.size() == lastUsedCell;
-                        data.add(tempData.get(ix));
-                    }
-                }
-            }
-            // points to next empty cell
-            lastUsedCell++;
-
-            double sum = 0;
-            for (int i = 0; i < lastUsedCell; i++) {
-                sum += weight[i];
-            }
-            assert sum == totalWeight;
-
+            merge(tempMean, tempWeight, tempUsed, tempData, order, unmergedWeight);
             tempUsed = 0;
+            unmergedWeight = 0;
             if (data != null) {
-                tempData = new ArrayList<List<Double>>();
+                tempData = new ArrayList<>();
             }
 
-            // contents of tempWeight will have been entirely zeroed by now
+        }
+    }
 
-            // swap pointers for working space and merge space
-            if (totalWeight > 0) {
-                min = Math.min(min, mean[0]);
-                max = Math.max(max, mean[lastUsedCell - 1]);
+    private void merge(double[] incomingMean, double[] incomingWeight, int incomingCount, List<List<Double>> incomingData, int[] incomingOrder, double unmergedWeight) {
+        System.arraycopy(mean, 0, incomingMean, incomingCount, lastUsedCell);
+        System.arraycopy(weight, 0, incomingWeight, incomingCount, lastUsedCell);
+        incomingCount += lastUsedCell;
+
+        if (incomingData != null) {
+            for (int i = 0; i < lastUsedCell; i++) {
+                assert data != null;
+                incomingData.add(data.get(i));
             }
+            data = new ArrayList<>();
+        }
+        if (incomingOrder == null) {
+            incomingOrder = new int[incomingCount];
+        }
+        Sort.sort(incomingOrder, incomingMean, incomingCount);
+
+        lastUsedCell = 0;
+        totalWeight += unmergedWeight;
+
+        assert incomingCount > 0;
+        mean[lastUsedCell] = incomingMean[incomingOrder[0]];
+        weight[lastUsedCell] = incomingWeight[incomingOrder[0]];
+        double wSoFar = weight[lastUsedCell];
+        if (data != null) {
+            assert data != null;
+            data.add(incomingData.get(incomingOrder[0]));
+        }
+
+        double k1 = 0;
+
+        // weight will contain all zeros
+        double wLimit = totalWeight * integratedQ(k1 + 1);
+        for (int i = 1; i < incomingCount; i++) {
+            int ix = incomingOrder[i];
+            double projectedW = wSoFar + incomingWeight[ix];
+            if (projectedW <= wLimit) {
+                // next point will fit
+                wSoFar = projectedW;
+
+                // merge into existing centroid
+                weight[lastUsedCell] += incomingWeight[ix];
+                mean[lastUsedCell] = mean[lastUsedCell] + (incomingMean[ix] - mean[lastUsedCell]) * incomingWeight[ix] / weight[lastUsedCell];
+                incomingWeight[ix] = 0;
+
+                if (data != null) {
+                    while (data.size() <= lastUsedCell) {
+                        data.add(new ArrayList<Double>());
+                    }
+                    assert incomingData != null;
+                    assert data.get(lastUsedCell) != incomingData.get(ix);
+                    data.get(lastUsedCell).addAll(incomingData.get(ix));
+                }
+            } else {
+                // didn't fit ... move to next output, copy out first centroid
+                k1 = integratedLocation(wSoFar / totalWeight);
+                wLimit = totalWeight * integratedQ(k1 + 1);
+                lastUsedCell++;
+                wSoFar += incomingWeight[ix];
+                mean[lastUsedCell] = incomingMean[ix];
+                weight[lastUsedCell] = incomingWeight[ix];
+                incomingWeight[ix] = 0;
+
+                if (data != null) {
+                    assert incomingData != null;
+                    assert data.size() == lastUsedCell;
+                    data.add(incomingData.get(ix));
+                }
+            }
+        }
+        // points to next empty cell
+        lastUsedCell++;
+
+        double sum = 0;
+        for (int i = 0; i < lastUsedCell; i++) {
+            sum += weight[i];
+        }
+        assert sum == totalWeight;
+
+        if (totalWeight > 0) {
+            min = Math.min(min, mean[0]);
+            max = Math.max(max, mean[lastUsedCell - 1]);
         }
     }
 
@@ -362,30 +432,25 @@ public class MergingDigest extends AbstractTDigest {
         mergeNewValues();
 
         if (lastUsedCell == 0) {
-            if (weight[lastUsedCell] == 0) {
-                // no data to examine
-                return Double.NaN;
+            // no data to examine
+            return Double.NaN;
+        } else if (lastUsedCell == 1) {
+            // exactly one centroid, should have max==min
+            double width = max - min;
+            if (x < min) {
+                return 0;
+            } else if (x > max) {
+                return 1;
+            } else if (x - min <= width) {
+                // min and max are too close together to do any viable interpolation
+                return 0.5;
             } else {
-                // exactly one centroid, probably have max==min
-                if (x < min) {
-                    return 0;
-                } else if (x > max) {
-                    return 1;
-                } else if (max - min < Double.MIN_NORMAL) {
-                    // x lands right on our only sample
-                    return 0.5;
-                } else {
-                    // interpolate
-                    return (x - min) / (max - min);
-                }
+                // interpolate if somehow we have weight > 0 and max != min
+                return (x - min) / (max - min);
             }
         } else {
             int n = lastUsedCell;
-            if (weight[n] > 0) {
-                n++;
-            }
-
-            if (x < min) {
+            if (x <= min) {
                 return 0;
             }
 
@@ -393,48 +458,56 @@ public class MergingDigest extends AbstractTDigest {
                 return 1;
             }
 
-            // we now know that there are at least two centroids
-            double r = 0;
-            // we scan a across the centroids
-            double a = min;
-            double aCount;
-
-            double b = min;
-            double bCount = 0;
-
-            double left;
-            double right = 0;
-
-            // to find enclosing pair of centroids (counting min as a virtual centroid
-            for (int it = 0; it < n; it++) {
-                left = b - (a + right);
-                a = b;
-                aCount = bCount;
-
-                b = mean[it];
-                bCount = weight[it];
-                right = (b - a) * aCount / (aCount + bCount);
-
-                // we know that x >= a-left
-                if (x < a + right) {
-                    double value = (r + aCount * interpolate(x, a - left, a + right)) / totalWeight;
-                    return value > 0.0 ? value : 0.0;
+            // check for the left tail
+            if (x <= mean[0]) {
+                // note that this is different than mean[0] > min ... this guarantees interpolation works
+                if (mean[0] - min > 0) {
+                    return (x - min) / (mean[0] - min) * weight[0] / totalWeight / 2;
+                } else {
+                    return 0;
                 }
-
-                r += aCount;
             }
+            assert x > mean[0];
 
-            left = b - (a + right);
-            a = b;
-            aCount = bCount;
-            right = max - a;
-
-            // for the last element, use max to determine right
-            if (x < a + right) {
-                return (r + aCount * interpolate(x, a - left, a + right)) / totalWeight;
-            } else {
-                return 1;
+            // and the right tail
+            if (x >= mean[n - 1]) {
+                if (max - mean[n - 1] > 0) {
+                    return 1 - (max - x) / (max - mean[n - 1]) * weight[n - 1] / totalWeight / 2;
+                } else {
+                    return 1;
+                }
             }
+            assert x < mean[n - 1];
+
+            // we know that there are at least two centroids and x > mean[0] && x < mean[n-1]
+            // that means that there are either a bunch of consecutive centroids all equal at x
+            // or there are consecutive centroids, c0 <= x and c1 > x
+            double weightSoFar = weight[0] / 2;
+            for (int it = 0; it < n; it++) {
+                if (mean[it] == x) {
+                    double w0 = weightSoFar;
+                    while (it < n && mean[it + 1] == x) {
+                        weightSoFar += (weight[it] + weight[it + 1]);
+                        it++;
+                    }
+                    return (w0 + weightSoFar) / 2 / totalWeight;
+                }
+                if (mean[it] <= x && mean[it + 1] > x) {
+                    if (mean[it + 1] - mean[it] > 0) {
+                        double dw = (weight[it] + weight[it + 1]) / 2;
+                        return (weightSoFar + dw * (x - mean[it]) / (mean[it + 1] - mean[it])) / totalWeight;
+                    } else {
+                        // this is simply caution against floating point madness
+                        // it is conceivable that the centroids will be different
+                        // but too near to allow safe interpolation
+                        double dw = (weight[it] + weight[it + 1]) / 2;
+                        return weightSoFar + dw / totalWeight;
+                    }
+                }
+                weightSoFar += (weight[it] + weight[it + 1]) / 2;
+            }
+            // it should not be possible for the loop fall through
+            throw new IllegalStateException("Can't happen ... loop fell through");
         }
     }
 
@@ -446,55 +519,48 @@ public class MergingDigest extends AbstractTDigest {
         mergeNewValues();
 
         if (lastUsedCell == 0 && weight[lastUsedCell] == 0) {
+            // no centroids means no data, no way to get a quantile
             return Double.NaN;
         } else if (lastUsedCell == 0) {
+            // with one data point, all quantiles lead to Rome
             return mean[0];
         }
 
         // we know that there are at least two centroids now
-
         int n = lastUsedCell;
 
         // if values were stored in a sorted array, index would be the offset we are interested in
         final double index = q * totalWeight;
 
-        double left;
-        double a;
-        double aCount;
+        // at the boundaries, we return min or max
+        if (index < weight[0] / 2) {
+            assert weight[0] > 0;
+            return min + 2 * index / weight[0] * (mean[0] - min);
+        }
 
-        double right = min;
-        double b = mean[0];
-        double bCount = weight[0];
-
-        double weightSoFar = 0;
-        for (int it = 1; it < n; it++) {
-            a = b;
-            aCount = bCount;
-            left = right;
-
-            b = mean[it];
-            bCount = weight[it];
-            right = (bCount * a + aCount * b) / (aCount + bCount);
-
-            if (index < weightSoFar + aCount) {
-                // belongs to left side of a
-                double p = (index - weightSoFar) / aCount;
-                return left * (1 - p) + right * p;
+        // in between we interpolate between centroids
+        double weightSoFar = weight[0] / 2;
+        for (int i = 0; i < n - 1; i++) {
+            double dw = (weight[i] + weight[i + 1]) / 2;
+            if (weightSoFar + dw > index) {
+                // centroids i and i+1 bracket our current point
+                double z1 = index - weightSoFar;
+                double z2 = weightSoFar + dw - index;
+                return (mean[i] * z2 + mean[i + 1] * z1) / dw;
             }
-            weightSoFar += aCount;
+            weightSoFar += dw;
         }
+        assert index < totalWeight;
+        assert index >= totalWeight - weight[n - 1] / 2;
 
-        left = right;
-        aCount = bCount;
-        right = max;
+        // weightSoFar = totalWeight - weight[n-1]/2 (very nearly)
+        // so we interpolate out to max value ever seen
+        return mean[n - 1] + (index - (totalWeight - weight[n - 1] / 2)) / (weight[n - 1] / 2) * (max - mean[n - 1]);
+    }
 
-        if (index < weightSoFar + aCount) {
-            // belongs to left side of a
-            double p = (index - weightSoFar) / aCount;
-            return left * (1 - p) + right * p;
-        } else {
-            return max;
-        }
+    @Override
+    public int centroidCount() {
+        return lastUsedCell;
     }
 
     @Override
@@ -557,6 +623,7 @@ public class MergingDigest extends AbstractTDigest {
     /**
      * Over-ride the min and max values for testing purposes
      */
+    @SuppressWarnings("SameParameterValue")
     void setMinMax(double min, double max) {
         this.min = min;
         this.max = max;
@@ -605,6 +672,7 @@ public class MergingDigest extends AbstractTDigest {
         }
     }
 
+    @SuppressWarnings("WeakerAccess")
     public static MergingDigest fromBytes(ByteBuffer buf) {
         int encoding = buf.getInt();
         if (encoding == Encoding.VERBOSE_ENCODING.code) {

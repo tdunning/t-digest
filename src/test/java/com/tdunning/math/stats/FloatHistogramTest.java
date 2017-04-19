@@ -17,21 +17,21 @@
 
 package com.tdunning.math.stats;
 
+import com.google.common.collect.Multiset;
 import org.junit.Test;
 
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.nio.LongBuffer;
-import java.util.Arrays;
-import java.util.Random;
+import java.util.*;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class FloatHistogramTest {
     @Test
     public void testEmpty() {
-        Histogram x = new FloatHistogram(1, 100);
+        FloatHistogram x = new FloatHistogram(1, 100);
         double[] bins = x.getBounds();
         assertEquals(1, bins[0], 1e-5);
         assertTrue(bins[bins.length - 1] >= 100.0);
@@ -55,8 +55,7 @@ public class FloatHistogramTest {
         int n2above = 0;
         int n1below = 0;
         int n2below = 0;
-        PrintWriter out = new PrintWriter("data.csv");
-        try {
+        try (PrintWriter out = new PrintWriter("data.csv")) {
             out.print("j,cut,low,high,k,expected,err\n");
             double mean = 0;
             double sd = 0;
@@ -122,16 +121,15 @@ public class FloatHistogramTest {
                 mean += (sum - mean) / (j + 1);
                 sd += (sum - mean) * (sum - old);
             }
-            System.out.printf("Chi^2 against ideal = %.4f ± %.1f\n", mean, Math.sqrt(sd / trials));
+            System.out.printf("Checking χ^2 = %.4f ± %.1f against expected %.4f ± %.1f\n",
+                    mean, Math.sqrt(sd / trials), idealChi2, chi2SD);
             // verify that the chi^2 score for counts is as expected
-            assertEquals("chi^2 > expect + 2*sd too often", 0, n1above, 0.05 * trials);
+            assertEquals("χ^2 > expect + 2*sd too often", 0, n1above, 0.05 * trials);
             // 3*sigma above for a chi^2 distribution happens more than you might think
-            assertEquals("chi^2 > expect + 3*sd too often", 0, n2above, 0.01 * trials);
+            assertEquals("χ^2 > expect + 3*sd too often", 0, n2above, 0.01 * trials);
             // the bottom side of the chi^2 distribution is a bit tighter
-            assertEquals("chi^2 < expect - 2*sd too often", 0, n1below, 0.03 * trials);
-            assertEquals("chi^2 < expect - 3*sd too often", 0, n2below, 0.06 * trials);
-        } finally {
-            out.close();
+            assertEquals("χ^2 < expect - 2*sd too often", 0, n1below, 0.03 * trials);
+            assertEquals("χ^2 < expect - 3*sd too often", 0, n2below, 0.06 * trials);
         }
     }
 
@@ -147,8 +145,7 @@ public class FloatHistogramTest {
         double x = 0.001;
         // 4 bits, worst case is mid octave
         double lowerBound = 1 / 16.0 * Math.sqrt(2);
-        PrintWriter out = new PrintWriter("log-fit.csv");
-        try {
+        try (PrintWriter out = new PrintWriter("log-fit.csv")) {
             out.printf("x,y1,y2\n");
             while (x < 10) {
                 long xz = Double.doubleToLongBits(x);
@@ -160,13 +157,24 @@ public class FloatHistogramTest {
                 assertTrue(v2 - v1 < lowerBound);
                 x *= 1.02;
             }
-        } finally {
-            out.close();
         }
     }
 
     @Test
-    public void testCompression() throws Exception {
+    public void testBins() {
+        FloatHistogram digest = new FloatHistogram(10e-6, 5, 20);
+        assertEquals(79, digest.bucket(10.01e-3));
+        assertEquals(79, digest.bucket(10e-3));
+        assertEquals(141, digest.bucket(2.235));
+//        int i = 0;
+//        for (double v : digest.getBounds()) {
+//            System.out.printf("%d,%.2f\n", i, v * 1e6);
+//            i++;
+//        }
+    }
+
+    @Test
+    public void testCompression() {
         int n = 1000000;
         FloatHistogram x = new FloatHistogram(1e-3, 10);
 
@@ -175,7 +183,7 @@ public class FloatHistogramTest {
             x.add(rand.nextDouble());
         }
         long[] compressed = x.getCompressedCounts();
-        System.out.printf("%d\n", compressed.length);
+        assertTrue(compressed.length < 45);
         long[] uncompressed = new long[x.getCounts().length];
         long[] counts = x.getCounts();
 
@@ -185,4 +193,71 @@ public class FloatHistogramTest {
             assertEquals(counts[i], uncompressed[i]);
         }
     }
+
+    @Test
+    public void testSerialization() throws IOException, ClassNotFoundException {
+        int n = 1000000;
+        FloatHistogram x = new FloatHistogram(1e-3, 10);
+
+        Random rand = new Random();
+        for (int i = 0; i < n; i++) {
+            x.add(rand.nextDouble());
+        }
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream(1000);
+        ObjectOutputStream xout = new ObjectOutputStream(out);
+        x.writeObject(xout);
+        xout.close();
+
+        ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray(), 0, out.size());
+        FloatHistogram y = new FloatHistogram();
+        y.readObject(new ObjectInputStream(in));
+
+        assertArrayEquals(x.getBounds(), y.getBounds(), 1e-10);
+        assertArrayEquals(x.getCounts(), y.getCounts());
+    }
+
+    private static class Observation {
+        Set<String> tags;
+        FloatHistogram histogram;
+    }
+
+//    @Test
+//    public void testLLR() {
+//        double t0;
+//        List<Observation> data;
+//
+//        Multiset<String> k11, k12;
+//        int kx1 = 0, kx2 = 0;
+//
+//        for (Observation datum : data) {
+//            long[] counts = datum.histogram.getCounts();
+//            double[] centers = datum.histogram.getBounds();
+//            int toLeft = 0, toRight = 0;
+//            for (int i = 0; i < centers.length; i++) {
+//                if (centers < t0) {
+//                    toLeft += counts[i];
+//                } else {
+//                    toRight += counts[i];
+//                }
+//            }
+//
+//            // inside region of interest
+//            for (String tag : datum.tags) {
+//                k11.add(tag, toRight);
+//            }
+//
+//            // outside region of interest
+//            for (String tag : datum.tags) {
+//                k12.add(tag, toLeft);
+//            }
+//            kx1 += toRight;
+//            kx2 += toLeft;
+//        }
+//
+//        for (String tag : k11.elementSet()) {
+//            System.out.printf("%s,%d,%d,%d,%d\n", tag, k11.count(tag), k12.count(tag), kx1 - k11.count(tag), kx2 - k12.count(tag),
+//                    LogLikelihood.rootLogLikelihoodRatio(k11.count(tag), k12.count(tag), kx1 - k11.count(tag), kx2 - k12.count(tag)));
+//        }
+//    }
 }

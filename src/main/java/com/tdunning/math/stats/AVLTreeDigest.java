@@ -40,6 +40,7 @@ public class AVLTreeDigest extends AbstractTDigest {
      *                    quantiles.  Conversely, you should expect to track about 5 N centroids for this
      *                    accuracy.
      */
+    @SuppressWarnings("WeakerAccess")
     public AVLTreeDigest(double compression) {
         this.compression = compression;
         summary = new AVLGroupTree(false);
@@ -55,6 +56,11 @@ public class AVLTreeDigest extends AbstractTDigest {
     }
 
     @Override
+    public int centroidCount() {
+        return summary.size();
+    }
+
+    @Override
     void add(double x, int w, Centroid base) {
         if (x != base.mean() || w != base.count()) {
             throw new IllegalArgumentException();
@@ -65,6 +71,15 @@ public class AVLTreeDigest extends AbstractTDigest {
     @Override
     public void add(double x, int w) {
         add(x, w, (List<Double>) null);
+    }
+
+    @Override
+    public void add(List<? extends TDigest> others) {
+        for (TDigest other : others) {
+            for (Centroid centroid : other.centroids()) {
+                add(centroid.mean(), centroid.count(), recordAllData ? centroid.data() : null);
+            }
+        }
     }
 
     public void add(double x, int w, List<Double> data) {
@@ -321,8 +336,8 @@ public class AVLTreeDigest extends AbstractTDigest {
         return buf.position();
     }
 
-    public final static int VERBOSE_ENCODING = 1;
-    public final static int SMALL_ENCODING = 2;
+    private final static int VERBOSE_ENCODING = 1;
+    private final static int SMALL_ENCODING = 2;
 
     /**
      * Outputs a histogram as bytes using a particularly cheesy encoding.
@@ -365,6 +380,7 @@ public class AVLTreeDigest extends AbstractTDigest {
      *
      * @return The new histogram structure
      */
+    @SuppressWarnings("WeakerAccess")
     public static AVLTreeDigest fromBytes(ByteBuffer buf) {
         int encoding = buf.getInt();
         if (encoding == VERBOSE_ENCODING) {

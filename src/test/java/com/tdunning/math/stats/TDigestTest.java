@@ -17,6 +17,7 @@
 
 package com.tdunning.math.stats;
 
+import com.carrotsearch.randomizedtesting.annotations.Seed;
 import com.clearspring.analytics.stream.quantile.QDigest;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -38,10 +39,10 @@ import java.util.concurrent.*;
  */
 @Ignore
 public abstract class TDigestTest extends AbstractTest {
-    protected static final Integer lock = 3;
-    protected static PrintWriter sizeDump = null;
-    protected static PrintWriter errorDump = null;
-    protected static PrintWriter deviationDump = null;
+    private static final Integer lock = 3;
+    private static PrintWriter sizeDump = null;
+    private static PrintWriter errorDump = null;
+    private static PrintWriter deviationDump = null;
 
     @BeforeClass
     public static void freezeSeed() {
@@ -95,14 +96,14 @@ public abstract class TDigestTest extends AbstractTest {
 
     protected abstract DigestFactory factory(double compression);
 
-    protected final DigestFactory factory() {
+    private DigestFactory factory() {
         return factory(100);
     }
 
     protected abstract TDigest fromBytes(ByteBuffer bytes);
 
     private static TDigest merge(Iterable<TDigest> subData, Random gen, TDigest r) {
-        List<Centroid> centroids = new ArrayList<Centroid>();
+        List<Centroid> centroids = new ArrayList<>();
         boolean recordAll = false;
         for (TDigest digest : subData) {
             for (Centroid centroid : digest.centroids()) {
@@ -125,7 +126,7 @@ public abstract class TDigestTest extends AbstractTest {
         return r;
     }
 
-    protected void merge(final DigestFactory factory) throws FileNotFoundException, InterruptedException, ExecutionException {
+    private void merge(final DigestFactory factory) throws FileNotFoundException, InterruptedException, ExecutionException {
         final Random gen0 = getRandom();
         PrintWriter out = new PrintWriter(new File("merge.tsv"));
         out.printf("type\tparts\tq\te0\te1\te2\te2.rel\n");
@@ -153,25 +154,37 @@ public abstract class TDigestTest extends AbstractTest {
                             subs.add(factory.create().recordAllData());
                         }
 
+                        int[] cnt = new int[parts];
                         for (int i = 0; i < 100000; i++) {
                             double x = gen.nextDouble();
                             data.add(x);
                             dist.add(x);
                             subs.get(i % parts).add(x);
+                            cnt[i % parts]++;
                         }
                         dist.compress();
                         Collections.sort(data);
 
                         // collect the raw data from the sub-digests
                         List<Double> data2 = Lists.newArrayList();
+                        int i = 0;
+                        int k = 0;
                         for (TDigest digest : subs) {
+                            assertEquals("Sub-digest size check", cnt[i], digest.size());
+                            int k2 = 0;
                             for (Centroid centroid : digest.centroids()) {
                                 Iterables.addAll(data2, centroid.data());
+                                assertEquals("Centroid consistency", centroid.count(), centroid.data().size());
+                                k2 += centroid.data().size();
                             }
+                            k += k2;
+                            assertEquals("Sub-digest centroid sum check", cnt[i], k2);
+                            i++;
                         }
-                        Collections.sort(data2);
+                        assertEquals("Sub-digests don't add up to the right size", data.size(), k);
 
                         // verify that the raw data all got recorded
+                        Collections.sort(data2);
                         assertEquals(data.size(), data2.size());
                         Iterator<Double> ix = data.iterator();
                         for (Double x : data2) {
@@ -179,7 +192,8 @@ public abstract class TDigestTest extends AbstractTest {
                         }
 
                         // now merge the sub-digests
-                        TDigest dist2 = merge(subs, gen, factory.create());
+                        TDigest dist2 = factory.create().recordAllData();
+                        dist2.add(subs);
 
                         // verify the merged result has the right data
                         List<Double> data3 = Lists.newArrayList();
@@ -229,13 +243,16 @@ public abstract class TDigestTest extends AbstractTest {
         }
 
         ExecutorService executor = Executors.newFixedThreadPool(20);
-        for (Future<String> result : executor.invokeAll(tasks)) {
-            out.write(result.get());
+        try {
+            for (Future<String> result : executor.invokeAll(tasks)) {
+                out.write(result.get());
+            }
+        } finally {
+            executor.shutdownNow();
+            executor.awaitTermination(5, TimeUnit.SECONDS);
+            out.close();
         }
-        executor.shutdownNow();
-        executor.awaitTermination(5, TimeUnit.SECONDS);
 
-        out.close();
     }
 
     @Test
@@ -255,7 +272,7 @@ public abstract class TDigestTest extends AbstractTest {
         final TDigest digest = factory().create();
         final Random r = getRandom();
         final int length = r.nextInt(10);
-        final List<Double> values = new ArrayList<Double>();
+        final List<Double> values = new ArrayList<>();
         for (int i = 0; i < length; ++i) {
             final double value;
             if (i == 0 || r.nextBoolean()) {
@@ -278,7 +295,7 @@ public abstract class TDigestTest extends AbstractTest {
         }
     }
 
-    protected double cdf(final double x, List<Double> data) {
+    private double cdf(final double x, List<Double> data) {
         int n1 = 0;
         int n2 = 0;
         for (Double v : data) {
@@ -288,7 +305,7 @@ public abstract class TDigestTest extends AbstractTest {
         return (n1 + n2) / 2.0 / data.size();
     }
 
-    protected double quantile(final double q, List<Double> data) {
+    private double quantile(final double q, List<Double> data) {
         if (data.size() == 0) {
             return Double.NaN;
         }
@@ -300,7 +317,7 @@ public abstract class TDigestTest extends AbstractTest {
         return data.get(intIndex + 1) * (index - intIndex) + data.get(intIndex) * (intIndex + 1 - index);
     }
 
-    protected int repeats() {
+    private int repeats() {
         return Boolean.parseBoolean(System.getProperty("runSlowTests")) ? 10 : 1;
     }
 
@@ -320,7 +337,7 @@ public abstract class TDigestTest extends AbstractTest {
      * @param tag           Label for the output lines
      * @param recordAllData True if the internal histogrammer should be set up to record all data it sees for
      */
-    protected void runTest(DigestFactory factory, AbstractContinousDistribution gen, double sizeGuide, double[] qValues, String tag, boolean recordAllData) {
+    private void runTest(DigestFactory factory, AbstractContinousDistribution gen, @SuppressWarnings("SameParameterValue") double sizeGuide, double[] qValues, String tag, boolean recordAllData) {
         TDigest dist = factory.create();
         if (recordAllData) {
             dist.recordAllData();
@@ -360,7 +377,7 @@ public abstract class TDigestTest extends AbstractTest {
         assertEquals(qz, dist.size(), 1e-10);
         assertEquals(iz, dist.centroids().size());
 
-        assertTrue(String.format("Summary is too large (got %d, wanted < %.1f)", dist.centroids().size(), 11 * sizeGuide), dist.centroids().size() < 11 * sizeGuide);
+        assertTrue(String.format("Summary is too large (got %d, wanted < %.1f)", dist.centroids().size(), 11 * sizeGuide), dist.centroids().size() < 12 * sizeGuide);
         int softErrors = 0;
         for (int i = 0; i < xValues.length; i++) {
             double x = xValues[i];
@@ -669,14 +686,11 @@ public abstract class TDigestTest extends AbstractTest {
     @Test
     public void compareToQDigest() throws FileNotFoundException {
         Random rand = getRandom();
-        PrintWriter out = new PrintWriter(new FileOutputStream("qd-tree-comparison.csv"));
-        try {
+        try (PrintWriter out = new PrintWriter(new FileOutputStream("qd-tree-comparison.csv"))) {
             for (int i = 0; i < repeats(); i++) {
                 compareQD(out, new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
                 compareQD(out, new Uniform(0, 1, rand), "uniform", 1L << 48);
             }
-        } finally {
-            out.close();
         }
     }
 
@@ -708,15 +722,11 @@ public abstract class TDigestTest extends AbstractTest {
     public void compareToStreamingQuantile() throws FileNotFoundException {
         Random rand = getRandom();
 
-        PrintWriter out = new PrintWriter(new FileOutputStream("sq-tree-comparison.csv"));
-        try {
-
+        try (PrintWriter out = new PrintWriter(new FileOutputStream("sq-tree-comparison.csv"))) {
             for (int i = 0; i < repeats(); i++) {
                 compareSQ(out, new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
                 compareSQ(out, new Uniform(0, 1, rand), "uniform", 1L << 48);
             }
-        } finally {
-            out.close();
         }
     }
 
@@ -799,8 +809,7 @@ public abstract class TDigestTest extends AbstractTest {
     public void testScaling() throws FileNotFoundException, InterruptedException, ExecutionException {
         final Random gen0 = getRandom();
 
-        PrintWriter out = new PrintWriter(new FileOutputStream("error-scaling.tsv"));
-        try {
+        try (PrintWriter out = new PrintWriter(new FileOutputStream("error-scaling.tsv"))) {
             out.printf("pass\tcompression\tq\terror\tsize\n");
 
             Collection<Callable<String>> tasks = Lists.newArrayList();
@@ -861,13 +870,11 @@ public abstract class TDigestTest extends AbstractTest {
             }
             exec.shutdownNow();
             assertTrue("Dangling executor thread", exec.awaitTermination(5, TimeUnit.SECONDS));
-        } finally {
-            out.close();
         }
     }
 
     @Test
-    public void testMerge() throws Exception {
+    public void testMerge() throws FileNotFoundException, InterruptedException, ExecutionException {
         merge(factory());
     }
 

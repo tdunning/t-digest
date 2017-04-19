@@ -22,12 +22,15 @@ import org.junit.Test;
 
 import java.util.List;
 
+import static org.junit.Assume.assumeTrue;
+
 /**
  * Tests scaling properties of t-digest variants
  */
 public class ScaleTest {
     @Test
     public void testGrowth() {
+        assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
         for (Limit limit : new Limit[]{
                 new RootLinearLimit(), new RootLimit(),
                 new StandardLimit(), new LinearLimit(), new PiecewiseLinearLimit(0.05),
@@ -46,7 +49,8 @@ public class ScaleTest {
         }
     }
 
-    public List<Centroid> size(long n, double compression, Limit limit) {
+    @SuppressWarnings("WeakerAccess")
+    public List<Centroid> size(long n, @SuppressWarnings("SameParameterValue") double compression, Limit limit) {
         if (compression <= 0) {
             compression = 50;
         }
@@ -80,6 +84,7 @@ public class ScaleTest {
         double mean;
         int count;
 
+        @SuppressWarnings("WeakerAccess")
         public Centroid(double mean, int count) {
             this.mean = mean;
             this.count = count;
@@ -134,7 +139,7 @@ public class ScaleTest {
     private class PiecewiseLinearLimit implements Limit {
         private double cut;
 
-        public PiecewiseLinearLimit(double cut) {
+        PiecewiseLinearLimit(double cut) {
             this.cut = cut;
         }
 

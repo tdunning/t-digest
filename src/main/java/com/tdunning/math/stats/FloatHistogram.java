@@ -17,6 +17,11 @@
 
 package com.tdunning.math.stats;
 
+import java.io.IOException;
+import java.io.InvalidObjectException;
+import java.io.ObjectStreamException;
+import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
 
 /**
@@ -24,20 +29,36 @@ import java.nio.LongBuffer;
  * in base-2 floating point representation space. This is close
  * to exponential binning, but should be much faster.
  */
-public class FloatHistogram extends Histogram {
-    private final long[] counts;
-    private final double min;
-    private final double max;
-    private final int bitsOfPrecision;
-    private final int shift;
+public class FloatHistogram implements Serializable {
+    private long[] counts;
+    private double min;
+    private double max;
+    private int bitsOfPrecision;
+    private int shift;
     private int offset;
 
+    FloatHistogram() {
+    }
+
+    @SuppressWarnings("WeakerAccess")
     public FloatHistogram(double min, double max) {
         this(min, max, 50);
     }
 
+    @SuppressWarnings("WeakerAccess")
     public FloatHistogram(double min, double max, double binsPerDecade) {
-        super(min, max, binsPerDecade);
+        if (max <= 2 * min) {
+            throw new IllegalArgumentException(String.format("Illegal/nonsensical min, max (%.2f, %.2g)", min, max));
+        }
+        if (min <= 0 || max <= 0) {
+            throw new IllegalArgumentException("Min and max must be positive");
+        }
+        if (binsPerDecade < 5 || binsPerDecade > 10000) {
+            throw new IllegalArgumentException(
+                    String.format("Unreasonable number of bins per decade %.2g. Expected value in range [5,10000]",
+                            binsPerDecade));
+        }
+
         this.min = min;
         this.max = max;
 
@@ -79,12 +100,11 @@ public class FloatHistogram extends Histogram {
         return min * Double.longBitsToDouble((k + (0x3ffL << bitsOfPrecision)) << (52 - bitsOfPrecision)) /* / fuzz */;
     }
 
-    @Override
     public void add(double v) {
         counts[bucket(v)]++;
     }
 
-    @Override
+    @SuppressWarnings("WeakerAccess")
     public double[] getBounds() {
         double[] r = new double[counts.length];
         for (int i = 0; i < r.length; i++) {
@@ -93,12 +113,11 @@ public class FloatHistogram extends Histogram {
         return r;
     }
 
-    @Override
     public long[] getCounts() {
         return counts;
     }
 
-    @Override
+    @SuppressWarnings("WeakerAccess")
     public long[] getCompressedCounts() {
         LongBuffer buf = LongBuffer.allocate(counts.length);
         Simple64.compress(buf, counts, 0, counts.length);
@@ -106,5 +125,49 @@ public class FloatHistogram extends Histogram {
         buf.flip();
         buf.get(r);
         return r;
+    }
+
+    @SuppressWarnings("WeakerAccess")
+    public void writeObject(java.io.ObjectOutputStream out) throws IOException {
+        out.writeDouble(min);
+        out.writeDouble(max);
+        out.writeByte(bitsOfPrecision);
+        out.writeByte(shift);
+
+        ByteBuffer buf = ByteBuffer.allocate(8 * counts.length);
+        LongBuffer longBuffer = buf.asLongBuffer();
+        Simple64.compress(longBuffer, counts, 0, counts.length);
+        buf.position(8 * longBuffer.position());
+        byte[] r = new byte[buf.position()];
+        out.writeShort(buf.position());
+        buf.flip();
+        buf.get(r);
+        out.write(r);
+    }
+
+    @SuppressWarnings("WeakerAccess")
+    public void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+        min = in.readDouble();
+        max = in.readDouble();
+        bitsOfPrecision = in.readByte();
+        shift = in.readByte();
+        offset = 0x3ff << bitsOfPrecision;
+
+        int n = in.readShort();
+        ByteBuffer buf = ByteBuffer.allocate(n);
+        in.readFully(buf.array(), 0, n);
+        int binCount = bucketIndex(max) + 1;
+        if (binCount > 10000) {
+            throw new IllegalArgumentException(
+                    String.format("Excessive number of bins %d during deserialization = %.2g, %.2g",
+                            binCount, min, max));
+
+        }
+        counts = new long[binCount];
+        Simple64.decompress(buf.asLongBuffer(), counts);
+    }
+
+    private void readObjectNoData() throws ObjectStreamException {
+        throw new InvalidObjectException("Stream data required");
     }
 }

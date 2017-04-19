@@ -20,6 +20,7 @@ package com.tdunning.math.stats;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Adaptive histogram based on something like streaming k-means crossed with Q-digest.
@@ -43,26 +44,39 @@ import java.util.Collection;
 public abstract class TDigest implements Serializable {
 
     /**
-     * Creates an AVLTreeDigest.  AVLTreeDigest is generally the best known implementation right now.
+     * Creates an {@link MergingDigest}.  This is generally the best known implementation right now.
      *
      * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
      *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
-     * @return the digest
+     * @return the MergingDigest
      */
-    private static TDigest createAvlTreeDigest(double compression) {
-        return new AVLTreeDigest(compression);
+    @SuppressWarnings("WeakerAccess")
+    public static TDigest createMergingDigest(double compression) {
+        return new MergingDigest(compression);
     }
 
     /**
-     * Creates a AvlTreeDigest of whichever type is the currently recommended type.  AVLTreeDigest is generally the best
-     * known implementation right now.
+     * Creates an AVLTreeDigest.  AVLTreeDigest is nearly the best known implementation right now.
      *
      * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
      *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
      * @return the AvlTreeDigest
      */
+    @SuppressWarnings("WeakerAccess")
+    public static TDigest createAvlTreeDigest(double compression) {
+        return new AVLTreeDigest(compression);
+    }
+
+    /**
+     * Creates a TDigest of whichever type is the currently recommended type.  MergingDigest is generally the best
+     * known implementation right now.
+     *
+     * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
+     *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
+     * @return the TDigest
+     */
     public static TDigest createDigest(double compression) {
-        return createAvlTreeDigest(compression);
+        return createMergingDigest(compression);
     }
 
     /**
@@ -78,6 +92,8 @@ public abstract class TDigest implements Serializable {
             throw new IllegalArgumentException("Cannot add NaN");
         }
     }
+
+    public abstract void add(List<? extends TDigest> others);
 
     /**
      * Re-examines a t-digest to determine whether some centroids are redundant.  If your data are
@@ -181,4 +197,6 @@ public abstract class TDigest implements Serializable {
      * @param other The other TDigest
      */
     public abstract void add(TDigest other);
+
+    public abstract int centroidCount();
 }
