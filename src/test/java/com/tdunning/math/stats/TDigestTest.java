@@ -312,9 +312,16 @@ public abstract class TDigestTest extends AbstractTest {
         if (q == 1 || data.size() == 1) {
             return data.get(data.size() - 1);
         }
-        final double index = q * (data.size() - 1);
-        final int intIndex = (int) index;
-        return data.get(intIndex + 1) * (index - intIndex) + data.get(intIndex) * (intIndex + 1 - index);
+        double index = q * data.size();
+        if (index < 0.5) {
+            return data.get(0);
+        } else if (data.size() - index < 0.5) {
+            return data.get(data.size() - 1);
+        } else {
+            index -= 0.5;
+            final int intIndex = (int) index;
+            return data.get(intIndex + 1) * (index - intIndex) + data.get(intIndex) * (intIndex + 1 - index);
+        }
     }
 
     private int repeats() {
@@ -377,7 +384,7 @@ public abstract class TDigestTest extends AbstractTest {
         assertEquals(qz, dist.size(), 1e-10);
         assertEquals(iz, dist.centroids().size());
 
-        assertTrue(String.format("Summary is too large (got %d, wanted < %.1f)", dist.centroids().size(), 11 * sizeGuide), dist.centroids().size() < 12 * sizeGuide);
+        assertTrue(String.format("Summary is too large (got %d, wanted < %.1f)", dist.centroids().size(), 17 * sizeGuide), dist.centroids().size() < 17 * sizeGuide);
         int softErrors = 0;
         for (int i = 0; i < xValues.length; i++) {
             double x = xValues[i];
@@ -891,9 +898,8 @@ public abstract class TDigestTest extends AbstractTest {
         // [ ?, 10, ?, 20, ?, ?, 50, ?, ? ]
         // and we expect it to compute approximate missing values:
         // [ 5, 10, 15, 20, 30, 40, 50, 60, 70]
-        List<Double> values = Arrays.asList(5., 10., 15., 20., 30., 40., 50., 60., 70.);
-        for (int i = 0; i < digest.size(); ++i) {
-            final double q = 1.0 / (digest.size() - 1); // a quantile that matches an array index
+        List<Double> values = Arrays.asList(5., 10., 15., 20., 30., 35., 40., 45., 50.);
+        for (double q : new double[]{1.5 / 9, 3.5 / 9, 6.5 / 9}) {
             assertEquals(String.format("q=%.2f ", q), quantile(q, values), digest.quantile(q), 0.01);
         }
     }

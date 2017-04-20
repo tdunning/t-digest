@@ -252,6 +252,7 @@ public class MergingDigest extends AbstractTDigest {
                     m[offset] = centroid.mean();
                     w[offset] = centroid.count();
                     if (recordAllData){
+                        assert data != null;
                         data.add(centroid.data());
                     }
                     offset++;
@@ -298,7 +299,7 @@ public class MergingDigest extends AbstractTDigest {
         weight[lastUsedCell] = incomingWeight[incomingOrder[0]];
         double wSoFar = weight[lastUsedCell];
         if (data != null) {
-            assert data != null;
+            assert incomingData != null;
             data.add(incomingData.get(incomingOrder[0]));
         }
 
@@ -550,7 +551,7 @@ public class MergingDigest extends AbstractTDigest {
             }
             weightSoFar += dw;
         }
-        assert index < totalWeight;
+        assert index <= totalWeight;
         assert index >= totalWeight - weight[n - 1] / 2;
 
         // weightSoFar = totalWeight - weight[n-1]/2 (very nearly)
