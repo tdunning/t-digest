@@ -42,6 +42,8 @@ import java.util.List;
  * - easy to adapt for use with map-reduce
  */
 public abstract class TDigest implements Serializable {
+    double min = Double.POSITIVE_INFINITY;
+    double max = Double.NEGATIVE_INFINITY;
 
     /**
      * Creates an {@link MergingDigest}.  This is generally the best known implementation right now.
@@ -199,4 +201,21 @@ public abstract class TDigest implements Serializable {
     public abstract void add(TDigest other);
 
     public abstract int centroidCount();
+
+    public double getMin() {
+        return min;
+    }
+
+    public double getMax() {
+        return max;
+    }
+
+    /**
+     * Over-ride the min and max values for testing purposes
+     */
+    @SuppressWarnings("SameParameterValue")
+    void setMinMax(double min, double max) {
+        this.min = min;
+        this.max = max;
+    }
 }

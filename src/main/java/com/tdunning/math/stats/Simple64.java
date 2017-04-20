@@ -46,36 +46,6 @@ import java.nio.LongBuffer;
  * </table>
  */
 public class Simple64 {
-    protected int compressedSize = 0;
-    protected LongBuffer compressedBuffer;
-
-    /**
-     * Uncompressed data
-     */
-    protected long[] unCompressedData;
-    /**
-     * Offset into unCompressedData
-     */
-    protected int offset;
-    /**
-     * Size of unCompressedData, -1 when not available.
-     */
-    protected int unComprSize = -1;
-
-    public void setCompressedBuffer(final LongBuffer compressedBuffer) {
-        this.compressedBuffer = compressedBuffer;
-    }
-
-    public void setUnCompressedData(final long[] unCompressedData,
-                                    final int offset, final int unComprSize) {
-        this.unCompressedData = unCompressedData;
-        this.offset = offset;
-        this.unComprSize = unComprSize;
-    }
-
-    public int compressedSize() {
-        return this.compressedSize;
-    }
 
     private static final int NUM_DATA_BITS = 60;
     private static final int BITS_30_MASK = (1 << 30) - 1;
@@ -462,7 +432,7 @@ public class Simple64 {
         return 0;
     }
 
-    public static int compressSingle(final long[] uncompressed, final int inOffset, final int inSize, final LongBuffer compressedBuffer) {
+    private static int compressSingle(final long[] uncompressed, final int inOffset, final int inSize, final LongBuffer compressedBuffer) {
         if (inSize < 1) {
             throw new IllegalArgumentException("Cannot compress input with non positive size " + inSize);
         }
@@ -755,7 +725,7 @@ public class Simple64 {
         }
     }
 
-    public static int decompressSingle(final long s9, final long[] decompressed, final int outOffset) {
+    private static int decompressSingle(final long s9, final long[] decompressed, final int outOffset) {
         switch ((int) (s9 & 15L)) {
             case STATUS_1NUM_60BITS:
                 decompressed[outOffset] = s9 >>> 4;
@@ -973,7 +943,8 @@ public class Simple64 {
         }
     }
 
-    public static void compress(LongBuffer compressedBuffer, long[] unCompressedData, int offset, int size) {
+    @SuppressWarnings("WeakerAccess")
+    public static void compress(LongBuffer compressedBuffer, long[] unCompressedData, @SuppressWarnings("SameParameterValue") int offset, int size) {
         int encoded;
         while (size > 0) {
             encoded = compressSingle(unCompressedData, offset, size, compressedBuffer);
@@ -982,6 +953,7 @@ public class Simple64 {
         }
     }
 
+    @SuppressWarnings("WeakerAccess")
     public static int decompress(LongBuffer compressedBuffer, long[] unCompressedData) {
         int totalOut = 0;
 

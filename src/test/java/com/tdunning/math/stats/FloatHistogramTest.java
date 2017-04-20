@@ -17,12 +17,12 @@
 
 package com.tdunning.math.stats;
 
-import com.google.common.collect.Multiset;
 import org.junit.Test;
 
 import java.io.*;
 import java.nio.LongBuffer;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Random;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -216,48 +216,4 @@ public class FloatHistogramTest {
         assertArrayEquals(x.getBounds(), y.getBounds(), 1e-10);
         assertArrayEquals(x.getCounts(), y.getCounts());
     }
-
-    private static class Observation {
-        Set<String> tags;
-        FloatHistogram histogram;
-    }
-
-//    @Test
-//    public void testLLR() {
-//        double t0;
-//        List<Observation> data;
-//
-//        Multiset<String> k11, k12;
-//        int kx1 = 0, kx2 = 0;
-//
-//        for (Observation datum : data) {
-//            long[] counts = datum.histogram.getCounts();
-//            double[] centers = datum.histogram.getBounds();
-//            int toLeft = 0, toRight = 0;
-//            for (int i = 0; i < centers.length; i++) {
-//                if (centers < t0) {
-//                    toLeft += counts[i];
-//                } else {
-//                    toRight += counts[i];
-//                }
-//            }
-//
-//            // inside region of interest
-//            for (String tag : datum.tags) {
-//                k11.add(tag, toRight);
-//            }
-//
-//            // outside region of interest
-//            for (String tag : datum.tags) {
-//                k12.add(tag, toLeft);
-//            }
-//            kx1 += toRight;
-//            kx2 += toLeft;
-//        }
-//
-//        for (String tag : k11.elementSet()) {
-//            System.out.printf("%s,%d,%d,%d,%d\n", tag, k11.count(tag), k12.count(tag), kx1 - k11.count(tag), kx2 - k12.count(tag),
-//                    LogLikelihood.rootLogLikelihoodRatio(k11.count(tag), k12.count(tag), kx1 - k11.count(tag), kx2 - k12.count(tag)));
-//        }
-//    }
 }

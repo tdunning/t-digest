@@ -37,13 +37,14 @@ import java.util.List;
 public class QuantileEstimator {
     private static final long MAX_TOT_ELEMS = 1024L * 1024L * 1024L * 1024L;
 
-    private final List<List<Double>> buffer = new ArrayList<List<Double>>();
+    private final List<List<Double>> buffer = new ArrayList<>();
     private final int numQuantiles;
     private final int maxElementsPerBuffer;
     private int totalElements;
     private double min;
     private double max;
 
+    @SuppressWarnings("WeakerAccess")
     public QuantileEstimator(int numQuantiles) {
         this.numQuantiles = numQuantiles;
         this.maxElementsPerBuffer = computeMaxElementsPerBuffer();
@@ -93,7 +94,7 @@ public class QuantileEstimator {
         if (buffer.get(level + 1).isEmpty()) {
             merged = buffer.get(level + 1);
         } else {
-            merged = new ArrayList<Double>(maxElementsPerBuffer);
+            merged = new ArrayList<>(maxElementsPerBuffer);
         }
 
         collapse(buffer.get(level), buf, merged);
@@ -128,8 +129,9 @@ public class QuantileEstimator {
         totalElements = 0;
     }
 
+    @SuppressWarnings("WeakerAccess")
     public List<Double> getQuantiles() {
-        List<Double> quantiles = new ArrayList<Double>();
+        List<Double> quantiles = new ArrayList<>();
         quantiles.add(min);
 
         if (buffer.get(0) != null) {
@@ -171,6 +173,7 @@ public class QuantileEstimator {
         return quantiles;
     }
 
+    @SuppressWarnings("WeakerAccess")
     public int serializedSize() {
         int r = 4 + 4 + 4 + 4 + 4;
         for (List<Double> b1 : buffer) {

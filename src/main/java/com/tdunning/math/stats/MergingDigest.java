@@ -71,11 +71,9 @@ public class MergingDigest extends AbstractTDigest {
     private double totalWeight = 0;
 
     // number of points that have been added to each merged centroid
-    private double[] weight;
+    private final double[] weight;
     // mean of points added to each merged centroid
-    private double[] mean;
-    // absolute min and max samples seen
-    private double min, max;
+    private final double[] mean;
 
     // history of all data added to centroids (for testing purposes)
     private List<List<Double>> data = null;
@@ -86,14 +84,14 @@ public class MergingDigest extends AbstractTDigest {
     // this is the index of the next temporary centroid
     // this is a more Java-like convention than lastUsedCell uses
     private int tempUsed = 0;
-    private double[] tempWeight;
-    private double[] tempMean;
+    private final double[] tempWeight;
+    private final double[] tempMean;
     private List<List<Double>> tempData = null;
 
 
     // array used for sorting the temp centroids.  This is a field
     // to avoid allocations during operation
-    private int[] order;
+    private final int[] order;
 
     /**
      * Allocates a buffer merging t-digest.  This is the normally used constructor that
@@ -139,8 +137,6 @@ public class MergingDigest extends AbstractTDigest {
 
         weight = new double[size];
         mean = new double[size];
-        min = Double.MAX_VALUE;
-        max = -Double.MAX_VALUE;
 
         tempWeight = new double[bufferSize];
         tempMean = new double[bufferSize];
@@ -170,7 +166,7 @@ public class MergingDigest extends AbstractTDigest {
         add(x, w, (List<Double>) null);
     }
 
-    public void add(double x, int w, List<Double> history) {
+    private void add(double x, int w, List<Double> history) {
         if (Double.isNaN(x)) {
             throw new IllegalArgumentException("Cannot add NaN to t-digest");
         }
@@ -196,7 +192,7 @@ public class MergingDigest extends AbstractTDigest {
         }
     }
 
-    public void add(double[] m, double[] w, int count, List<List<Double>> data) {
+    private void add(double[] m, double[] w, int count, List<List<Double>> data) {
         if (m.length != w.length) {
             throw new IllegalArgumentException("Arrays not same length");
         }
@@ -547,7 +543,7 @@ public class MergingDigest extends AbstractTDigest {
                 // centroids i and i+1 bracket our current point
                 double z1 = index - weightSoFar;
                 double z2 = weightSoFar + dw - index;
-                return (mean[i] * z2 + mean[i + 1] * z1) / dw;
+                return weightedAverage(mean[i], z2, mean[i + 1], z1);
             }
             weightSoFar += dw;
         }
@@ -556,7 +552,9 @@ public class MergingDigest extends AbstractTDigest {
 
         // weightSoFar = totalWeight - weight[n-1]/2 (very nearly)
         // so we interpolate out to max value ever seen
-        return mean[n - 1] + (index - (totalWeight - weight[n - 1] / 2)) / (weight[n - 1] / 2) * (max - mean[n - 1]);
+        double z1 = index - totalWeight - weight[n - 1] / 2.0;
+        double z2 = weight[n - 1] / 2 - z1;
+        return weightedAverage(mean[n - 1], z1, max, z2);
     }
 
     @Override
@@ -621,15 +619,6 @@ public class MergingDigest extends AbstractTDigest {
         return lastUsedCell * 8 + 30;
     }
 
-    /**
-     * Over-ride the min and max values for testing purposes
-     */
-    @SuppressWarnings("SameParameterValue")
-    void setMinMax(double min, double max) {
-        this.min = min;
-        this.max = max;
-    }
-
     public enum Encoding {
         VERBOSE_ENCODING(1), SMALL_ENCODING(2);
 
@@ -683,8 +672,7 @@ public class MergingDigest extends AbstractTDigest {
             int n = buf.getInt();
             int bufferSize = buf.getInt();
             MergingDigest r = new MergingDigest(compression, bufferSize, n);
-            r.min = min;
-            r.max = max;
+            r.setMinMax(min, max);
             r.lastUsedCell = buf.getInt();
             for (int i = 0; i < r.lastUsedCell; i++) {
                 r.weight[i] = buf.getDouble();
@@ -700,8 +688,7 @@ public class MergingDigest extends AbstractTDigest {
             int n = buf.getShort();
             int bufferSize = buf.getShort();
             MergingDigest r = new MergingDigest(compression, bufferSize, n);
-            r.min = min;
-            r.max = max;
+            r.setMinMax(min, max);
             r.lastUsedCell = buf.getShort();
             for (int i = 0; i < r.lastUsedCell; i++) {
                 r.weight[i] = buf.getFloat();

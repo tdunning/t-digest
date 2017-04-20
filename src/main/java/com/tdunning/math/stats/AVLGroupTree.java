@@ -73,7 +73,7 @@ final class AVLGroupTree extends AbstractCollection<Centroid> implements Seriali
                         if (count != 1) {
                             throw new IllegalStateException();
                         }
-                        data = new ArrayList<Double>();
+                        data = new ArrayList<>();
                         data.add(centroid);
                     }
                     datas[node] = data;
@@ -168,6 +168,7 @@ final class AVLGroupTree extends AbstractCollection<Centroid> implements Seriali
     /**
      * Update values associated with a node, readjusting the tree if necessary.
      */
+    @SuppressWarnings("WeakerAccess")
     public void update(int node, double centroid, int count, List<Double> data) {
         this.centroid = centroid;
         this.count = count;
@@ -178,6 +179,7 @@ final class AVLGroupTree extends AbstractCollection<Centroid> implements Seriali
     /**
      * Return the last node whose centroid is less than <code>centroid</code>.
      */
+    @SuppressWarnings("WeakerAccess")
     public int floor(double centroid) {
         int floor = IntAVLTree.NIL;
         for (int node = tree.root(); node != IntAVLTree.NIL; ) {
@@ -196,6 +198,7 @@ final class AVLGroupTree extends AbstractCollection<Centroid> implements Seriali
      * Return the last node so that the sum of counts of nodes that are before
      * it is less than or equal to <code>sum</code>.
      */
+    @SuppressWarnings("WeakerAccess")
     public int floorSum(long sum) {
         int floor = IntAVLTree.NIL;
         for (int node = tree.root(); node != IntAVLTree.NIL; ) {
@@ -223,6 +226,7 @@ final class AVLGroupTree extends AbstractCollection<Centroid> implements Seriali
      * Compute the number of elements and sum of counts for every entry that
      * is strictly before <code>node</code>.
      */
+    @SuppressWarnings("WeakerAccess")
     public long headSum(int node) {
         final int left = tree.left(node);
         long sum = aggregatedCounts[left];

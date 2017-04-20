@@ -27,10 +27,10 @@ import java.util.List;
  *
  */
 public class AVLTreeDigest extends AbstractTDigest {
-
-    private double compression;
+    private final double compression;
     private AVLGroupTree summary;
-    long count = 0; // package private for testing
+
+    private long count = 0; // package private for testing
 
     /**
      * A histogram structure that will record a sketch of a distribution.
@@ -76,6 +76,7 @@ public class AVLTreeDigest extends AbstractTDigest {
     @Override
     public void add(List<? extends TDigest> others) {
         for (TDigest other : others) {
+            setMinMax(Math.min(min, other.getMin()), Math.max(max, other.getMax()));
             for (Centroid centroid : other.centroids()) {
                 add(centroid.mean(), centroid.count(), recordAllData ? centroid.data() : null);
             }
@@ -84,6 +85,12 @@ public class AVLTreeDigest extends AbstractTDigest {
 
     public void add(double x, int w, List<Double> data) {
         checkValue(x);
+        if (x < min) {
+            min = x;
+        }
+        if (x > max) {
+            max = x;
+        }
         int start = summary.floor(x);
         if (start == IntAVLTree.NIL) {
             start = summary.first();
@@ -256,54 +263,44 @@ public class AVLTreeDigest extends AbstractTDigest {
 
         AVLGroupTree values = summary;
         if (values.size() == 0) {
+            // no centroids means no data, no way to get a quantile
             return Double.NaN;
         } else if (values.size() == 1) {
+            // with one data point, all quantiles lead to Rome
             return values.iterator().next().mean();
         }
 
         // if values were stored in a sorted array, index would be the offset we are interested in
-        final double index = q * (count - 1);
+        final double index = q * count;
+        int currentNode = values.first();
+        int currentWeight = values.count(currentNode);
 
-        double previousMean = Double.NaN, previousIndex = 0;
-        int next = values.floorSum((long) index);
-        assert next != IntAVLTree.NIL;
-        long total = values.headSum(next);
-        final int prev = values.prev(next);
-        if (prev != IntAVLTree.NIL) {
-            previousMean = values.mean(prev);
-            previousIndex = total - (values.count(prev) + 1.0) / 2;
+        // weightSoFar represents the total mass to the left of the center of the current node
+        double weightSoFar = currentWeight / 2.0;
+
+        // at left boundary, we interpolate between min and first mean
+        if (index < weightSoFar) {
+            return (min * index + values.mean(currentNode) * (weightSoFar - index)) / weightSoFar;
         }
-
-        while (true) {
-            final double nextIndex = total + (values.count(next) - 1.0) / 2;
-            if (nextIndex >= index) {
-                if (Double.isNaN(previousMean)) {
-                    // special case 1: the index we are interested in is before the 1st centroid
-                    assert total == 0 : total;
-                    if (nextIndex == previousIndex) {
-                        return values.mean(next);
-                    }
-                    // assume values grow linearly between index previousIndex=0 and nextIndex2
-                    int next2 = values.next(next);
-                    final double nextIndex2 = total + values.count(next) + (values.count(next2) - 1.0) / 2;
-                    previousMean = (nextIndex2 * values.mean(next) - nextIndex * values.mean(next2)) / (nextIndex2 - nextIndex);
-                }
-                // common case: we found two centroids previous and next so that the desired quantile is
-                // after 'previous' but before 'next'
-                return quantile(index, previousIndex, nextIndex, previousMean, values.mean(next));
-            } else if (values.next(next) == IntAVLTree.NIL) {
-                // special case 2: the index we are interested in is beyond the last centroid
-                // again, assume values grow linearly between index previousIndex and (count - 1)
-                // which is the highest possible index
-                final double nextIndex2 = count - 1;
-                final double nextMean2 = (values.mean(next) * (nextIndex2 - previousIndex) - previousMean * (nextIndex2 - nextIndex)) / (nextIndex - previousIndex);
-                return quantile(index, nextIndex, nextIndex2, values.mean(next), nextMean2);
+        for (int i = 0; i < values.size() - 1; i++) {
+            int nextNode = values.next(currentNode);
+            int nextWeight = values.count(nextNode);
+            // this is the mass between current center and next center
+            double dw = (currentWeight + nextWeight) / 2.0;
+            if (weightSoFar + dw > index) {
+                // centroids i and i+1 bracket our current point
+                double z1 = index - weightSoFar;
+                double z2 = weightSoFar + dw - index;
+                return weightedAverage(values.mean(currentNode), z2, values.mean(nextNode), z1);
             }
-            total += values.count(next);
-            previousMean = values.mean(next);
-            previousIndex = nextIndex;
-            next = values.next(next);
+            weightSoFar += dw;
+            currentNode = nextNode;
+            currentWeight = nextWeight;
         }
+        // index is in the right hand side of the last node, interpolate to max
+        double z1 = index - weightSoFar;
+        double z2 = currentWeight / 2.0 - z1;
+        return weightedAverage(values.mean(currentNode), z2, max, z1);
     }
 
     @Override
@@ -321,7 +318,7 @@ public class AVLTreeDigest extends AbstractTDigest {
      */
     @Override
     public int byteSize() {
-        return 4 + 8 + 4 + summary.size() * 12;
+        return 4 + 8 * 3 + 4 + summary.size() * 12;
     }
 
     /**
@@ -345,6 +342,8 @@ public class AVLTreeDigest extends AbstractTDigest {
     @Override
     public void asBytes(ByteBuffer buf) {
         buf.putInt(VERBOSE_ENCODING);
+        buf.putDouble(min);
+        buf.putDouble(max);
         buf.putDouble(compression());
         buf.putInt(summary.size());
         for (Centroid centroid : summary) {
@@ -359,6 +358,8 @@ public class AVLTreeDigest extends AbstractTDigest {
     @Override
     public void asSmallBytes(ByteBuffer buf) {
         buf.putInt(SMALL_ENCODING);
+        buf.putDouble(min);
+        buf.putDouble(max);
         buf.putDouble(compression());
         buf.putInt(summary.size());
 
@@ -384,8 +385,11 @@ public class AVLTreeDigest extends AbstractTDigest {
     public static AVLTreeDigest fromBytes(ByteBuffer buf) {
         int encoding = buf.getInt();
         if (encoding == VERBOSE_ENCODING) {
+            double min = buf.getDouble();
+            double max = buf.getDouble();
             double compression = buf.getDouble();
             AVLTreeDigest r = new AVLTreeDigest(compression);
+            r.setMinMax(min, max);
             int n = buf.getInt();
             double[] means = new double[n];
             for (int i = 0; i < n; i++) {
@@ -396,8 +400,11 @@ public class AVLTreeDigest extends AbstractTDigest {
             }
             return r;
         } else if (encoding == SMALL_ENCODING) {
+            double min = buf.getDouble();
+            double max = buf.getDouble();
             double compression = buf.getDouble();
             AVLTreeDigest r = new AVLTreeDigest(compression);
+            r.setMinMax(min, max);
             int n = buf.getInt();
             double[] means = new double[n];
             double x = 0;

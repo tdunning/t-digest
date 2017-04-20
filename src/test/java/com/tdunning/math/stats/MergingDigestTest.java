@@ -28,11 +28,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-@Seed("84527677CF03B566:A6FF596BDDB2D59D")
+//@Seed("84527677CF03B566:A6FF596BDDB2D59D")
 public class MergingDigestTest extends TDigestTest {
     @BeforeClass
     public static void setup() throws IOException {

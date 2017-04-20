@@ -146,7 +146,7 @@ public class FloatHistogram implements Serializable {
     }
 
     @SuppressWarnings("WeakerAccess")
-    public void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+    public void readObject(java.io.ObjectInputStream in) throws IOException {
         min = in.readDouble();
         max = in.readDouble();
         bitsOfPrecision = in.readByte();

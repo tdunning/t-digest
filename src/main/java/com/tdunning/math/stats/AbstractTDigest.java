@@ -24,15 +24,15 @@ import java.util.List;
 import java.util.Random;
 
 public abstract class AbstractTDigest extends TDigest {
-    protected Random gen = new Random();
-    protected boolean recordAllData = false;
+    final Random gen = new Random();
+    boolean recordAllData = false;
 
     /**
-     * Same as {@link #weightedAverageSorted(double, int, double, int)} but flips
+     * Same as {@link #weightedAverageSorted(double, double, double, double)} but flips
      * the order of the variables if <code>x2</code> is greater than
      * <code>x1</code>.
      */
-    public static double weightedAverage(double x1, int w1, double x2, int w2) {
+    static double weightedAverage(double x1, double w1, double x2, double w2) {
         if (x1 <= x2) {
             return weightedAverageSorted(x1, w1, x2, w2);
         } else {
@@ -47,17 +47,17 @@ public abstract class AbstractTDigest extends TDigest {
      * and is guaranteed to return a number between <code>x1</code> and
      * <code>x2</code>.
      */
-    public static double weightedAverageSorted(double x1, int w1, double x2, int w2) {
+    private static double weightedAverageSorted(double x1, double w1, double x2, double w2) {
         assert x1 <= x2;
         final double x = (x1 * w1 + x2 * w2) / (w1 + w2);
         return Math.max(x1, Math.min(x, x2));
     }
 
-    public static double interpolate(double x, double x0, double x1) {
+    static double interpolate(double x, double x0, double x1) {
         return (x - x0) / (x1 - x0);
     }
 
-    public static void encode(ByteBuffer buf, int n) {
+    static void encode(ByteBuffer buf, int n) {
         int k = 0;
         while (n < 0 || n > 0x7f) {
             byte b = (byte) (0x80 | (0x7f & n));
@@ -71,7 +71,7 @@ public abstract class AbstractTDigest extends TDigest {
         buf.put((byte) n);
     }
 
-    public static int decode(ByteBuffer buf) {
+    static int decode(ByteBuffer buf) {
         int v = buf.get();
         int z = 0x7f & v;
         int shift = 7;
@@ -133,7 +133,7 @@ public abstract class AbstractTDigest extends TDigest {
 
     @Override
     public void add(TDigest other) {
-        List<Centroid> tmp = new ArrayList<Centroid>();
+        List<Centroid> tmp = new ArrayList<>();
         for (Centroid centroid : other.centroids()) {
             tmp.add(centroid);
         }

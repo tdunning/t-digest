@@ -17,7 +17,6 @@
 
 package com.tdunning.math.stats;
 
-import com.carrotsearch.randomizedtesting.annotations.Seed;
 import com.clearspring.analytics.stream.quantile.QDigest;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -135,7 +134,7 @@ public abstract class TDigestTest extends AbstractTest {
         for (int k = 0; k < repeats(); k++) {
             final int currentK = k;
             tasks.add(new Callable<String>() {
-                Random gen = new Random(gen0.nextLong());
+                final Random gen = new Random(gen0.nextLong());
 
                 @Override
                 public String call() throws Exception {
@@ -384,7 +383,7 @@ public abstract class TDigestTest extends AbstractTest {
         assertEquals(qz, dist.size(), 1e-10);
         assertEquals(iz, dist.centroids().size());
 
-        assertTrue(String.format("Summary is too large (got %d, wanted < %.1f)", dist.centroids().size(), 17 * sizeGuide), dist.centroids().size() < 17 * sizeGuide);
+        assertTrue(String.format("Summary is too large (got %d, wanted < %.1f)", dist.centroids().size(), 20 * sizeGuide), dist.centroids().size() < 20 * sizeGuide);
         int softErrors = 0;
         for (int i = 0; i < xValues.length; i++) {
             double x = xValues[i];
@@ -525,8 +524,8 @@ public abstract class TDigestTest extends AbstractTest {
         // near the median.  Our system should be scale invariant and work well regardless.
         final Random gen = getRandom();
         AbstractContinousDistribution mix = new AbstractContinousDistribution() {
-            AbstractContinousDistribution normal = new Normal(0, 1e-5, gen);
-            AbstractContinousDistribution uniform = new Uniform(-1, 1, gen);
+            final AbstractContinousDistribution normal = new Normal(0, 1e-5, gen);
+            final AbstractContinousDistribution uniform = new Uniform(-1, 1, gen);
 
             @Override
             public double nextDouble() {
@@ -780,7 +779,7 @@ public abstract class TDigestTest extends AbstractTest {
             for (final int size : new int[]{10, 100, 1000, 10000}) {
                 final int currentK = k;
                 tasks.add(new Callable<String>() {
-                    Random gen = new Random(gen0.nextLong());
+                    final Random gen = new Random(gen0.nextLong());
 
                     @Override
                     public String call() throws Exception {
@@ -824,7 +823,7 @@ public abstract class TDigestTest extends AbstractTest {
             for (int k = 0; k < n; k++) {
                 final int currentK = k;
                 tasks.add(new Callable<String>() {
-                    Random gen = new Random(gen0.nextLong());
+                    final Random gen = new Random(gen0.nextLong());
 
                     @Override
                     public String call() throws Exception {

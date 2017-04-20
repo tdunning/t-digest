@@ -35,11 +35,13 @@ public class IntAVLTreeTest extends AbstractTest {
             counts = new int[capacity()];
         }
 
+        @SuppressWarnings("WeakerAccess")
         public boolean addValue(int value) {
             this.value = value;
             return super.add();
         }
 
+        @SuppressWarnings("WeakerAccess")
         public boolean removeValue(int value) {
             this.value = value;
             final int node = find();
@@ -78,9 +80,9 @@ public class IntAVLTreeTest extends AbstractTest {
     }
 
     @Test
-    public void duelAdd() {
+    public void dualAdd() {
         Random r = new Random(0);
-        TreeMap<Integer, Integer> map = new TreeMap<Integer, Integer>();
+        TreeMap<Integer, Integer> map = new TreeMap<>();
         IntBag bag = new IntBag();
         for (int i = 0; i < 100000; ++i) {
             final int v = r.nextInt(100000);
@@ -104,7 +106,7 @@ public class IntAVLTreeTest extends AbstractTest {
     @Test
     public void duelAddRemove() {
         Random r = new Random(0);
-        TreeMap<Integer, Integer> map = new TreeMap<Integer, Integer>();
+        TreeMap<Integer, Integer> map = new TreeMap<>();
         IntBag bag = new IntBag();
         for (int i = 0; i < 100000; ++i) {
             final int v = r.nextInt(1000);

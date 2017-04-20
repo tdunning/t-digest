@@ -81,8 +81,8 @@ public class ScaleTest {
     }
 
     public static class Centroid {
-        double mean;
-        int count;
+        final double mean;
+        final int count;
 
         @SuppressWarnings("WeakerAccess")
         public Centroid(double mean, int count) {
@@ -124,7 +124,7 @@ public class ScaleTest {
     }
 
     public static class PowerLinearLimit implements Limit {
-        private double exp;
+        private final double exp;
 
         public PowerLinearLimit(double exp) {
             this.exp = exp;
@@ -137,7 +137,7 @@ public class ScaleTest {
     }
 
     private class PiecewiseLinearLimit implements Limit {
-        private double cut;
+        private final double cut;
 
         PiecewiseLinearLimit(double cut) {
             this.cut = cut;

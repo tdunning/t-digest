@@ -39,10 +39,10 @@ public class Centroid implements Comparable<Centroid>, Serializable {
 
     private List<Double> actualData = null;
 
-    Centroid(boolean record) {
+    private Centroid(boolean record) {
         id = uniqueCount.getAndIncrement();
         if (record) {
-            actualData = new ArrayList<Double>();
+            actualData = new ArrayList<>();
         }
     }
 
@@ -122,9 +122,10 @@ public class Centroid implements Comparable<Centroid>, Serializable {
         return actualData;
     }
 
+    @SuppressWarnings("WeakerAccess")
     public void insertData(double x) {
         if (actualData == null) {
-            actualData = new ArrayList<Double>();
+            actualData = new ArrayList<>();
         }
         actualData.add(x);
     }
