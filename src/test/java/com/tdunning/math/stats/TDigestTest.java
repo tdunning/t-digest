@@ -620,7 +620,7 @@ public abstract class TDigestTest extends AbstractTest {
         ByteBuffer buf = ByteBuffer.allocate(20000);
         dist.asBytes(buf);
         assertTrue(buf.position() < 11000);
-        assertEquals(buf.position(), dist.byteSize());
+        assertEquals(dist.byteSize(), buf.position());
         buf.clear();
 
         dist.asSmallBytes(buf);

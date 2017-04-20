@@ -77,6 +77,7 @@ public abstract class TDigest implements Serializable {
      *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
      * @return the TDigest
      */
+    @SuppressWarnings("unused")
     public static TDigest createDigest(double compression) {
         return createMergingDigest(compression);
     }
@@ -153,6 +154,10 @@ public abstract class TDigest implements Serializable {
 
     /**
      * Returns the number of bytes required to encode this TDigest using #asSmallBytes().
+     *
+     * Note that this is just as expensive as actually compressing the digest. If you don't
+     * care about time, but want to never over-allocate, this is fine. If you care about compression
+     * and speed, you pretty much just have to overallocate by using allocating #byteSize() bytes.
      *
      * @return The number of bytes required.
      */

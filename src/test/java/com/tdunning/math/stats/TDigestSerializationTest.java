@@ -20,6 +20,13 @@ package com.tdunning.math.stats;
 import org.apache.commons.lang3.SerializationUtils;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Random;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
 /**
@@ -38,10 +45,28 @@ public class TDigestSerializationTest {
         assertSerializesAndDeserializes(new AVLTreeDigest(100));
     }
 
-    private void assertSerializesAndDeserializes(TDigest tdigest) {
+    private <T extends TDigest> void assertSerializesAndDeserializes(T tdigest) {
         assertNotNull(SerializationUtils.deserialize(SerializationUtils.serialize(tdigest)));
 
-        tdigest.add(1);
-        assertNotNull(SerializationUtils.deserialize(SerializationUtils.serialize(tdigest)));
+        final Random gen = new Random();
+        for (int i = 0; i < 100000; i++) {
+            tdigest.add(gen.nextDouble());
+        }
+        T roundTrip = SerializationUtils.deserialize(SerializationUtils.serialize(tdigest));
+
+        assertTDigestEquals(tdigest, roundTrip);
+    }
+
+    private void assertTDigestEquals(TDigest t1, TDigest t2) {
+        assertEquals(t1.getMin(), t2.getMin(), 0);
+        assertEquals(t1.getMax(), t2.getMax(), 0);
+        Iterator<Centroid> cx = t2.centroids().iterator();
+        for (Centroid c1 : t1.centroids()) {
+            Centroid c2 = cx.next();
+            assertEquals(c1.count(), c2.count());
+            assertEquals(c1.mean(), c2.mean(), 1e-10);
+        }
+        assertFalse(cx.hasNext());
+        assertNotNull(t2);
     }
 }

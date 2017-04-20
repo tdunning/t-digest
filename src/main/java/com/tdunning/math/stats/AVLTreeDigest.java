@@ -23,9 +23,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-/**
- *
- */
 public class AVLTreeDigest extends AbstractTDigest {
     private final double compression;
     private AVLGroupTree summary;
@@ -318,7 +315,7 @@ public class AVLTreeDigest extends AbstractTDigest {
      */
     @Override
     public int byteSize() {
-        return 4 + 8 * 3 + 4 + summary.size() * 12;
+        return 4 + 8 * 2 + 4 + 4 + summary.size() * 12;
     }
 
     /**
@@ -344,7 +341,7 @@ public class AVLTreeDigest extends AbstractTDigest {
         buf.putInt(VERBOSE_ENCODING);
         buf.putDouble(min);
         buf.putDouble(max);
-        buf.putDouble(compression());
+        buf.putFloat((float) compression());
         buf.putInt(summary.size());
         for (Centroid centroid : summary) {
             buf.putDouble(centroid.mean());

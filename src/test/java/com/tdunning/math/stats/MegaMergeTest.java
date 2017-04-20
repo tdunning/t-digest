@@ -35,7 +35,7 @@ public class MegaMergeTest {
 
     @Test
     public void testLargeMerge() throws InterruptedException, ExecutionException {
-        assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
+//        assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
         // prove we can summarize a days worth of data at 5 minute intervals. Each interval has
         // 1000 samples each with 1500 data points
         double t0 = System.nanoTime() * 1e-9;
