@@ -902,4 +902,25 @@ public abstract class TDigestTest extends AbstractTest {
             assertEquals(String.format("q=%.2f ", q), quantile(q, values), digest.quantile(q), 0.01);
         }
     }
+
+    @Test
+    public void testMontonicity() throws Exception {
+        TDigest digest = factory().create();
+        final Random gen = getRandom();
+        for (int i = 0; i < 100000; i++) {
+            digest.add(gen.nextDouble());
+        }
+
+        double lastQuantile = -1;
+        double lastX = -1;
+        for (double z = 0; z <= 1; z += 1e-5) {
+            double x = digest.quantile(z);
+            assertTrue(x >= lastX);
+            lastX = x;
+
+            double q = digest.cdf(z);
+            assertTrue(q >= lastQuantile);
+            lastQuantile = q;
+        }
+    }
 }
