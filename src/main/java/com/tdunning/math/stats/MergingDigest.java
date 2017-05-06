@@ -92,6 +92,7 @@ public class MergingDigest extends AbstractTDigest {
     // array used for sorting the temp centroids.  This is a field
     // to avoid allocations during operation
     private final int[] order;
+    private static boolean useApproximation = true;
 
     /**
      * Allocates a buffer merging t-digest.  This is the normally used constructor that
@@ -247,7 +248,7 @@ public class MergingDigest extends AbstractTDigest {
                 for (Centroid centroid : other.centroids()) {
                     m[offset] = centroid.mean();
                     w[offset] = centroid.count();
-                    if (recordAllData){
+                    if (recordAllData) {
                         assert data != null;
                         data.add(centroid.data());
                     }
@@ -407,7 +408,97 @@ public class MergingDigest extends AbstractTDigest {
      * @return The centroid scale value corresponding to q.
      */
     private double integratedLocation(double q) {
-        return compression * (Math.asin(2 * q - 1) + Math.PI / 2) / Math.PI;
+        return compression * (asinApproximation(2 * q - 1) + Math.PI / 2) / Math.PI;
+    }
+
+    private static double eval(double[] model, double[] vars) {
+        double r = 0;
+        for (int i = 0; i < model.length; i++) {
+            r += model[i] * vars[i];
+        }
+        return r;
+    }
+
+    static double asinApproximation(double x) {
+        if (useApproximation) {
+            if (x < 0) {
+                return -asinApproximation(-x);
+            } else {
+                // this approximation works by breaking that range from 0 to 1 into 5 regions
+                // for all but the region nearest 1, rational polynomial models get us a very
+                // good approximation of asin and by interpolating as we move from region to
+                // region, we can guarantee continuity and we happen to get monotonicity as well.
+                // for the values near 1, we just use Math.asin as our region "approximation".
+
+                // cutoffs for models. Note that the ranges overlap. In the overlap we do
+                // linear interpolation to guarantee the overall result is "nice"
+                double c0High = 0.1;
+                double c1High = 0.55;
+                double c2Low = 0.5;
+                double c2High = 0.8;
+                double c3Low = 0.75;
+                double c3High = 0.9;
+                double c4Low = 0.87;
+                if (x > c3High) {
+                    return Math.asin(x);
+                } else {
+                    // the models
+                    double[] m0 = {0.2955302411, 1.2221903614, 0.1488583743, 0.2422015816, -0.3688700895, 0.0733398445};
+                    double[] m1 = {-0.0430991920, 0.9594035750, -0.0362312299, 0.1204623351, 0.0457029620, -0.0026025285};
+                    double[] m2 = {-0.034873933724, 1.054796752703, -0.194127063385, 0.283963735636, 0.023800124916, -0.000872727381};
+                    double[] m3 = {-0.37588391875, 2.61991859025, -2.48835406886, 1.48605387425, 0.00857627492, -0.00015802871};
+
+                    // the parameters for all of the models
+                    double[] vars = {1, x, x * x, x * x * x, 1 / (1 - x), 1 / (1 - x) / (1 - x)};
+
+                    // raw grist for interpolation coefficients
+                    double x0 = bound((c0High - x) / c0High);
+                    double x1 = bound((c1High - x) / (c1High - c2Low));
+                    double x2 = bound((c2High - x) / (c2High - c3Low));
+                    double x3 = bound((c3High - x) / (c3High - c4Low));
+
+                    // interpolation coefficients
+                    //noinspection UnnecessaryLocalVariable
+                    double mix0 = x0;
+                    double mix1 = (1 - x0) * x1;
+                    double mix2 = (1 - x1) * x2;
+                    double mix3 = (1 - x2) * x3;
+                    double mix4 = 1 - x3;
+
+                    // now mix all the results together
+                    double r = 0;
+                    if (mix0 > 0) {
+                        r += mix0 * eval(m0, vars);
+                    }
+                    if (mix1 > 0) {
+                        r += mix1 * eval(m1, vars);
+                    }
+                    if (mix2 > 0) {
+                        r += mix2 * eval(m2, vars);
+                    }
+                    if (mix3 > 0) {
+                        r += mix3 * eval(m3, vars);
+                    }
+                    if (mix4 > 0) {
+                        // model 4 is just the real deal
+                        r += mix4 * Math.asin(x);
+                    }
+                    return r;
+                }
+            }
+        } else {
+            return Math.asin(x);
+        }
+    }
+
+    private static double bound(double v) {
+        if (v <= 0) {
+            return 0;
+        } else if (v >= 1) {
+            return 1;
+        } else {
+            return v;
+        }
     }
 
     private double integratedQ(double k) {
@@ -457,7 +548,8 @@ public class MergingDigest extends AbstractTDigest {
 
             // check for the left tail
             if (x <= mean[0]) {
-                // note that this is different than mean[0] > min ... this guarantees interpolation works
+                // note that this is different than mean[0] > min
+                // ... this guarantees we divide by non-zero number and interpolation works
                 if (mean[0] - min > 0) {
                     return (x - min) / (mean[0] - min) * weight[0] / totalWeight / 2;
                 } else {

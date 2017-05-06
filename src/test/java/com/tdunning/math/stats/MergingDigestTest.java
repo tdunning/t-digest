@@ -53,6 +53,24 @@ public class MergingDigestTest extends TDigestTest {
     }
 
     @Test
+    public void testApproximation() {
+        double worst = 0;
+        double old = Double.NEGATIVE_INFINITY;
+        for (double x = -1; x < 1; x+=0.0001) {
+            double ex = Math.asin(x);
+            double actual = MergingDigest.asinApproximation(x);
+            double error = ex - actual;
+//            System.out.printf("%.8f, %.8f, %.8f, %.12f\n", x, ex, actual, error * 1e6);
+            worst = Math.max(worst, Math.abs(error));
+            assertEquals("Bad approximation", 0, error, 1e-6);
+            assertTrue("Not monotonic", actual >= old);
+            old = actual;
+        }
+        System.out.printf("worst = %.5g\n", worst);
+
+    }
+
+    @Test
     public void testFill() {
         int delta = 300;
         MergingDigest x = new MergingDigest(delta);

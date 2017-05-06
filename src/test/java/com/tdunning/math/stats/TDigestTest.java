@@ -923,4 +923,53 @@ public abstract class TDigestTest extends AbstractTest {
             lastQuantile = q;
         }
     }
+
+    @Test
+    public void testKSDrift() throws Exception {
+        final Random gen = getRandom();
+        int N1 = 100;
+        int N2 = 10000;
+        double[] data = new double[N1 * N2];
+        System.out.printf("rep,i,ks\n");
+        for (int rep = 0; rep < 20; rep++) {
+            TDigest digest = factory(1000).create();
+            for (int i = 0; i < N1; i++) {
+                for (int j = 0; j < N2; j++) {
+                    double x = gen.nextDouble();
+                    data[i * N2 + j] = x;
+                    digest.add(x);
+                }
+                System.out.printf("%d, %d, %.7f\n", rep, i, ks(data, (i + 1) * N2, digest));
+            }
+        }
+    }
+
+    private double ks(double[] data, int length, TDigest digest) {
+        double d1 = 0;
+        double d2 = 0;
+        Arrays.sort(data, 0, length);
+        int i = 0;
+        for (Centroid centroid : digest.centroids()) {
+            double x = centroid.mean();
+            while (i < length && data[i] <= x) {
+                i++;
+            }
+            double q0a = (double) i / (length - 1);
+            double q0b = (double) (i + 1) / (length - 1);
+            double q0;
+            if (i > 0) {
+                if (i < length) {
+                    q0 = (q0a * (data[i] - x) + q0b * (x - data[i - 1])) / (data[i] - data[i - 1]);
+                } else {
+                    q0 = 1;
+                }
+            } else {
+                q0 = 0;
+            }
+            double q1 = digest.cdf(x);
+            d1 = Math.max(q1 - q0, d1);
+            d2 = Math.max(q0 - q1, d2);
+        }
+        return Math.max(d1, d2);
+    }
 }
