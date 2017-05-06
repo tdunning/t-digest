@@ -411,12 +411,8 @@ public class MergingDigest extends AbstractTDigest {
         return compression * (asinApproximation(2 * q - 1) + Math.PI / 2) / Math.PI;
     }
 
-    private static double eval(double[] model, double[] vars) {
-        double r = 0;
-        for (int i = 0; i < model.length; i++) {
-            r += model[i] * vars[i];
-        }
-        return r;
+    private double integratedQ(double k) {
+        return (Math.sin(Math.min(k, compression) * Math.PI / compression - Math.PI / 2) + 1) / 2;
     }
 
     static double asinApproximation(double x) {
@@ -465,7 +461,7 @@ public class MergingDigest extends AbstractTDigest {
                     double mix3 = (1 - x2) * x3;
                     double mix4 = 1 - x3;
 
-                    // now mix all the results together
+                    // now mix all the results together, avoiding extra evaluations
                     double r = 0;
                     if (mix0 > 0) {
                         r += mix0 * eval(m0, vars);
@@ -491,6 +487,14 @@ public class MergingDigest extends AbstractTDigest {
         }
     }
 
+    private static double eval(double[] model, double[] vars) {
+        double r = 0;
+        for (int i = 0; i < model.length; i++) {
+            r += model[i] * vars[i];
+        }
+        return r;
+    }
+
     private static double bound(double v) {
         if (v <= 0) {
             return 0;
@@ -501,9 +505,6 @@ public class MergingDigest extends AbstractTDigest {
         }
     }
 
-    private double integratedQ(double k) {
-        return (Math.sin(Math.min(k, compression) * Math.PI / compression - Math.PI / 2) + 1) / 2;
-    }
 
     @Override
     public void compress() {
