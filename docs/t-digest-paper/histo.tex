@@ -162,9 +162,9 @@ The run-time cost of the merge variant of the $t$-digest is a mixture of the fre
 
 % boundary 
 
-The basic outline of the clustering algorithm for constructing a $t$-digest is quite simple.  An initially empty ordered list of centroids, $C = [ c_1 \ldots c_m ]$ is kept.  Each centroid consists of a mean and a count.  To add a new value $x_n$ with a weight $w_n$, the set of centroids is found that have minimum distance to $x_n$.  This set is reduced by retaining only centroids whose $K$ size after adding $w_n$ would be less than $1$.  If more than one centroid remains, the one with maximum weight is selected.  If a centroid is found, then $(x_n,w_n)$ is added to that centroid. If no satisfactory centroid is found then $x_n$ is used to form a new centroid with weight $w_n$ and the next point is considered. The $K$ size of cluster $c_i \in C$ is defined as 
+The basic outline of the clustering algorithm for constructing a $t$-digest is quite simple.  An initially empty ordered list of centroids, $C = [ c_1 \ldots c_m ]$ is kept.  Each centroid consists of a mean and a count.  To add a new value $x_n$ with a weight $w_n$, the set of centroids is found that have minimum distance to $x_n$.  This set is reduced by retaining only centroids whose $K$ size after adding $w_n$ would be less than $1$.  If more than one centroid remains, the one with maximum weight is selected.  If a centroid is found, then $(x_n,w_n)$ is added to that centroid. If no satisfactory centroid is found then $x_n$ is used to form a new centroid with weight $w_n$ and the next point is considered. The $K$ size of cluster $c_i \in C$ is defined as before as
 \[
-K(i) = k \left(\sum_{j \le i} w_j , \delta \right ) - k \left(\sum_{j < i} w_j \delta\right)
+K(c_i) = k \big( \sum_{j \le i} w_j , \delta \big) - k \big(\sum_{j < i} w_j \delta\big)
 \]
 This procedure is shown more formally as Algorithm \ref{alg:full}.
  \begin{algorithm}[htb]
@@ -177,13 +177,13 @@ This procedure is shown more formally as Algorithm \ref{alg:full}.
 \KwIn{Ordered set of weighted centroids $C = \lbrace \rbrace$, sequence of real-valued, weighted points $X = \lbrace (x_1, w_1),\ldots (x_N, w_N)\rbrace$, and accuracy tolerance $\delta$}
 \KwOut{final set $C=[c_1 \ldots c_m]$ of weighted centroids} 
 \For{$(x_n, w_n) \in X$} {
-  $z = \min | c_i.\mathtt{mean} - x |$\;
-  $S = \lbrace c_i  :  |c_i.\mathtt{mean} - x| = z \wedge K(c_i+w_1) < 1 \rbrace $\;
-  $S.\mathtt{sort}( key=\lambda (c) \lbrace -c.\mathtt{sum} \rbrace)$\;
+  $z = \min | c_i.\mathtt{sum}/c_i.\mathtt{count} - x |$\;
+  $S = \lbrace c_i  :  |c_i.\mathtt{sum}/c_i.\mathtt{count} - x| = z \wedge K(c_i+w_1) < 1 \rbrace $\;
   \If {$|S| > 0$} {
+       $S.\mathtt{sort}( key=\lambda (c) \lbrace -c.\mathtt{sum} \rbrace)$\;
        $c \gets S.\mathtt{first()}$ \;
        $c.\mathtt{count} \gets c.\mathtt{count} + w_n$\;
-       $c.\mathtt{mean} \gets c.\mathtt{mean} + (x_n- c.\mathtt{mean})/ c.\mathtt{sum}$\;
+       $c.\mathtt{sum} \gets c.\mathtt{sum} + x_n w_n$\;
      } \Else {
       $C \gets C + (x_n, w_n)$\;
       }
@@ -195,9 +195,38 @@ This procedure is shown more formally as Algorithm \ref{alg:full}.
 \caption{Construction of a $t$-Digest by clustering}
 \end{algorithm}
 
-In this algorithm, a centroid object contains a mean and and a count.  Updating such an object with a new data-point $(x,w)$ is done using Welford's method \cite{wiki:welford, knuth2welford, welford62}.
+In this algorithm, a centroid object contains a weighted sum and and a count from which the mean can easily be determined.  It is also just about as easy to use the mean and the count and update using Welford's method \cite{wiki:welford, knuth2welford, welford62}.
 
-The number of points assigned to each centroid is limited so no centroid exceeds the $t$-digest size constraint, but pathological insertion orders can cause the number of centroids to increase without bound. Whenever the number of centroids exceeds a heuristically chosen limit, the entire set of centroids is consolidated using the merge algorithm given in Algorithm \ref{alg:merge}.  
+The number of points assigned to each centroid is limited so no centroid exceeds the $t$-digest size constraint, but pathological insertion orders can cause the number of centroids to increase without bound because only one centroid can ever be updated. Whenever the number of centroids exceeds a heuristically chosen limit, the entire set of centroids is consolidated using the merge algorithm given in Algorithm \ref{alg:merge}.  
+
+\subsection{Alternative Size Bound}
+The use of $K$ size as a bound for centroids gives a bound with very nice properties when it comes to the size and accuracy of $t$-digest. The computation of $\sin^-1$ multiple times for each new data point is, however, extremely expensive. The merging variant of the $t$-digest can amortize this cost over many insertions, but the clustering variant cannot. To achieve that amortization, the merging variant must maintain a sizable merge buffer.
+
+One way to limit the cost of computing the size bound in either variant of the algorithm is to use a direct size limit defined in terms of $q$ rather than differences in $k$. Substituting $u=2q-1$,
+\[
+\begin{aligned}
+k &= \delta \left( {\sin^{-1}(2q-1) \over \pi} + {1 \over 2} \right ) \\
+u &= - \cos {\pi k \over \delta} \\
+\end{aligned}
+\]
+The change in $u$ due to unit change in $k$ centered at $u$ can be estimated using small-angle approximations and simple trigonometric identities
+\[
+\begin{aligned}
+\Delta u &= -\left( \cos {\pi (k+1/2) \over \delta} - \cos {\pi (k-1/2) \over \delta} \right) \\
+ &\approx    {\pi \over \delta}\sin {\pi k \over \delta}    =    {2\pi \over \delta} \sqrt {1-u^2} \\
+\end{aligned}
+\]
+The change in $q$ is half the change in $u$ and that, in turn, gives the maximum weight for a centroid
+\[
+\begin{aligned}
+ \Delta q &\approx { \pi \over \delta} \sqrt {q (1-q)}   \\
+w_{\mathtt max} &\le  { \pi n \over \delta} \sqrt {q (1-q)}   
+\end{aligned}
+\]
+When implementing this alternative bound, using a value of $q$ at the center of each centroid decreases the error in the small-angle approximation by roughly a factor of 4 as well as making the limits symmetrical where $q$ is near either $0$ or $1$.
+\[q(c_i)=\frac{c_i.\mathtt{count}/2 + \sum_{j<i}c_j.\mathtt{count}} {\sum_j c_j.\mathtt{count}}\]
+
+With the merging algorithm the sum in this numerator can be computed progressively as we pass through the centroids being merged while the sum in the denominator can be kept up-to-date as points are added to the digest. In the clustering algorithm, on the other hand, a bit more machinery is required to compute the numerator sum quickly. This can be done by storing the centroids in a data structure such as a balanced binary tree that keeps sums of each sub-tree.  For centroids with identical means, order of creation is used as a tie-breaker to allow an unambiguous ordering.  Figure \ref{fig:gamma-sizes} shows actual centroid weights from multiple runs of this algorithm and for multiple distributions plotted against the ideal bound.
 
 \vspace{10mm}
 \hrule
@@ -216,15 +245,6 @@ End of edited text ... text beyond here needs revision to match current release
 \vspace{0.4mm}
 \hrule
 \vspace{10mm}
-
-\subsection{Alternative Size Bound}
-The use of $K$ size as a bound for centroids gives a bound with very nice properties when it comes to the size and accuracy of $t$-digest. The computation of $\sin^-1$ multiple times for each new data point is, however, extremely expensive. The merging variant of the $t$-digest can amortize this cost over many insertions, but the clustering variant cannot.
-
-The algorithm approximates $q$ for centroid $c_i$ by summing the weights for all of the centroids ordered before $c_i$:
-
-\[q(c_i)=\frac{c_i.\mathtt{count}/2 + \sum_{j<i}c_j.\mathtt{count}} {\sum_j c_j.\mathtt{count}}\]
-
-In order to compute this sum quickly, the centroids can be stored in a data structure such as a balanced binary tree that keeps sums of each sub-tree.  For centroids with identical means, order of creation is used as a tie-breaker to allow an unambiguous ordering.  Figure \ref{fig:gamma-sizes} shows actual centroid weights from multiple runs of this algorithm and for multiple distributions plotted against the ideal bound.
 
 \subsection{Ordered Inputs}
 The use of a bound on centroid size that becomes small for extreme values of $q$ is useful because it allows relative error to be bounded very tightly, but this bound may be problematic for some inputs.  If the values of $X$ are in ascending or descending order, then $C$ will contain as many centroids as values that have been observed.  This will happen because each new value of $X$ will always form a new centroid because $q(1-q)\approx0$.  To avoid this pathology, if the number of centroids becomes excessive, the set of centroids is collapsed by recursively applying the $t$-digest algorithm to the centroids themselves after randomizing the order of the centroids.  
