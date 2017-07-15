@@ -246,6 +246,9 @@ public abstract class TDigestTest extends AbstractTest {
             for (Future<String> result : executor.invokeAll(tasks)) {
                 out.write(result.get());
             }
+        } catch (Throwable e) {
+            e.printStackTrace();
+            throw e;
         } finally {
             executor.shutdownNow();
             executor.awaitTermination(5, TimeUnit.SECONDS);
@@ -705,6 +708,24 @@ public abstract class TDigestTest extends AbstractTest {
 //        System.out.println("p95: " + tdigest.quantile(0.95));
 //        System.out.println("p99: " + tdigest.quantile(0.99));
 //        System.out.println();
+    }
+
+    @Test
+    public void testSingletonInACrowd() {
+        final double compression = 100;
+        TDigest dist = factory(compression).create();
+        for (int i = 0; i < 10000; i++) {
+            dist.add(10);
+        }
+        dist.add(20);
+        dist.compress();
+        assertEquals(10.0, dist.quantile(0), 0);
+        assertEquals(10.0, dist.quantile(0.5), 0);
+        assertEquals(10.0, dist.quantile(0.8), 0);
+        assertEquals(10.0, dist.quantile(0.9), 0);
+        assertEquals(10.0, dist.quantile(0.99), 0);
+        assertEquals(10.0, dist.quantile(0.999), 0);
+        assertEquals(20.0, dist.quantile(1), 0);
     }
 
     @Test
