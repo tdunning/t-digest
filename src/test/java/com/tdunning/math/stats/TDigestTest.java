@@ -669,6 +669,44 @@ public abstract class TDigestTest extends AbstractTest {
         assertFalse(ix.hasNext());
     }
 
+    /**
+     * Does basic sanity testing for a particular small example that used to fail.
+     * See https://github.com/addthis/stream-lib/issues/138
+     */
+    @Test
+    public void testThreePointExample() {
+        TDigest tdigest = factory(100).create();
+        double x0 = 0.18615591526031494;
+        double x1 = 0.4241943657398224;
+        double x2 = 0.8813006281852722;
+
+        tdigest.add(x0);
+        tdigest.add(x1);
+        tdigest.add(x2);
+
+        double p10 = tdigest.quantile(0.1);
+        double p50 = tdigest.quantile(0.5);
+        double p90 = tdigest.quantile(0.9);
+        double p95 = tdigest.quantile(0.95);
+        double p99 = tdigest.quantile(0.99);
+
+        assertTrue("ordering of quantiles", p10 <= p50);
+        assertTrue("ordering of quantiles", p50 <= p90);
+        assertTrue("ordering of quantiles", p90 <= p95);
+        assertTrue("ordering of quantiles", p95 <= p99);
+
+        assertEquals("Extreme quantiles", x0, p10, 0);
+        assertEquals("Extreme quantiles", x2, p99, 0);
+
+//        System.out.println("digest: " + tdigest.getClass());
+//        System.out.println("p10: " + tdigest.quantile(0.1));
+//        System.out.println("p50: " + tdigest.quantile(0.5));
+//        System.out.println("p90: " + tdigest.quantile(0.9));
+//        System.out.println("p95: " + tdigest.quantile(0.95));
+//        System.out.println("p99: " + tdigest.quantile(0.99));
+//        System.out.println();
+    }
+
     @Test
     public void testIntEncoding() {
         Random gen = getRandom();
