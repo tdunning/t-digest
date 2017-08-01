@@ -92,7 +92,8 @@ public class MergingDigest extends AbstractTDigest {
     // array used for sorting the temp centroids.  This is a field
     // to avoid allocations during operation
     private final int[] order;
-    private static boolean useApproximation = true;
+    private static boolean usePieceWiseApproximation = true;
+    private static boolean useWeightLimit = true;
 
     /**
      * Allocates a buffer merging t-digest.  This is the normally used constructor that
@@ -129,10 +130,36 @@ public class MergingDigest extends AbstractTDigest {
     public MergingDigest(double compression, int bufferSize, int size) {
         if (size == -1) {
             size = (int) (2 * Math.ceil(compression));
+            if (useWeightLimit) {
+                // the weight limit approach generates smaller centroids than necessary
+                // that can result in using a bit more memory than expected
+                size += 10;
+            }
         }
         if (bufferSize == -1) {
             // having a big buffer is good for speed
-            bufferSize = (int) (8 * Math.ceil(compression));
+            // experiments show bufferSize = 1 gives half the performance of bufferSize=10
+            // bufferSize = 2 gives 40% worse performance than 10
+            // but bufferSize = 5 only costs about 5-10%
+            //
+            //   compression factor     time(us)
+            //    50          1         0.275799
+            //    50          2         0.151368
+            //    50          5         0.108856
+            //    50         10         0.102530
+            //   100          1         0.215121
+            //   100          2         0.142743
+            //   100          5         0.112278
+            //   100         10         0.107753
+            //   200          1         0.210972
+            //   200          2         0.148613
+            //   200          5         0.118220
+            //   200         10         0.112970
+            //   500          1         0.219469
+            //   500          2         0.158364
+            //   500          5         0.127552
+            //   500         10         0.121505
+            bufferSize = (int) (5 * Math.ceil(compression));
         }
         this.compression = compression;
 
@@ -288,13 +315,14 @@ public class MergingDigest extends AbstractTDigest {
         }
         Sort.sort(incomingOrder, incomingMean, incomingCount);
 
-        lastUsedCell = 0;
         totalWeight += unmergedWeight;
+        double normalizer = compression / (Math.PI * totalWeight);
 
         assert incomingCount > 0;
+        lastUsedCell = 0;
         mean[lastUsedCell] = incomingMean[incomingOrder[0]];
         weight[lastUsedCell] = incomingWeight[incomingOrder[0]];
-        double wSoFar = weight[lastUsedCell];
+        double wSoFar = 0;
         if (data != null) {
             assert incomingData != null;
             data.add(incomingData.get(incomingOrder[0]));
@@ -303,15 +331,25 @@ public class MergingDigest extends AbstractTDigest {
         double k1 = 0;
 
         // weight will contain all zeros
-        double wLimit = totalWeight * integratedQ(k1 + 1);
+        double wLimit;
+        wLimit = totalWeight * integratedQ(k1 + 1);
         for (int i = 1; i < incomingCount; i++) {
             int ix = incomingOrder[i];
-            double projectedW = wSoFar + incomingWeight[ix];
-            if (projectedW <= wLimit) {
-                // next point will fit
-                wSoFar = projectedW;
+            double proposedWeight = weight[lastUsedCell] + incomingWeight[ix];
+            double projectedW = wSoFar + proposedWeight;
+            boolean addThis;
+            if (useWeightLimit) {
+                double z = proposedWeight * normalizer;
+                double q0 = wSoFar / totalWeight;
+                double q2 = (wSoFar + proposedWeight) / totalWeight;
+                addThis = z * z <= q0 * (1 - q0) && z * z <= q2 * (1 - q2);
+            } else {
+                addThis = projectedW <= wLimit;
+            }
 
-                // merge into existing centroid
+            if (addThis) {
+                // next point will fit
+                // so merge into existing centroid
                 weight[lastUsedCell] += incomingWeight[ix];
                 mean[lastUsedCell] = mean[lastUsedCell] + (incomingMean[ix] - mean[lastUsedCell]) * incomingWeight[ix] / weight[lastUsedCell];
                 incomingWeight[ix] = 0;
@@ -326,10 +364,13 @@ public class MergingDigest extends AbstractTDigest {
                 }
             } else {
                 // didn't fit ... move to next output, copy out first centroid
-                k1 = integratedLocation(wSoFar / totalWeight);
-                wLimit = totalWeight * integratedQ(k1 + 1);
+                wSoFar += weight[lastUsedCell];
+                if (!useWeightLimit) {
+                    k1 = integratedLocation(wSoFar / totalWeight);
+                    wLimit = totalWeight * integratedQ(k1 + 1);
+                }
+
                 lastUsedCell++;
-                wSoFar += incomingWeight[ix];
                 mean[lastUsedCell] = incomingMean[ix];
                 weight[lastUsedCell] = incomingWeight[ix];
                 incomingWeight[ix] = 0;
@@ -344,6 +385,7 @@ public class MergingDigest extends AbstractTDigest {
         // points to next empty cell
         lastUsedCell++;
 
+        // sanity check
         double sum = 0;
         for (int i = 0; i < lastUsedCell; i++) {
             sum += weight[i];
@@ -373,17 +415,27 @@ public class MergingDigest extends AbstractTDigest {
 
         double k1 = 0;
         double q = 0;
+        double left = 0;
+        String header = "\n";
         for (int i = 0; i < n; i++) {
             double dq = w[i] / total;
             double k2 = integratedLocation(q + dq);
+            q += dq / 2;
             if (k2 - k1 > 1 && w[i] != 1) {
-                System.out.printf("Oversize centroid at %d, k0=%.2f, k1=%.2f, dk=%.2f, w=%.2f, q=%.4f\n", i, k1, k2, k2 - k1, w[i], q);
+                System.out.printf("%sOversize centroid at " +
+                                "%d, k0=%.2f, k1=%.2f, dk=%.2f, w=%.2f, q=%.4f, dq=%.4f, left=%.1f, current=%.2f maxw=%.2f\n",
+                        header, i, k1, k2, k2 - k1, w[i], q, dq, left, w[i], Math.PI * total / compression * Math.sqrt(q * (1 - q)));
+                header = "";
                 badCount++;
             }
-            if (k2 - k1 > 1.5 && w[i] != 1) {
-                throw new IllegalStateException(String.format("Egregiously oversized centroid at %d, k0=%.2f, k1=%.2f, dk=%.2f, w=%.2f, q=%.4f\n", i, k1, k2, k2 - k1, w[i], q));
+            if (k2 - k1 > 4 && w[i] != 1) {
+                throw new IllegalStateException(
+                        String.format("Egregiously oversized centroid at " +
+                                        "%d, k0=%.2f, k1=%.2f, dk=%.2f, w=%.2f, q=%.4f, dq=%.4f, left=%.1f, current=%.2f, maxw=%.2f\n",
+                                i, k1, k2, k2 - k1, w[i], q, dq, left, w[i], Math.PI * total / compression * Math.sqrt(q * (1 - q))));
             }
-            q += dq;
+            q += dq / 2;
+            left += w[i];
             k1 = k2;
         }
 
@@ -416,7 +468,7 @@ public class MergingDigest extends AbstractTDigest {
     }
 
     static double asinApproximation(double x) {
-        if (useApproximation) {
+        if (usePieceWiseApproximation) {
             if (x < 0) {
                 return -asinApproximation(-x);
             } else {
