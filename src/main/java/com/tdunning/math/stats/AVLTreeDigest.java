@@ -315,7 +315,7 @@ public class AVLTreeDigest extends AbstractTDigest {
      */
     @Override
     public int byteSize() {
-        return 4 + 8 * 2 + 4 + 4 + summary.size() * 12;
+        return 4 + 8 * 2 + 8 + 4 + summary.size() * 12;
     }
 
     /**
@@ -341,7 +341,7 @@ public class AVLTreeDigest extends AbstractTDigest {
         buf.putInt(VERBOSE_ENCODING);
         buf.putDouble(min);
         buf.putDouble(max);
-        buf.putFloat((float) compression());
+        buf.putDouble((float) compression());
         buf.putInt(summary.size());
         for (Centroid centroid : summary) {
             buf.putDouble(centroid.mean());

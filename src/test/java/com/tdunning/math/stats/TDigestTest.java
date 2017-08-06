@@ -624,11 +624,6 @@ public abstract class TDigestTest extends AbstractTest {
         dist.asBytes(buf);
         assertTrue(buf.position() < 11000);
         assertEquals(dist.byteSize(), buf.position());
-        buf.clear();
-
-        dist.asSmallBytes(buf);
-        assertTrue(buf.position() < 6000);
-        assertEquals(buf.position(), dist.smallByteSize());
 
         System.out.printf("# big %d bytes\n", buf.position());
 
