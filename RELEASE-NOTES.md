@@ -1,4 +1,16 @@
-In release 3.2
+Release 3.2
+===========
+In release 3.2, the goal is to produce an update to the code given the large number of improvements since the previous release.
+
+There are a few bugs that will survive this release, most notably in the AVLTreeDigest. These have to do with large nubmers of repeated data points and are not new bugs.
+ 
+There is a also lot of work going on with serialization. I need to hear from people about  what they are doing with serialization so that we can build some test cases to allow an appropriate migration strategy to future serialization.
+
+The paper continues to be updated. The algorithmic descriptions are getting reasonably clear, but the speed and accuracy sections need a complete revamp with current implementations.
+
+
+Bugs, fixed and known
+----
 
 The following issues are fixed in this release
 
