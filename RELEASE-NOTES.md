@@ -12,7 +12,7 @@ The paper continues to be updated. The algorithmic descriptions are getting reas
 Bugs, fixed and known
 ----
 
-The following issues are fixed in this release
+The following important issues are fixed in this release
 
 [Issue #90](https://github.com/tdunning/t-digest/issues/90) Serialization for MergingDigest
 
@@ -27,4 +27,36 @@ The following issues are pushed beyond this release
 [Issue #87](https://github.com/tdunning/t-digest/issues/87) Future proof and extensible serialization
 
 [Issue #89](https://github.com/tdunning/t-digest/issues/89) Bad handling for duplicate values in AVLTreeDigest
+
+Here is a complete list of issues resolved in this release:
+
+#55
+#52
+#90
+#92
+#93
+#67
+#81
+#75
+#74
+#72
+#65
+#60
+#53
+#82
+#42
+#40
+#37
+#29
+#84
+#76
+#77
+#71
+#61
+#58
+#48
+#63
+#62
+#47
+#49
 
