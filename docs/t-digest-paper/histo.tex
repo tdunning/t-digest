@@ -100,7 +100,7 @@ The introduction of the concept of a scaling function provides a useful way to s
 
 Once we have formed a $t$-digest by binning the original sequence into sub-sequences that satisfy the size limit, we can estimate quantiles using interpolation between the end-points of each bin. This is similar to what is done in other quantile estimation algorithms such as Greenwald-Khanna and will give errors that scale roughly quadratically in the number of samples in each sub-sequence. The $t$-digest, having smaller number of samples in bins near $q=0$ or $q=1$ will obviously have better accuracy there. The only wrinkle is that with a $t$-digest contains the centroids of the samples in a bin instead of the end-points. Estimating quantiles requires that the boundaries of the bins be estimated first and then used to interpolate as before. 
 
-In general, there are many partitions of $X$ that valid result in a $t$-digest. As long as the result is subject to the size contraint, however, any such $t$-digest will perform similarly in terms of accuracy.
+In general, there are many partitions of $X$ that valid result in a $t$-digest. As long as the result is subject to the size constraint, however, any such $t$-digest will perform similarly in terms of accuracy.
 
 Figure \ref{fig:linear-interpolation} shows an example of how error bounds are improved by the strategy of keeping bins small near extreme values of $q$. 
 
