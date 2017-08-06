@@ -71,7 +71,7 @@ public class MergingDigestTest extends TDigestTest {
 
     }
 
-    @Test
+//    @Test
     public void testFill() {
         int delta = 300;
         MergingDigest x = new MergingDigest(delta);
@@ -99,22 +99,6 @@ public class MergingDigestTest extends TDigestTest {
     private double qToK(double q) {
         return Math.asin(2 * Math.min(1, q) - 1) / Math.PI + 0.5;
     }
-
-    //    @Override
-//    public void testExtremeQuantiles() {
-//        // disable test
-//    }
-//
-//    @Override
-//    public void testFewValues() {
-//        // disable test
-//    }
-//
-//    @Override
-//    public void testMerge() throws Exception {
-//        // disable test
-//    }
-
 
     @Test
     public void testSmallCountQuantile() {
