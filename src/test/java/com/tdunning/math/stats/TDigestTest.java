@@ -986,12 +986,12 @@ public abstract class TDigestTest extends AbstractTest {
     @Test
     public void testKSDrift() throws Exception {
         final Random gen = getRandom();
-        int N1 = 100;
+        int N1 = 50;
         int N2 = 10000;
         double[] data = new double[N1 * N2];
         System.out.printf("rep,i,ks\n");
-        for (int rep = 0; rep < 20; rep++) {
-            TDigest digest = factory(1000).create();
+        for (int rep = 0; rep < 5; rep++) {
+            TDigest digest = factory(200).create();
             for (int i = 0; i < N1; i++) {
                 for (int j = 0; j < N2; j++) {
                     double x = gen.nextDouble();
