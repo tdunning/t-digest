@@ -612,7 +612,7 @@ public abstract class TDigestTest extends AbstractTest {
     @Test
     public void testSerialization() {
         Random gen = getRandom();
-        final double compression = randomDouble() * 100;
+        final double compression = 20 + randomDouble() * 100;
         TDigest dist = factory(compression).create();
         for (int i = 0; i < 100000; i++) {
             double x = gen.nextDouble();

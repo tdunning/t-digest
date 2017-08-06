@@ -315,7 +315,7 @@ public class AVLTreeDigest extends AbstractTDigest {
      */
     @Override
     public int byteSize() {
-        return 4 + 8 * 2 + 8 + 4 + summary.size() * 12;
+        return 32 + summary.size() * 12;
     }
 
     /**

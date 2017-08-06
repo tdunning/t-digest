@@ -753,7 +753,7 @@ public class MergingDigest extends AbstractTDigest {
         compress();
         // format code, compression(float), buffer-size(int), temp-size(int), #centroids-1(int),
         // then two doubles per centroid
-        return lastUsedCell * 16 + 36;
+        return lastUsedCell * 16 + 32;
     }
 
     @Override
@@ -780,14 +780,10 @@ public class MergingDigest extends AbstractTDigest {
         buf.putInt(Encoding.VERBOSE_ENCODING.code);
         buf.putDouble(min);
         buf.putDouble(max);
-        buf.putFloat((float) compression);
-        buf.putInt(mean.length);
-        buf.putInt(tempMean.length);
+        buf.putDouble(compression);
         buf.putInt(lastUsedCell);
         for (int i = 0; i < lastUsedCell; i++) {
             buf.putDouble(weight[i]);
-        }
-        for (int i = 0; i < lastUsedCell; i++) {
             buf.putDouble(mean[i]);
         }
     }
@@ -814,11 +810,11 @@ public class MergingDigest extends AbstractTDigest {
         if (encoding == Encoding.VERBOSE_ENCODING.code) {
             double min = buf.getDouble();
             double max = buf.getDouble();
-            double compression = buf.getFloat();
+            double compression = buf.getDouble();
             int n = buf.getInt();
             MergingDigest r = new MergingDigest(compression);
             r.setMinMax(min, max);
-            r.lastUsedCell = buf.getInt();
+            r.lastUsedCell = n;
             for (int i = 0; i < n; i++) {
                 r.weight[i] = buf.getDouble();
                 r.mean[i] = buf.getDouble();
