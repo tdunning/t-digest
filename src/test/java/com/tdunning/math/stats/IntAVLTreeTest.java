@@ -104,7 +104,7 @@ public class IntAVLTreeTest extends AbstractTest {
     }
 
     @Test
-    public void duelAddRemove() {
+    public void dualAddRemove() {
         Random r = new Random(0);
         TreeMap<Integer, Integer> map = new TreeMap<>();
         IntBag bag = new IntBag();
