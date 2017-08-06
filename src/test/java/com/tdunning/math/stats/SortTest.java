@@ -19,21 +19,25 @@ package com.tdunning.math.stats;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
-import java.util.Random;
-import junit.framework.TestCase;
 import org.junit.Assert;
+import org.junit.Test;
 
-public class SortTest extends TestCase {
+import java.util.Random;
+
+public class SortTest {
+    @Test
     public void testEmpty() {
         Sort.sort(new int[]{}, new double[]{});
     }
 
+    @Test
     public void testOne() {
         int[] order = new int[1];
         Sort.sort(order, new double[]{1});
         Assert.assertEquals(0, order[0]);
     }
 
+    @Test
     public void testIdentical() {
         int[] order = new int[6];
         double[] values = new double[6];
@@ -42,6 +46,7 @@ public class SortTest extends TestCase {
         checkOrder(order, values);
     }
 
+    @Test
     public void testRepeated() {
         int n = 50;
         int[] order = new int[n];
@@ -54,6 +59,7 @@ public class SortTest extends TestCase {
         checkOrder(order, values);
     }
 
+    @Test
     public void testShort() {
         int[] order = new int[6];
         double[] values = new double[6];
@@ -79,9 +85,10 @@ public class SortTest extends TestCase {
         checkOrder(order, values);
     }
 
+    @Test
     public void testLonger() {
         int[] order = new int[20];
-        double[] values= new double[20];
+        double[] values = new double[20];
         for (int i = 0; i < 20; i++) {
             values[i] = (i * 13) % 20;
         }
@@ -89,11 +96,12 @@ public class SortTest extends TestCase {
         checkOrder(order, values);
     }
 
+    @Test
     public void testMultiPivots() {
         // more pivots than low split on first pass
         // multiple pivots, but more low data on second part of recursion
         int[] order = new int[30];
-        double[] values= new double[30];
+        double[] values = new double[30];
         for (int i = 0; i < 9; i++) {
             values[i] = i + 20 * (i % 2);
         }
@@ -113,12 +121,13 @@ public class SortTest extends TestCase {
         checkOrder(order, values);
     }
 
+    @Test
     public void testRandomized() {
         Random rand = new Random();
 
         for (int k = 0; k < 100; k++) {
             int[] order = new int[30];
-            double[] values= new double[30];
+            double[] values = new double[30];
             for (int i = 0; i < 30; i++) {
                 values[i] = rand.nextDouble();
             }
