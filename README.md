@@ -5,7 +5,7 @@ A new data structure for accurate on-line accumulation of rank-based statistics 
 and trimmed means.  The t-digest algorithm is also very parallel friendly making it useful in
 map-reduce and parallel streaming applications.
 
-The t-digest construction algorithm uses a variant of 1-dimensional k-means clustering to product a
+The t-digest construction algorithm uses a variant of 1-dimensional k-means clustering to produce a
 data structure that is related to the Q-digest.  This t-digest data structure can be used to estimate
 quantiles or compute other rank statistics.  The advantage of the t-digest over the Q-digest is that
 the t-digest can handle floating point values while the Q-digest is limited to integers.  With small
@@ -37,11 +37,11 @@ omission.
 Compile and Test
 ================
 
-You have to have java 1.7 to compile and run this code.  You will also need maven (3+ preferred)
+You have to have Java 1.7 to compile and run this code.  You will also need maven (3+ preferred)
 to compile and test this software.  In order to build the images that go into the theory paper, you will need R.
 In order to format the paper, you will need latex.  A pre-built pdf version of the paper is provided.
 
-On ubuntu, you can get the necessary pre-requisites with the following:
+On Ubuntu, you can get the necessary pre-requisites with the following:
 
     sudo apt-get install  openjdk-7-jdk git maven
 
@@ -91,7 +91,7 @@ The t-digest algorithm has been ported to other languages:
 Continuous Integration
 =================
 
-The t-digest project makes use of Travis integration with github for testing whenever a change is made.
+The t-digest project makes use of Travis integration with Github for testing whenever a change is made.
 
 You can see the reports at:
 
