@@ -27,6 +27,7 @@ public class AVLTreeDigestTest extends TDigestTest {
     public static void setup() throws IOException {
         TDigestTest.setup("avl-tree");
     }
+
     protected DigestFactory factory(final double compression) {
         return new DigestFactory() {
             @Override
@@ -45,5 +46,10 @@ public class AVLTreeDigestTest extends TDigestTest {
     public void testSingletonInACrowd() {
         // ignore this test for AVL. Known bug.
         System.out.printf("\n\nIgnoring known bug for AvlTreeDigest. See https://github.com/tdunning/t-digest/issues/89\n\n");
+    }
+
+    @Override
+    public void testKSDrift() {
+        System.out.printf("Skipping KS test for AVL digest\n");
     }
 }

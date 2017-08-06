@@ -984,7 +984,7 @@ public abstract class TDigestTest extends AbstractTest {
     }
 
     @Test
-    public void testKSDrift() throws Exception {
+    public void testKSDrift() {
         final Random gen = getRandom();
         int N1 = 50;
         int N2 = 10000;

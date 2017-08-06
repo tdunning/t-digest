@@ -22,12 +22,22 @@ In summary, the particularly interesting characteristics of the t-digest are tha
 * is very simple
 * has a reference implementation that has > 90% test coverage
 * can be used with map-reduce very easily because digests can be merged
+* recent versions are simple, very fast, and require no dynamic allocation after creation
+
+FloatHistogram
+--------------
+
+This package also has an implementation of `FloatHistogram` which is another way to look at distributions where all measurements are positive and where you want relative accuracy in the measurement space instead of accuracy defined in quantiles. This `FloatHistogram` makes use of the floating point hardware to implement variable width bins so that adding data is very fast (5ns/data point in benchmarks) and the resulting sketch is small for reasonable accuracy levels. For instance, if you require dynamic range of a million and are OK with about bins being about ±10%, then you only need 80 counters.
+
+Since the bins for `FloatHistogram`'s are static rather than adaptive, they can be combined very easily. Thus you can store a histogram for short periods of time and combined them at query time if you are looking at metrics for your system. You can also reweight histograms to avoid errors due to structured
+omission.
+
+
 
 Compile and Test
 ================
 
-You have to have java 1.7 to compile and run this code.  The special features of Java 1.7 are only lightly used
-so you should be able to adapt it to use with Java6 relatively easily.  You will also need maven (3+ preferred)
+You have to have java 1.7 to compile and run this code.  You will also need maven (3+ preferred)
 to compile and test this software.  In order to build the images that go into the theory paper, you will need R.
 In order to format the paper, you will need latex.  A pre-built pdf version of the paper is provided.
 
@@ -65,7 +75,7 @@ At this point you can run the R analysis scripts:
 
 Most of these scripts will complete almost instantaneously; one or two will take a few tens of seconds.
 
-The output of these scripts are a collection of PNG image files that can be viewed with any suitable viewer
+The output of these scripts are a collection of PNG and/or PDF files that can be viewed with any suitable viewer
 such as Preview on a Mac.  Many of these images are used as figures in the paper in the same directory with
 the R scripts.
 
@@ -76,6 +86,7 @@ The t-digest algorithm has been ported to other languages:
  - Go: [github.com/spenczar/tdigest](https://github.com/spenczar/tdigest)
  - Javascript: [tdigest](https://github.com/welch/tdigest)
  - C++: [CPP TDigest](https://github.com/gpichot/cpp-tdigest)
+ - Scala: need link!
 
 Continuous Integration
 =================
@@ -92,7 +103,7 @@ Installation
 ===============
 
 The t-Digest library Jars are released via [Maven Central Repository] (http://repo1.maven.org/maven2/com/tdunning/).
-The current version is 3.1.
+The current version is 3.2.
 
  ```xml
       <dependency>
