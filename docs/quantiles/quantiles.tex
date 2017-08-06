@@ -1,0 +1,39 @@
+\documentclass[11pt]{amsart}
+\usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   % ... or a4paper or a5paper or ... 
+%\geometry{landscape}                % Activate for for rotated page geometry
+%\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{epstopdf}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+
+\title{Brief Article}
+\author{The Author}
+%\date{}                                           % Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+\section{Assumptions}
+\begin{enumerate}
+\item The samples for each centroid are evenly divided on each side of the centroid
+\item The samples between centroids are uniformly distributed
+\item If a centroid has $n = 2k + 1$ samples, then there are $k$ samples on each side and one at the centroid
+\item If a centroid has $n = 2k$ samples, then there $k-1/2$ samples on each side
+\item the first and last centroid will have only one sample
+\end{enumerate}
+\section{Equal Spacing Model}
+Take two centroids separated by $x$ with $n_\mathtt{ left}$ and $n_\mathtt{ right}$ samples respectively. We know the following about the samples between these centroids
+\begin{enumerate}
+\item the first and last centroids represent the minimum and maximum samples for the entire datasets
+\item if $n_\mathtt{left}=1$ or $n_\mathtt{right}=1$ then the unique sample for the corresponding centroid is at the centroid
+\item there will be $\lfloor n_\mathtt{left} / 2 \rfloor + \lfloor n_\mathtt{right} / 2 \rfloor$ samples between the centroids
+\item samples will be spaced $\Delta x = 2x / ( n_\mathtt {left} + n_\mathtt{ right})$ apart
+\item the left-most sample is at $((n_\mathtt{left} \mod 2) + 1)\Delta x / 2$ from the left centroid
+\item the right-most sample is at $((n_\mathtt{right} \mod 2) + 1)\Delta x / 2$ from the left centroid
+\end{enumerate}
+%\subsection{}
+
+
+
+\end{document}  
