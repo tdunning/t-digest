@@ -21,7 +21,7 @@
 
     <groupId>com.tdunning</groupId>
     <artifactId>t-digest</artifactId>
-    <version>3.2</version>
+    <version>3.3-SNAPSHOT</version>
 
     <packaging>jar</packaging>
     <name>T-Digest</name>
@@ -39,7 +39,7 @@
     <scm>
         <connection>scm:git:https://github.com/tdunning/t-digest.git</connection>
         <developerConnection>scm:git:https://github.com/tdunning/t-digest.git</developerConnection>
-        <tag>t-digest-3.2</tag>
+        <tag>HEAD</tag>
         <url>https://github.com/tdunning/t-digest</url>
     </scm>
 
