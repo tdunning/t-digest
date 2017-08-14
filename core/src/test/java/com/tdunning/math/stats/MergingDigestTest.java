@@ -33,6 +33,7 @@ import java.util.Random;
 
 //to freeze the tests with a particular seed, put the seed on the next line
 //@Seed("84527677CF03B566:A6FF596BDDB2D59D")
+@Seed("1CD6F48E8CA53BD1:379C5BDEB3A02ACB")
 public class MergingDigestTest extends TDigestTest {
     @BeforeClass
     public static void setup() throws IOException {
