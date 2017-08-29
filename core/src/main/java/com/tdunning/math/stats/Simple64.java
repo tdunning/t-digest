@@ -29,20 +29,21 @@ import java.nio.LongBuffer;
  * in the following table:
  * <table>
  * <tr><th>Code</th><th>Arrangement</th></tr>
- * <tr><td>14</td>  </td><td>1 X 60BITS</tr>
- * <tr><td>13</td>  </td><td>2 X 30BITS</tr>
- * <tr><td>12</td>  </td><td>3 X 20BITS</tr>
- * <tr><td>11</td>  </td><td>4 X 15BITS</tr>
- * <tr><td>10</td>  </td><td>5 X 12BITS</tr>
- * <tr><td>9</td>  </td><td>6 X 10BITS</tr>
- * <tr><td>8</td>  </td><td> 7 X 8BITS</tr>
- * <tr><td>7</td>   </td><td> 8 X 7BITS </tr>
- * <tr><td>6</td>  </td><td>10 X 6BITS</tr>
- * <tr><td>5</td>  </td><td>12 X 5BITS</tr>
- * <tr><td>4</td>  </td><td>15 X 4BITS</tr>
- * <tr><td>3</td>  </td><td>20 X 3BITS</tr>
- * <tr><td>2</td>  </td><td>30 X 2BITS</tr>
- * <tr><td>1</td>  </td><td>60 X 1BITS</tr>
+ * <tr><td>14</td> <td>1 X 60BITS</tr>
+ * <tr><td>13</td> <td>2 X 30BITS</tr>
+ * <tr><td>12</td> <td>3 X 20BITS</tr>
+ * <tr><td>11</td> <td>4 X 15BITS</tr>
+ * <tr><td>10</td> <td>5 X 12BITS</tr>
+ * <tr><td>9</td>  <td>6 X 10BITS</tr>
+ * <tr><td>8</td>  <td> 7 X 8BITS</tr>
+ * <tr><td>7</td>  <td> 8 X 7BITS </tr>
+ * <tr><td>6</td>  <td>10 X 6BITS</tr>
+ * <tr><td>5</td>  <td>12 X 5BITS</tr>
+ * <tr><td>4</td>  <td>15 X 4BITS</tr>
+ * <tr><td>3</td>  <td>20 X 3BITS</tr>
+ * <tr><td>2</td>  <td>30 X 2BITS</tr>
+ * <tr><td>1</td>  <td>60 X 1BITS</tr>
+ * <caption>Size codes for Simple64 compression</caption>
  * </table>
  */
 public class Simple64 {

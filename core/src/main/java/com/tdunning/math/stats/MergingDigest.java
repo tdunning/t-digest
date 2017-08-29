@@ -28,12 +28,12 @@ import java.util.List;
 /**
  * Maintains a t-digest by collecting new points in a buffer that is then sorted occasionally and merged
  * into a sorted array that contains previously computed centroids.
- * <p/>
+ *
  * This can be very fast because the cost of sorting and merging is amortized over several insertion. If
  * we keep N centroids total and have the input array is k long, then the amortized cost is something like
- * <p/>
+ *
  * N/k + log k
- * <p/>
+ *
  * These costs even out when N/k = log k.  Balancing costs is often a good place to start in optimizing an
  * algorithm.  For different values of compression factor, the following table shows estimated asymptotic
  * values of N and suggested values of k:
@@ -46,15 +46,16 @@ import java.util.List;
  * <tr><td>100</td><td>157</td><td>42</td></tr>
  * <tr><td>200</td><td>314</td><td>73</td></tr>
  * </tbody>
+ * <caption>Sizing considerations for t-digest</caption>
  * </table>
- * <p/>
+ *
  * The virtues of this kind of t-digest implementation include:
  * <ul>
  * <li>No allocation is required after initialization</li>
  * <li>The data structure automatically compresses existing centroids when possible</li>
  * <li>No Java object overhead is incurred for centroids since data is kept in primitive arrays</li>
  * </ul>
- * <p/>
+ *
  * The current implementation takes the liberty of using ping-pong buffers for implementing the merge resulting
  * in a substantial memory penalty, but the complexity of an in place merge was not considered as worthwhile
  * since even with the overhead, the memory cost is less than 40 bytes per centroid which is much less than half
@@ -451,7 +452,7 @@ public class MergingDigest extends AbstractTDigest {
      * scale range more than one should be split across more than one centroid if
      * possible.  This won't be possible if the quantile range refers to a single point
      * or an already existing centroid.
-     * <p/>
+     *
      * This mapping is steep near q=0 or q=1 so each centroid there will correspond to
      * less q range.  Near q=0.5, the mapping is flatter so that centroids there will
      * represent a larger chunk of quantiles.

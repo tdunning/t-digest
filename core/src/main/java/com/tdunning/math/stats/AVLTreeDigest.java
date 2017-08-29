@@ -250,7 +250,7 @@ public class AVLTreeDigest extends AbstractTDigest {
 
     /**
      * @param q The quantile desired.  Can be in the range [0,1].
-     * @return The minimum value x such that we think that the proportion of samples is <= x is q.
+     * @return The minimum value x such that we think that the proportion of samples is &le; x is q.
      */
     @Override
     public double quantile(double q) {
@@ -376,6 +376,7 @@ public class AVLTreeDigest extends AbstractTDigest {
     /**
      * Reads a histogram from a byte buffer
      *
+     * @param buf The buffer to read from.
      * @return The new histogram structure
      */
     @SuppressWarnings("WeakerAccess")

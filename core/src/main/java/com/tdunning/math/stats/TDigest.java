@@ -31,7 +31,7 @@ import java.util.List;
  *
  * - works on doubles as well as integers.
  *
- * - provides part per million accuracy for extreme quantiles and typically <1000 ppm accuracy for middle quantiles
+ * - provides part per million accuracy for extreme quantiles and typically &lt;1000 ppm accuracy for middle quantiles
  *
  * - fast
  *
@@ -77,7 +77,7 @@ public abstract class TDigest implements Serializable {
      *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
      * @return the TDigest
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "WeakerAccess", "SameParameterValue"})
     public static TDigest createDigest(double compression) {
         return createMergingDigest(compression);
     }
@@ -103,7 +103,7 @@ public abstract class TDigest implements Serializable {
      * perversely ordered, this may be a good idea.  Even if not, this may save 20% or so in space.
      *
      * The cost is roughly the same as adding as many data points as there are centroids.  This
-     * is typically < 10 * compression, but could be as high as 100 * compression.
+     * is typically &lt; 10 * compression, but could be as high as 100 * compression.
      *
      * This is a destructive operation that is not thread-safe.
      */
@@ -117,7 +117,10 @@ public abstract class TDigest implements Serializable {
     public abstract long size();
 
     /**
-     * Returns the fraction of all points added which are <= x.
+     * Returns the fraction of all points added which are &le; x.
+     *
+     * @param x The cutoff for the cdf.
+     * @return The fraction of all data which is less or equal to x.
      */
     public abstract double cdf(double x);
 

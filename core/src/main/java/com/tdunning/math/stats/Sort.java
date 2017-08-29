@@ -28,6 +28,7 @@ public class Sort {
      * @param order  Indexes into values
      * @param values The values to sort.
      */
+    @SuppressWarnings("WeakerAccess")
     public static void sort(int[] order, double[] values) {
         sort(order, values, values.length);
     }
@@ -40,6 +41,7 @@ public class Sort {
      * @param values The values to sort.
      * @param n      The number of values to sort
      */
+    @SuppressWarnings("WeakerAccess")
     public static void sort(int[] order, double[] values, int n) {
         for (int i = 0; i < n; i++) {
             order[i] = i;
@@ -188,6 +190,14 @@ public class Sort {
 
     /**
      * Check that a partition step was done correctly.  For debugging and testing.
+     *
+     * @param order      The array of indexes representing a permutation of the keys.
+     * @param values     The keys to sort.
+     * @param pivotValue The value that splits the data
+     * @param start      The beginning of the data of interest.
+     * @param low        Values from start (inclusive) to low (exclusive) are &lt; pivotValue.
+     * @param high       Values from low to high are equal to the pivot.
+     * @param end        Values from high to end are above the pivot.
      */
     @SuppressWarnings("UnusedDeclaration")
     public static void checkPartition(int[] order, double[] values, double pivotValue, int start, int low, int high, int end) {
@@ -228,6 +238,7 @@ public class Sort {
      * @param values The values we are sorting
      * @param limit  The largest amount of disorder
      */
+    @SuppressWarnings("SameParameterValue")
     private static void insertionSort(int[] order, double[] values, int n, int limit) {
         for (int i = 1; i < n; i++) {
             int t = order[i];
