@@ -29,16 +29,11 @@ import java.nio.LongBuffer;
  * in base-2 floating point representation space. This is close
  * to exponential binning, but should be much faster.
  */
-public class FloatHistogram implements Serializable {
-    private long[] counts;
-    private double min;
-    private double max;
+public class FloatHistogram extends Histogram {
     private int bitsOfPrecision;
     private int shift;
     private int offset;
 
-    FloatHistogram() {
-    }
 
     @SuppressWarnings("WeakerAccess")
     public FloatHistogram(double min, double max) {
@@ -47,6 +42,7 @@ public class FloatHistogram implements Serializable {
 
     @SuppressWarnings("WeakerAccess")
     public FloatHistogram(double min, double max, double binsPerDecade) {
+        super(min, max);
         if (max <= 2 * min) {
             throw new IllegalArgumentException(String.format("Illegal/nonsensical min, max (%.2f, %.2g)", min, max));
         }
@@ -59,9 +55,6 @@ public class FloatHistogram implements Serializable {
                             binsPerDecade));
         }
 
-        this.min = min;
-        this.max = max;
-
         // convert binsPerDecade into bins per octave, then figure out how many bits that takes
         bitsOfPrecision = (int) Math.ceil(Math.log(binsPerDecade * Math.log10(2)) / Math.log(2));
         // we keep just the required amount of the mantissa
@@ -69,54 +62,23 @@ public class FloatHistogram implements Serializable {
         // The exponent in a floating point number is offset
         offset = 0x3ff << bitsOfPrecision;
 
-        int binCount = bucketIndex(max) + 1;
-        if (binCount > 10000) {
-            throw new IllegalArgumentException(
-                    String.format("Excessive number of bins %d resulting from min,max,binsPerDecade = %.2g, %.2g, %.2g",
-                            binCount, min, max, binsPerDecade));
-
-        }
-        counts = new long[binCount];
+        setupBins(min, max);
     }
 
-    // exposed for testing
-    int bucket(double x) {
-        if (x <= min) {
-            return 0;
-        } else if (x >= max) {
-            return counts.length - 1;
-        } else {
-            return bucketIndex(x);
-        }
-    }
-
-    private int bucketIndex(double x) {
+    @Override
+    protected int bucketIndex(double x) {
         x = x / min;
         long floatBits = Double.doubleToLongBits(x);
         return (int) (floatBits >>> shift) - offset;
     }
 
-    private double lowerBound(int k) {
+    // exposed for testing
+    @Override
+    double lowerBound(int k) {
         return min * Double.longBitsToDouble((k + (0x3ffL << bitsOfPrecision)) << (52 - bitsOfPrecision)) /* / fuzz */;
     }
 
-    public void add(double v) {
-        counts[bucket(v)]++;
-    }
-
-    @SuppressWarnings("WeakerAccess")
-    public double[] getBounds() {
-        double[] r = new double[counts.length];
-        for (int i = 0; i < r.length; i++) {
-            r[i] = lowerBound(i);
-        }
-        return r;
-    }
-
-    public long[] getCounts() {
-        return counts;
-    }
-
+    @Override
     @SuppressWarnings("WeakerAccess")
     public long[] getCompressedCounts() {
         LongBuffer buf = LongBuffer.allocate(counts.length);
@@ -127,6 +89,7 @@ public class FloatHistogram implements Serializable {
         return r;
     }
 
+    @Override
     @SuppressWarnings("WeakerAccess")
     public void writeObject(java.io.ObjectOutputStream out) throws IOException {
         out.writeDouble(min);
@@ -145,6 +108,7 @@ public class FloatHistogram implements Serializable {
         out.write(r);
     }
 
+    @Override
     @SuppressWarnings("WeakerAccess")
     public void readObject(java.io.ObjectInputStream in) throws IOException {
         min = in.readDouble();

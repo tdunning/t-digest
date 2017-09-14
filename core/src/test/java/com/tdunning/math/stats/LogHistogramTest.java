@@ -21,26 +21,61 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
-public class FloatHistogramTest extends HistogramTest {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class LogHistogramTest extends HistogramTest {
     @Before
     public void setup() {
-        useLinearBuckets = true;
+        useLinearBuckets = false;
         factory = new HistogramFactory() {
             @Override
             public Histogram create(double min, double max) {
-                return new FloatHistogram(min, max);
+                return new LogHistogram(min, max, 0.05);
             }
         };
     }
 
+
+    @Test
+    public void testApproxLog() {
+        double x = 1e-6;
+        for (int i = 0; i < 1000; i++) {
+            assertEquals(Math.log(x) / Math.log(2), LogHistogram.approxLog2(x), 0.01);
+            x *= 1.0 + Math.PI / 100.0;
+        }
+        assertTrue("Insufficient range", x > 1e6);
+    }
+
+    @Test
+    public void testInverse() throws Exception {
+        for (double x = 0.001; x <= 100; x += 1e-3) {
+            double log = LogHistogram.approxLog2(x);
+            double roundTrip = LogHistogram.pow2(log);
+            assertEquals(x, roundTrip, 1e-13);
+        }
+
+    }
+
     @Test
     public void testBins() {
-        super.testBins(79, 141, new FloatHistogram(10e-6, 5, 20));
+        super.testBins(72, 129, new LogHistogram(10e-6, 5, 0.1));
     }
 
     @Test
     public void testLinear() throws FileNotFoundException {
-        super.doLinear(165.4, 18, 212);
+        super.doLinear(146, 17, 189);
+    }
+
+    @Override
+    public void testCompression() {
+        //ignore
+    }
+
+    @Override
+    public void testSerialization() throws IOException, ClassNotFoundException {
+        //ignore
     }
 }

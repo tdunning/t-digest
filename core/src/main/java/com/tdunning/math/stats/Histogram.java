@@ -17,29 +17,78 @@
 
 package com.tdunning.math.stats;
 
+import java.io.IOException;
+import java.io.Serializable;
+
 /**
- * Abstract class that describes how a Histogram should work.
+ * A Histogram is a histogram with cleverly chosen, but fixed, bin widths.
+ *
+ * Different implementations may provide better or worse speed or space complexity,
+ * but each is attuned to a particular distribution or error metric.
  */
-public abstract class Histogram {
-    public Histogram(double min, double max, double binsPerDecade) {
-        if (max <= 2 * min) {
-            throw new IllegalArgumentException(String.format("Illegal/nonsensical min,max (%.2f, %.2g)", min, max));
-        }
-        if (min <= 0 || max <= 0) {
-            throw new IllegalArgumentException("Min and max must be positive");
-        }
-        if (binsPerDecade < 5 || binsPerDecade > 10000) {
+@SuppressWarnings("WeakerAccess")
+public abstract class Histogram implements Serializable {
+    protected long[] counts;
+    protected double min;
+    protected double max;
+    protected double logFactor;
+    protected double logOffset;
+
+    public Histogram(double min, double max) {
+        this.min = min;
+        this.max = max;
+    }
+
+    protected void setupBins(double min, double max) {
+        int binCount = bucketIndex(max) + 1;
+        if (binCount > 10000) {
             throw new IllegalArgumentException(
-                    String.format("Unreasonable number of bins per decade %.2g. Expected value in range [5,10000]",
-                            binsPerDecade));
+                    String.format("Excessive number of bins %d resulting from min,max = %.2g, %.2g",
+                            binCount, min, max));
+
+        }
+        counts = new long[binCount];
+    }
+
+    public void add(double v) {
+        counts[bucket(v)]++;
+    }
+
+    @SuppressWarnings("WeakerAccess")
+    public double[] getBounds() {
+        double[] r = new double[counts.length];
+        for (int i = 0; i < r.length; i++) {
+            r[i] = lowerBound(i);
+        }
+        return r;
+    }
+
+    public long[] getCounts() {
+        return counts;
+    }
+
+    // exposed for testing
+    int bucket(double x) {
+        if (x <= min) {
+            return 0;
+        } else if (x >= max) {
+            return counts.length - 1;
+        } else {
+            return bucketIndex(x);
         }
     }
 
-    abstract void add(double v);
+    protected abstract int bucketIndex(double x);
 
-    abstract double[] getBounds();
+    // exposed for testing
+    abstract double lowerBound(int k);
 
-    abstract long[] getCounts();
-
+    @SuppressWarnings("WeakerAccess")
     abstract long[] getCompressedCounts();
+
+    @SuppressWarnings("WeakerAccess")
+    abstract void writeObject(java.io.ObjectOutputStream out) throws IOException;
+
+    @SuppressWarnings("WeakerAccess")
+    abstract void readObject(java.io.ObjectInputStream in) throws IOException;
 }

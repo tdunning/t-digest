@@ -9,4 +9,3 @@ cache:
     - '$HOME/.m2/repository'
 
 install: /bin/true
-
