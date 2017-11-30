@@ -373,6 +373,11 @@ public class AVLTreeDigest extends AbstractTDigest {
         }
     }
 
+    @Override
+    public TDigest getFromBytes(ByteBuffer buf) {
+        return AVLTreeDigest.fromBytes(buf);
+    }
+
     /**
      * Reads a histogram from a byte buffer
      *

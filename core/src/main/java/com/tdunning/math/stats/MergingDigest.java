@@ -805,6 +805,11 @@ public class MergingDigest extends AbstractTDigest {
         }
     }
 
+    @Override
+    public TDigest getFromBytes(ByteBuffer buf) {
+        return MergingDigest.fromBytes(buf);
+    }
+
     @SuppressWarnings("WeakerAccess")
     public static MergingDigest fromBytes(ByteBuffer buf) {
         int encoding = buf.getInt();

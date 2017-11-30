@@ -185,6 +185,14 @@ public abstract class TDigest implements Serializable {
     public abstract void asSmallBytes(ByteBuffer buf);
 
     /**
+     * Deserializes the TDigest object from given byte buffer.
+     * @param buf The byte buffer into which the TDigest should be deserialized.
+     * @return A new TDigest object deserialized from byte buffer. Note that
+     * <ITALIC>this</ITALIC> TDigest remains intact
+     */
+    public abstract TDigest getFromBytes(ByteBuffer buf);
+
+    /**
      * Tell this TDigest to record the original data as much as possible for test
      * purposes.
      *
