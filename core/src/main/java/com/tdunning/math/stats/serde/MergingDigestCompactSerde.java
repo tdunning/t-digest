@@ -8,9 +8,13 @@ import java.nio.ByteBuffer;
 
 public class MergingDigestCompactSerde {
 
+  public static int byteSize(int centroids) {
+    return (centroids * 8) + 30;
+  }
+
   public static void serialize(MergingDigest digest, ByteBuffer buf) {
     DigestModel model = digest.toModel();
-    buf.putInt(2);
+    buf.putInt(Encoding.COMPACT.code());
     buf.putDouble(model.min());                          // + 8
     buf.putDouble(model.max());                          // + 8
     buf.putFloat((float) model.compression());           // + 4
@@ -27,7 +31,7 @@ public class MergingDigestCompactSerde {
   }
 
   public static MergingDigest deserialize(ByteBuffer buf) {
-    boolean compactEncoding = buf.getInt() == 2;
+    boolean compactEncoding = buf.getInt() == Encoding.COMPACT.code();
     if (!compactEncoding) {
       throw new IllegalArgumentException("Serialization was not done using compact encoding, cannot deserialize");
     }

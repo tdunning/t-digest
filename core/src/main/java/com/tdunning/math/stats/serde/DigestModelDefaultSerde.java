@@ -1,14 +1,17 @@
 package com.tdunning.math.stats.serde;
 
 import com.tdunning.math.stats.DigestModel;
-import com.tdunning.math.stats.TDigest;
 
 import java.nio.ByteBuffer;
 
 public class DigestModelDefaultSerde {
 
+  public static int byteSize(int centroids) {
+    return (centroids * 16) + 32;
+  }
+
   public static void serialize(DigestModel model, ByteBuffer buf) {
-    buf.putInt(1);
+    buf.putInt(Encoding.VERBOSE.code());
     buf.putDouble(model.min());
     buf.putDouble(model.max());
     buf.putDouble(model.compression());
@@ -22,7 +25,7 @@ public class DigestModelDefaultSerde {
   }
 
   public static DigestModel deserialize(ByteBuffer buf) {
-    boolean verboseEncoding = buf.getInt() == 1;
+    boolean verboseEncoding = buf.getInt() == Encoding.VERBOSE.code();
     if (!verboseEncoding) {
       throw new IllegalArgumentException("Serialization was not done using verbose encoding, cannot deserialize");
     }

@@ -7,9 +7,17 @@ import java.nio.ByteBuffer;
 
 public class AVLTreeDigestCompactSerde {
 
+  public static int byteSize(AVLTreeDigest digest) {
+    DigestModel model = digest.toModel();
+    int bound = DigestModelDefaultSerde.byteSize(model.centroidCount());
+    ByteBuffer buf = ByteBuffer.allocate(bound);
+    serialize(digest, buf);
+    return buf.position();
+  }
+
   public static void serialize(AVLTreeDigest digest, ByteBuffer buf) {
     DigestModel model = digest.toModel();
-    buf.putInt(2);
+    buf.putInt(Encoding.COMPACT.code());
     buf.putDouble(model.min());
     buf.putDouble(model.max());
     buf.putDouble(model.compression());
@@ -27,7 +35,7 @@ public class AVLTreeDigestCompactSerde {
   }
 
   public static AVLTreeDigest deserialize(ByteBuffer buf) {
-    boolean compactEncoding = buf.getInt() == 2;
+    boolean compactEncoding = buf.getInt() == Encoding.COMPACT.code();
     if (!compactEncoding) {
       throw new IllegalArgumentException("Serialization was not done using compact encoding, cannot deserialize");
     }
