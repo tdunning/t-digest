@@ -17,6 +17,8 @@
 
 package com.tdunning.math.stats;
 
+import com.tdunning.math.stats.serde.AVLTreeDigestCompactSerde;
+
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
@@ -369,7 +371,7 @@ public class AVLTreeDigest extends AbstractTDigest {
 
         for (Centroid centroid : summary) {
             int n = centroid.count();
-            encode(buf, n);
+            AVLTreeDigestCompactSerde.encodeInt(buf, n);
         }
     }
 
@@ -413,7 +415,7 @@ public class AVLTreeDigest extends AbstractTDigest {
             }
 
             for (int i = 0; i < n; i++) {
-                int z = decode(buf);
+                int z = AVLTreeDigestCompactSerde.decodeInt(buf);
                 r.add(means[i], z);
             }
             return r;
@@ -422,4 +424,36 @@ public class AVLTreeDigest extends AbstractTDigest {
         }
     }
 
+    public DigestModel toModel() {
+        double[] positions = new double[summary.size()];
+        double[] weights = new double[summary.size()];
+        int i = 0;
+        for (Centroid centroid : summary) {
+            positions[i] = centroid.mean();
+            weights[i] = centroid.count();
+            i++;
+        }
+        return new DigestModel(compression, min, max, i, positions, weights);
+    }
+
+    public static AVLTreeDigest fromModel(DigestModel model) {
+        AVLTreeDigest r = new AVLTreeDigest(model.compression());
+        r.setMinMax(model.min(), model.max());
+        double[] mean = model.centroidPositions();
+        double[] weight = model.centroidWeights();
+
+        if(model.compactEncoding()) {
+            double x = 0;
+            for (int i = 0; i < model.centroidCount(); i++) {
+                x += mean[i];
+                mean[i] = x;
+                r.add(mean[i], (int) weight[i]);
+            }
+        } else {
+            for (int i = 0; i < model.centroidCount(); i++) {
+                r.add(mean[i], (int) weight[i]);
+            }
+        }
+        return r;
+    }
 }

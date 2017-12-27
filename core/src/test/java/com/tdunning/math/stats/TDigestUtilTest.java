@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Random;
 
+import com.tdunning.math.stats.serde.AVLTreeDigestCompactSerde;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
@@ -36,13 +37,13 @@ public class TDigestUtilTest extends AbstractTest {
             int n = gen.nextInt();
             n = n >>> (i / 100);
             ref.add(n);
-            AbstractTDigest.encode(buf, n);
+            AVLTreeDigestCompactSerde.encodeInt(buf, n);
         }
 
         buf.flip();
 
         for (int i = 0; i < 3000; i++) {
-            int n = AbstractTDigest.decode(buf);
+            int n = AVLTreeDigestCompactSerde.decodeInt(buf);
             assertEquals(String.format("%d:", i), ref.get(i).intValue(), n);
         }
     }

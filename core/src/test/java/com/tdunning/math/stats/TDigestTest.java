@@ -20,6 +20,7 @@ package com.tdunning.math.stats;
 import com.clearspring.analytics.stream.quantile.QDigest;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.tdunning.math.stats.serde.AVLTreeDigestCompactSerde;
 import org.apache.mahout.common.RandomUtils;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
@@ -732,13 +733,13 @@ public abstract class TDigestTest extends AbstractTest {
             int n = gen.nextInt();
             n = n >>> (i / 100);
             ref.add(n);
-            AbstractTDigest.encode(buf, n);
+            AVLTreeDigestCompactSerde.encodeInt(buf, n);
         }
 
         buf.flip();
 
         for (int i = 0; i < 3000; i++) {
-            int n = AbstractTDigest.decode(buf);
+            int n = AVLTreeDigestCompactSerde.decodeInt(buf);
             assertEquals(String.format("%d:", i), ref.get(i).intValue(), n);
         }
     }

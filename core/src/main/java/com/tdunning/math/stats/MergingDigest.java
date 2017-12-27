@@ -844,4 +844,29 @@ public class MergingDigest extends AbstractTDigest {
         }
 
     }
+
+    public DigestModel toModel() {
+        compress();
+        return new DigestModel(compression, min, max, lastUsedCell, mean, weight, mean.length, tempMean.length);
+    }
+
+    public static MergingDigest fromModel(DigestModel model) {
+        MergingDigest r;
+        if(model.compactEncoding()) {
+            r = new MergingDigest(model.compression(), model.tempBufferSize(), model.mainBufferSize());
+        } else {
+            r = new MergingDigest(model.compression());
+        }
+
+        r.setMinMax(model.min(), model.max());
+        r.lastUsedCell = model.centroidCount();
+        double[] mean = model.centroidPositions();
+        double[] weight = model.centroidWeights();
+        for (int i = 0;i < model.centroidCount();i++) {
+            r.mean[i] = mean[i];
+            r.weight[i] = weight[i];
+            r.totalWeight += weight[i];
+        }
+        return r;
+    }
 }
