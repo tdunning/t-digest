@@ -185,6 +185,13 @@ public abstract class TDigest implements Serializable {
     public abstract void asSmallBytes(ByteBuffer buf);
 
     /**
+     * Returns final representation of the digest as a plain data structure
+     * Can be used for serde, inter-conversion, etc
+     * @return DigestModel which captures minimum required fields for representing the digest accurately
+     */
+    public abstract DigestModel toModel();
+
+    /**
      * Tell this TDigest to record the original data as much as possible for test
      * purposes.
      *

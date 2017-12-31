@@ -17,6 +17,9 @@
 
 package com.tdunning.math.stats;
 
+import com.tdunning.math.stats.serde.DigestModelDefaultSerde;
+import com.tdunning.math.stats.serde.MergingDigestCompactSerde;
+
 import java.nio.ByteBuffer;
 import java.util.AbstractCollection;
 import java.util.ArrayList;
@@ -752,96 +755,60 @@ public class MergingDigest extends AbstractTDigest {
     @Override
     public int byteSize() {
         compress();
-        // format code, compression(float), buffer-size(int), temp-size(int), #centroids-1(int),
-        // then two doubles per centroid
-        return lastUsedCell * 16 + 32;
+        return DigestModelDefaultSerde.byteSize(lastUsedCell);
     }
 
     @Override
     public int smallByteSize() {
         compress();
-        // format code(int), compression(float), buffer-size(short), temp-size(short), #centroids-1(short),
-        // then two floats per centroid
-        return lastUsedCell * 8 + 30;
-    }
-
-    public enum Encoding {
-        VERBOSE_ENCODING(1), SMALL_ENCODING(2);
-
-        private final int code;
-
-        Encoding(int code) {
-            this.code = code;
-        }
+        return MergingDigestCompactSerde.byteSize(lastUsedCell);
     }
 
     @Override
     public void asBytes(ByteBuffer buf) {
         compress();
-        buf.putInt(Encoding.VERBOSE_ENCODING.code);
-        buf.putDouble(min);
-        buf.putDouble(max);
-        buf.putDouble(compression);
-        buf.putInt(lastUsedCell);
-        for (int i = 0; i < lastUsedCell; i++) {
-            buf.putDouble(weight[i]);
-            buf.putDouble(mean[i]);
-        }
+        DigestModelDefaultSerde.serialize(toModel(), buf);
     }
 
     @Override
     public void asSmallBytes(ByteBuffer buf) {
         compress();
-        buf.putInt(Encoding.SMALL_ENCODING.code);    // 4
-        buf.putDouble(min);                          // + 8
-        buf.putDouble(max);                          // + 8
-        buf.putFloat((float) compression);           // + 4
-        buf.putShort((short) mean.length);           // + 2
-        buf.putShort((short) tempMean.length);       // + 2
-        buf.putShort((short) lastUsedCell);          // + 2 = 30
-        for (int i = 0; i < lastUsedCell; i++) {
-            buf.putFloat((float) weight[i]);
-            buf.putFloat((float) mean[i]);
-        }
+        MergingDigestCompactSerde.serialize(this, buf);
     }
 
     @SuppressWarnings("WeakerAccess")
     public static MergingDigest fromBytes(ByteBuffer buf) {
-        int encoding = buf.getInt();
-        if (encoding == Encoding.VERBOSE_ENCODING.code) {
-            double min = buf.getDouble();
-            double max = buf.getDouble();
-            double compression = buf.getDouble();
-            int n = buf.getInt();
-            MergingDigest r = new MergingDigest(compression);
-            r.setMinMax(min, max);
-            r.lastUsedCell = n;
-            for (int i = 0; i < n; i++) {
-                r.weight[i] = buf.getDouble();
-                r.mean[i] = buf.getDouble();
+        try {
+            DigestModel digestModel = DigestModelDefaultSerde.deserialize(buf);
+            return fromModel(digestModel);
+        } catch (IllegalArgumentException ex) {
+            buf.rewind(); //reset the buf position to enable read from start
+            return MergingDigestCompactSerde.deserialize(buf);
+        }
+    }
 
-                r.totalWeight += r.weight[i];
-            }
-            return r;
-        } else if (encoding == Encoding.SMALL_ENCODING.code) {
-            double min = buf.getDouble();
-            double max = buf.getDouble();
-            double compression = buf.getFloat();
-            int n = buf.getShort();
-            int bufferSize = buf.getShort();
-            MergingDigest r = new MergingDigest(compression, bufferSize, n);
-            r.setMinMax(min, max);
-            r.lastUsedCell = buf.getShort();
-            for (int i = 0; i < r.lastUsedCell; i++) {
-                r.weight[i] = buf.getFloat();
-                r.mean[i] = buf.getFloat();
+    public DigestModel toModel() {
+        compress();
+        return new DigestModel(compression, min, max, lastUsedCell, mean, weight, mean.length, tempMean.length);
+    }
 
-                r.totalWeight += r.weight[i];
-            }
-            return r;
+    public static MergingDigest fromModel(DigestModel model) {
+        MergingDigest r;
+        if(model.compactEncoding()) {
+            r = new MergingDigest(model.compression(), model.tempBufferSize(), model.mainBufferSize());
         } else {
-            throw new IllegalStateException("Invalid format for serialized histogram");
+            r = new MergingDigest(model.compression());
         }
 
+        r.setMinMax(model.min(), model.max());
+        r.lastUsedCell = model.centroidCount();
+        double[] mean = model.centroidPositions();
+        double[] weight = model.centroidWeights();
+        for (int i = 0;i < model.centroidCount();i++) {
+            r.mean[i] = mean[i];
+            r.weight[i] = weight[i];
+            r.totalWeight += weight[i];
+        }
+        return r;
     }
 }

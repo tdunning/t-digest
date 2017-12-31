@@ -17,6 +17,9 @@
 
 package com.tdunning.math.stats;
 
+import com.tdunning.math.stats.serde.AVLTreeDigestCompactSerde;
+import com.tdunning.math.stats.serde.DigestModelDefaultSerde;
+
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
@@ -315,7 +318,7 @@ public class AVLTreeDigest extends AbstractTDigest {
      */
     @Override
     public int byteSize() {
-        return 32 + summary.size() * 12;
+        return DigestModelDefaultSerde.byteSize(summary.size());
     }
 
     /**
@@ -324,53 +327,20 @@ public class AVLTreeDigest extends AbstractTDigest {
      */
     @Override
     public int smallByteSize() {
-        int bound = byteSize();
-        ByteBuffer buf = ByteBuffer.allocate(bound);
-        asSmallBytes(buf);
-        return buf.position();
+        return AVLTreeDigestCompactSerde.byteSize(this);
     }
-
-    private final static int VERBOSE_ENCODING = 1;
-    private final static int SMALL_ENCODING = 2;
 
     /**
      * Outputs a histogram as bytes using a particularly cheesy encoding.
      */
     @Override
     public void asBytes(ByteBuffer buf) {
-        buf.putInt(VERBOSE_ENCODING);
-        buf.putDouble(min);
-        buf.putDouble(max);
-        buf.putDouble((float) compression());
-        buf.putInt(summary.size());
-        for (Centroid centroid : summary) {
-            buf.putDouble(centroid.mean());
-        }
-
-        for (Centroid centroid : summary) {
-            buf.putInt(centroid.count());
-        }
+        DigestModelDefaultSerde.serialize(toModel(), buf);
     }
 
     @Override
     public void asSmallBytes(ByteBuffer buf) {
-        buf.putInt(SMALL_ENCODING);
-        buf.putDouble(min);
-        buf.putDouble(max);
-        buf.putDouble(compression());
-        buf.putInt(summary.size());
-
-        double x = 0;
-        for (Centroid centroid : summary) {
-            double delta = centroid.mean() - x;
-            x = centroid.mean();
-            buf.putFloat((float) delta);
-        }
-
-        for (Centroid centroid : summary) {
-            int n = centroid.count();
-            encode(buf, n);
-        }
+        AVLTreeDigestCompactSerde.serialize(this, buf);
     }
 
     /**
@@ -381,45 +351,36 @@ public class AVLTreeDigest extends AbstractTDigest {
      */
     @SuppressWarnings("WeakerAccess")
     public static AVLTreeDigest fromBytes(ByteBuffer buf) {
-        int encoding = buf.getInt();
-        if (encoding == VERBOSE_ENCODING) {
-            double min = buf.getDouble();
-            double max = buf.getDouble();
-            double compression = buf.getDouble();
-            AVLTreeDigest r = new AVLTreeDigest(compression);
-            r.setMinMax(min, max);
-            int n = buf.getInt();
-            double[] means = new double[n];
-            for (int i = 0; i < n; i++) {
-                means[i] = buf.getDouble();
-            }
-            for (int i = 0; i < n; i++) {
-                r.add(means[i], buf.getInt());
-            }
-            return r;
-        } else if (encoding == SMALL_ENCODING) {
-            double min = buf.getDouble();
-            double max = buf.getDouble();
-            double compression = buf.getDouble();
-            AVLTreeDigest r = new AVLTreeDigest(compression);
-            r.setMinMax(min, max);
-            int n = buf.getInt();
-            double[] means = new double[n];
-            double x = 0;
-            for (int i = 0; i < n; i++) {
-                double delta = buf.getFloat();
-                x += delta;
-                means[i] = x;
-            }
-
-            for (int i = 0; i < n; i++) {
-                int z = decode(buf);
-                r.add(means[i], z);
-            }
-            return r;
-        } else {
-            throw new IllegalStateException("Invalid format for serialized histogram");
+        try {
+            DigestModel digestModel = DigestModelDefaultSerde.deserialize(buf);
+            return fromModel(digestModel);
+        } catch (IllegalArgumentException ex) {
+            buf.rewind(); //reset the buf position to enable read from start
+            return AVLTreeDigestCompactSerde.deserialize(buf);
         }
     }
 
+    public DigestModel toModel() {
+        double[] positions = new double[summary.size()];
+        double[] weights = new double[summary.size()];
+        int i = 0;
+        for (Centroid centroid : summary) {
+            positions[i] = centroid.mean();
+            weights[i] = centroid.count();
+            i++;
+        }
+        return new DigestModel(compression, min, max, i, positions, weights);
+    }
+
+    public static AVLTreeDigest fromModel(DigestModel model) {
+        AVLTreeDigest r = new AVLTreeDigest(model.compression());
+        r.setMinMax(model.min(), model.max());
+        double[] mean = model.centroidPositions();
+        double[] weight = model.centroidWeights();
+        for (int i = 0; i < model.centroidCount(); i++) {
+            r.add(mean[i], (int) weight[i]);
+        }
+
+        return r;
+    }
 }
