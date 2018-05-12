@@ -19,12 +19,50 @@ package com.tdunning.math.stats;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Random;
 
+import static org.junit.Assert.assertEquals;
+
 public class SortTest {
+    @Test
+    public void testReverse() throws Exception {
+        int[] x = new int[0];
+
+        // don't crash with no input
+        Sort.reverse(x);
+
+        // reverse stuff!
+        x = new int[]{1, 2, 3, 4, 5};
+        Sort.reverse(x);
+        for (int i = 0; i < 5; i++) {
+            assertEquals(5 - i, x[i]);
+        }
+
+        // reverse some stuff back
+        Sort.reverse(x, 1, 3);
+        assertEquals(5, x[0]);
+        assertEquals(2, x[1]);
+        assertEquals(3, x[2]);
+        assertEquals(4, x[3]);
+        assertEquals(1, x[4]);
+
+        // another no-op
+        Sort.reverse(x, 3, 0);
+        assertEquals(5, x[0]);
+        assertEquals(2, x[1]);
+        assertEquals(3, x[2]);
+        assertEquals(4, x[3]);
+        assertEquals(1, x[4]);
+
+        x = new int[]{1, 2, 3, 4, 5, 6};
+        Sort.reverse(x);
+        for (int i = 0; i < 6; i++) {
+            assertEquals(6 - i, x[i]);
+        }
+    }
+
     @Test
     public void testEmpty() {
         Sort.sort(new int[]{}, new double[]{});
@@ -34,7 +72,7 @@ public class SortTest {
     public void testOne() {
         int[] order = new int[1];
         Sort.sort(order, new double[]{1});
-        Assert.assertEquals(0, order[0]);
+        assertEquals(0, order[0]);
     }
 
     @Test
@@ -149,10 +187,10 @@ public class SortTest {
             previous = v;
         }
 
-        Assert.assertEquals(order.length, counts.size());
+        assertEquals(order.length, counts.size());
 
         for (Integer count : counts) {
-            Assert.assertEquals(1, counts.count(count));
+            assertEquals(1, counts.count(count));
         }
     }
 }

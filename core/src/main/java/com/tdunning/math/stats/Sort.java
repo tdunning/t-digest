@@ -255,4 +255,43 @@ public class Sort {
             }
         }
     }
+
+    /**
+     * Reverses an array in-place.
+     * @param order The array to reverse
+     */
+    @SuppressWarnings("WeakerAccess")
+    public static void reverse(int[] order) {
+        reverse(order, 0, order.length);
+    }
+
+    /**
+     * Reverses part of an array. See {@link #reverse(int[])}
+     * @param order  The array containing the data to reverse.
+     * @param offset Where to start reversing.
+     * @param length How many elements to reverse
+     */
+    @SuppressWarnings("WeakerAccess")
+    public static void reverse(int[] order, int offset, int length) {
+        for (int i = 0; i < length / 2; i++) {
+            int t = order[offset + i];
+            order[offset + i] = order[offset + length - i - 1];
+            order[offset + length - i - 1] = t;
+        }
+    }
+
+    /**
+     * Reverses part of an array. See {@link #reverse(int[])}
+     * @param order  The array containing the data to reverse.
+     * @param offset Where to start reversing.
+     * @param length How many elements to reverse
+     */
+    @SuppressWarnings({"WeakerAccess", "SameParameterValue"})
+    public static void reverse(double[] order, int offset, int length) {
+        for (int i = 0; i < length / 2; i++) {
+            double t = order[offset + i];
+            order[offset + i] = order[offset + length - i - 1];
+            order[offset + length - i - 1] = t;
+        }
+    }
 }
