@@ -28,7 +28,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class HistogramTest {
+public class HistogramTestCases {
     boolean useLinearBuckets;
     HistogramFactory factory;
 

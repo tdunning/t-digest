@@ -22,7 +22,7 @@ import org.junit.Test;
 
 import java.io.FileNotFoundException;
 
-public class FloatHistogramTest extends HistogramTest {
+public class FloatHistogramTest extends HistogramTestCases {
     @Before
     public void setup() {
         useLinearBuckets = true;

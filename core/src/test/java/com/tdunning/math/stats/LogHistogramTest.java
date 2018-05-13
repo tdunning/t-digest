@@ -26,7 +26,7 @@ import java.io.IOException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class LogHistogramTest extends HistogramTest {
+public class LogHistogramTest extends HistogramTestCases {
     @Before
     public void setup() {
         useLinearBuckets = false;
