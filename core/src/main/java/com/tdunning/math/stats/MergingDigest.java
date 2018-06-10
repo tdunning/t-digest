@@ -678,7 +678,9 @@ public class MergingDigest extends AbstractTDigest {
         // at the boundaries, we return min or max
         if (index < weight[0] / 2) {
             assert weight[0] > 0;
-            return min + 2 * index / weight[0] * (mean[0] - min);
+            double z1 = (index / totalWeight) * weight[0];
+            double z2 = ((weight[0] / 2 - index) / totalWeight) * getWeightForMinOrMax(weight[0]);
+            return weightedAverage(min, z2, mean[0], z1);
         }
 
         // in between we interpolate between centroids
@@ -687,8 +689,8 @@ public class MergingDigest extends AbstractTDigest {
             double dw = (weight[i] + weight[i + 1]) / 2;
             if (weightSoFar + dw > index) {
                 // centroids i and i+1 bracket our current point
-                double z1 = index - weightSoFar;
-                double z2 = weightSoFar + dw - index;
+                double z1 = ((index - weightSoFar) / totalWeight) * weight[i + 1];
+                double z2 = ((weightSoFar + dw - index) / totalWeight) * weight[i];
                 return weightedAverage(mean[i], z2, mean[i + 1], z1);
             }
             weightSoFar += dw;
@@ -698,9 +700,26 @@ public class MergingDigest extends AbstractTDigest {
 
         // weightSoFar = totalWeight - weight[n-1]/2 (very nearly)
         // so we interpolate out to max value ever seen
-        double z1 = index - totalWeight - weight[n - 1] / 2.0;
-        double z2 = weight[n - 1] / 2 - z1;
+        double z1 = ((totalWeight - index) / totalWeight) * weight[n - 1];
+        double z2 = (weight[n - 1] / 2 - z1) * getWeightForMinOrMax(weight[n - 1]);
         return weightedAverage(mean[n - 1], z1, max, z2);
+    }
+
+    private double getWeightForMinOrMax(double maxWeight) {
+        return Math.min(maxWeight, centroidScaleToQuantile(1 / compression));
+    }
+
+    /**
+     * Takes a centroid scale (the centroid number) and returns the ideal
+     * starting percentile for it.
+     *
+     * @param centroidNumber the number of the centroid
+     * @return the ideal starting percentile for this centroid
+     */
+    private double centroidScaleToQuantile(double centroidNumber) {
+        double k = centroidNumber / compression;
+        double sinePrecalc = Math.sin((k*Math.PI)/2);
+        return sinePrecalc * sinePrecalc;
     }
 
     @Override

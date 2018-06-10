@@ -122,7 +122,7 @@ public class MergingDigestTest extends TDigestTest {
         td.setMinMax(0, 10);
         td.add(1);
         td.add(2);
-        td.add(5, 2);
+        td.add(5);
         td.add(6);
         td.add(9);
         td.add(10);
@@ -132,7 +132,7 @@ public class MergingDigestTest extends TDigestTest {
 
             quantiles.printf("x,q\n");
             cdfs.printf("x,q\n");
-            for (double q = 0; q < 1; q += 1e-3) {
+            for (double q = 1.0 / 12.0; q < 1; q += 1e-3) {
                 double x = td.quantile(q);
                 quantiles.printf("%.3f,%.3f\n", x, q);
 
@@ -145,7 +145,27 @@ public class MergingDigestTest extends TDigestTest {
             }
         }
 
-        assertEquals(2.0 / 7, td.cdf(3), 1e-9);
+        assertEquals(0.25 + 1.0/18.0, td.cdf(3), 1e-9);
+    }
+
+    @Test
+    public void testCloseTo1QuantileBigWeights() {
+        MergingDigest td = new MergingDigest(200);
+        td.add(1, 1);
+        td.add(2, 100);
+        td.setMinMax(0, 1000);
+        final double quantile = td.quantile(.999);
+        assertTrue("Quantile val incorrect: " + quantile, quantile < 101);
+    }
+
+    @Test
+    public void testCloseToZeroQuantileBigWeights() {
+        MergingDigest td = new MergingDigest(200);
+        td.add(1000, 100);
+        td.add(1001, 1);
+        td.setMinMax(0, 1002);
+        final double quantile = td.quantile(.001);
+        assertTrue("Quantile val incorrect: " + quantile, quantile > 999);
     }
 
     @Override
