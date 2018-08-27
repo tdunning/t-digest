@@ -28,12 +28,12 @@ import java.util.List;
 /**
  * Maintains a t-digest by collecting new points in a buffer that is then sorted occasionally and merged
  * into a sorted array that contains previously computed centroids.
- *
+ * <p>
  * This can be very fast because the cost of sorting and merging is amortized over several insertion. If
  * we keep N centroids total and have the input array is k long, then the amortized cost is something like
- *
+ * <p>
  * N/k + log k
- *
+ * <p>
  * These costs even out when N/k = log k.  Balancing costs is often a good place to start in optimizing an
  * algorithm.  For different values of compression factor, the following table shows estimated asymptotic
  * values of N and suggested values of k:
@@ -48,21 +48,22 @@ import java.util.List;
  * </tbody>
  * <caption>Sizing considerations for t-digest</caption>
  * </table>
- *
+ * <p>
  * The virtues of this kind of t-digest implementation include:
  * <ul>
  * <li>No allocation is required after initialization</li>
  * <li>The data structure automatically compresses existing centroids when possible</li>
  * <li>No Java object overhead is incurred for centroids since data is kept in primitive arrays</li>
  * </ul>
- *
+ * <p>
  * The current implementation takes the liberty of using ping-pong buffers for implementing the merge resulting
  * in a substantial memory penalty, but the complexity of an in place merge was not considered as worthwhile
  * since even with the overhead, the memory cost is less than 40 bytes per centroid which is much less than half
- * what the AVLTreeDigest uses.  Speed tests are still not complete so it is uncertain whether the merge
- * strategy is faster than the tree strategy.
+ * what the AVLTreeDigest uses and no dynamic allocation is required at all.
  */
 public class MergingDigest extends AbstractTDigest {
+    private int mergeCount = 0;
+
     private final double compression;
 
     // points to the first unused centroid
@@ -93,8 +94,27 @@ public class MergingDigest extends AbstractTDigest {
     // array used for sorting the temp centroids.  This is a field
     // to avoid allocations during operation
     private final int[] order;
-    private static boolean usePieceWiseApproximation = true;
-    private static boolean useWeightLimit = true;
+
+    // if true, alternate upward and downward merge passes
+    public static boolean useAlternatingSort = false;
+
+    // if useWeightLimit is false, this makes asin faster
+    static boolean usePieceWiseApproximation = true;
+
+    // this forces centroid merging based on size limit rather than
+    // based on accumulated k-index. This is much faster since we
+    // never have to compute any sines or square roots
+    public static boolean useWeightLimit = true;
+
+    // the conservative limit limits centroids to
+    // \delta \log(N) (q/(1-q))
+    // the non-conservative limit is
+    // \delta \sqrt {q/(1-q)}
+    // the conservative limit makes the extreme centroids smaller to
+    // get more accuracy at the edges. Both options result in the
+    // same number of centroids ... it is just that the mass is
+    // distributed differently
+    public static boolean useConservativeLimit = true;
 
     /**
      * Allocates a buffer merging t-digest.  This is the normally used constructor that
@@ -133,7 +153,7 @@ public class MergingDigest extends AbstractTDigest {
             size = (int) (2 * Math.ceil(compression));
             if (useWeightLimit) {
                 // the weight limit approach generates smaller centroids than necessary
-                // that can result in using a bit more memory than expected
+                // that can result in using a bit more memory than expected (but is faster)
                 size += 10;
             }
         }
@@ -238,7 +258,7 @@ public class MergingDigest extends AbstractTDigest {
         for (int i = 0; i < count; i++) {
             total += w[i];
         }
-        merge(m, w, count, data, null, total);
+        merge(m, w, count, data, null, total, false);
     }
 
     @Override
@@ -289,7 +309,9 @@ public class MergingDigest extends AbstractTDigest {
 
     private void mergeNewValues() {
         if (unmergedWeight > 0) {
-            merge(tempMean, tempWeight, tempUsed, tempData, order, unmergedWeight);
+            // note that we run the merge in reverse every other merge to avoid left-to-right bias in merging
+            merge(tempMean, tempWeight, tempUsed, tempData, order, unmergedWeight, useAlternatingSort & mergeCount % 2 == 1);
+            mergeCount++;
             tempUsed = 0;
             unmergedWeight = 0;
             if (data != null) {
@@ -299,7 +321,7 @@ public class MergingDigest extends AbstractTDigest {
         }
     }
 
-    private void merge(double[] incomingMean, double[] incomingWeight, int incomingCount, List<List<Double>> incomingData, int[] incomingOrder, double unmergedWeight) {
+    private void merge(double[] incomingMean, double[] incomingWeight, int incomingCount, List<List<Double>> incomingData, int[] incomingOrder, double unmergedWeight, boolean runBackwards) {
         System.arraycopy(mean, 0, incomingMean, incomingCount, lastUsedCell);
         System.arraycopy(weight, 0, incomingWeight, incomingCount, lastUsedCell);
         incomingCount += lastUsedCell;
@@ -315,9 +337,16 @@ public class MergingDigest extends AbstractTDigest {
             incomingOrder = new int[incomingCount];
         }
         Sort.sort(incomingOrder, incomingMean, incomingCount);
+        // option to run backwards is to investigate bias in errors
+        if (runBackwards) {
+            Sort.reverse(incomingOrder, 0, incomingCount);
+        }
 
         totalWeight += unmergedWeight;
-        double normalizer = compression / (Math.PI * totalWeight);
+        double normalizer = compression / (2 * Math.PI * totalWeight);
+        if (useConservativeLimit) {
+            normalizer = normalizer / Math.log(totalWeight);
+        }
 
         assert incomingCount > 0;
         lastUsedCell = 0;
@@ -343,7 +372,11 @@ public class MergingDigest extends AbstractTDigest {
                 double z = proposedWeight * normalizer;
                 double q0 = wSoFar / totalWeight;
                 double q2 = (wSoFar + proposedWeight) / totalWeight;
-                addThis = z * z <= q0 * (1 - q0) && z * z <= q2 * (1 - q2);
+                if (useConservativeLimit) {
+                    addThis = z <= q0 * (1 - q0) && z <= q2 * (1 - q2);
+                } else {
+                    addThis = z * z <= q0 * (1 - q0) && z * z <= q2 * (1 - q2);
+                }
             } else {
                 addThis = projectedW <= wLimit;
             }
@@ -367,7 +400,7 @@ public class MergingDigest extends AbstractTDigest {
                 // didn't fit ... move to next output, copy out first centroid
                 wSoFar += weight[lastUsedCell];
                 if (!useWeightLimit) {
-                    k1 = integratedLocation(wSoFar / totalWeight);
+                    k1 = integratedLocation(wSoFar / totalWeight, compression, totalWeight);
                     wLimit = totalWeight * integratedQ(k1 + 1);
                 }
 
@@ -392,6 +425,13 @@ public class MergingDigest extends AbstractTDigest {
             sum += weight[i];
         }
         assert sum == totalWeight;
+        if (runBackwards) {
+            Sort.reverse(mean, 0, lastUsedCell);
+            Sort.reverse(weight, 0, lastUsedCell);
+            if (data != null) {
+                Collections.reverse(data);
+            }
+        }
 
         if (totalWeight > 0) {
             min = Math.min(min, mean[0]);
@@ -420,7 +460,7 @@ public class MergingDigest extends AbstractTDigest {
         String header = "\n";
         for (int i = 0; i < n; i++) {
             double dq = w[i] / total;
-            double k2 = integratedLocation(q + dq);
+            double k2 = integratedLocation(q + dq, compression, totalWeight);
             q += dq / 2;
             if (k2 - k1 > 1 && w[i] != 1) {
                 System.out.printf("%sOversize centroid at " +
@@ -452,18 +492,38 @@ public class MergingDigest extends AbstractTDigest {
      * scale range more than one should be split across more than one centroid if
      * possible.  This won't be possible if the quantile range refers to a single point
      * or an already existing centroid.
-     *
+     * <p>
      * This mapping is steep near q=0 or q=1 so each centroid there will correspond to
      * less q range.  Near q=0.5, the mapping is flatter so that centroids there will
      * represent a larger chunk of quantiles.
      *
-     * @param q The quantile scale value to be mapped.
+     * @param q           The quantile scale value to be mapped.
+     * @param compression
+     * @param totalWeight
      * @return The centroid scale value corresponding to q.
      */
-    private double integratedLocation(double q) {
-        return compression * (asinApproximation(2 * q - 1) + Math.PI / 2) / Math.PI;
+    public static double integratedLocation(double q, double compression, double totalWeight) {
+        if (!useConservativeLimit) {
+            return compression * (asinApproximation(2 * q - 1) + Math.PI / 2) / Math.PI;
+        } else {
+            // the k-scale for the conservative limit has infinite tails that we have to trim off
+            if (q < 1 / totalWeight) {
+                return 0;
+            } else if (1 - q < 1 / totalWeight) {
+                return 1;
+            } else {
+                return compression / 2 * (1 + Math.log(q / (1 - q)) / Math.log(totalWeight - 1));
+            }
+        }
     }
 
+    /**
+     * Converts a k-scale value into a quantile. This is the inverse of {@link #integratedLocation(double, double, double)}.
+     * The virtue of using this is that sin is much cheaper than asin.
+     *
+     * @param k The k-index to be converted.
+     * @return The value of q.
+     */
     private double integratedQ(double k) {
         return (Math.sin(Math.min(k, compression) * Math.PI / compression - Math.PI / 2) + 1) / 2;
     }
