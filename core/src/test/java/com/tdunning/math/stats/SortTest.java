@@ -24,6 +24,7 @@ import org.junit.Test;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class SortTest {
     @Test
@@ -160,6 +161,32 @@ public class SortTest {
     }
 
     @Test
+    public void testMultiPivotsInPlace() {
+        // more pivots than low split on first pass
+        // multiple pivots, but more low data on second part of recursion
+        double[] keys = new double[30];
+        for (int i = 0; i < 9; i++) {
+            keys[i] = i + 20 * (i % 2);
+        }
+
+        for (int i = 9; i < 20; i++) {
+            keys[i] = 10;
+        }
+
+        for (int i = 20; i < 30; i++) {
+            keys[i] = i - 20 * (i % 2);
+        }
+        keys[29] = 29;
+        keys[24] = 25;
+        keys[26] = 25;
+
+        double[] v = valuesFromKeys(keys, 0);
+
+        Sort.sort(keys, v);
+        checkOrder(keys, 0, keys.length, v);
+    }
+
+    @Test
     public void testRandomized() {
         Random rand = new Random();
 
@@ -173,6 +200,143 @@ public class SortTest {
             Sort.sort(order, values);
             checkOrder(order, values);
         }
+    }
+
+    @Test
+    public void testRandomizedInPlace() {
+        Random rand = new Random();
+
+        for (int k = 0; k < 100; k++) {
+            double[] keys = new double[30];
+            for (int i = 0; i < 30; i++) {
+                keys[i] = rand.nextDouble();
+            }
+
+            Sort.sort(keys);
+            checkOrder(keys, 0, keys.length);
+        }
+
+        for (int k = 0; k < 100; k++) {
+            double[] keys = new double[30];
+            for (int i = 0; i < 30; i++) {
+                keys[i] = rand.nextDouble();
+            }
+            double[] v0 = valuesFromKeys(keys, 0);
+
+            Sort.sort(keys, v0);
+            checkOrder(keys, 0, keys.length, v0);
+        }
+
+        for (int k = 0; k < 100; k++) {
+            double[] keys = new double[30];
+            for (int i = 0; i < 30; i++) {
+                keys[i] = rand.nextDouble();
+            }
+            double[] v0 = valuesFromKeys(keys, 0);
+            double[] v1 = valuesFromKeys(keys, 1);
+
+            Sort.sort(keys, v0, v1);
+            checkOrder(keys, 0, keys.length, v0, v1);
+        }
+
+        for (int k = 0; k < 100; k++) {
+            double[] keys = new double[30];
+            for (int i = 0; i < 30; i++) {
+                keys[i] = rand.nextDouble();
+            }
+            double[] v0 = valuesFromKeys(keys, 0);
+            double[] v1 = valuesFromKeys(keys, 1);
+            double[] v2 = valuesFromKeys(keys, 2);
+
+            Sort.sort(keys, v0, v1, v2);
+            checkOrder(keys, 0, keys.length, v0, v1, v2);
+        }
+    }
+
+    @Test
+    public void testRandomizedShortSort() throws Exception {
+        Random rand = new Random();
+
+        for (int k = 0; k < 100; k++) {
+            double[] keys = new double[30];
+            for (int i = 0; i < 10; i++) {
+                keys[i] = i;
+            }
+            for (int i = 10; i < 20; i++) {
+                keys[i] = rand.nextDouble();
+            }
+            for (int i = 20; i < 30; i++) {
+                keys[i] = i;
+            }
+            double[] v0 = valuesFromKeys(keys, 0);
+            double[] v1 = valuesFromKeys(keys, 1);
+
+            Sort.sort(keys, 10, 10, v0, v1);
+            checkOrder(keys, 10, 20, v0, v1);
+            checkValues(keys, 0, keys.length, v0, v1);
+            for (int i = 0; i < 10; i++) {
+                assertEquals(i, keys[i], 0);
+            }
+            for (int i = 20; i < 30; i++) {
+                assertEquals(i, keys[i], 0);
+            }
+        }
+
+    }
+
+    /**
+     * Generates a vector of values corresponding to a vector of keys.
+     *
+     * @param keys A vector of keys
+     * @param k    Which value vector to generate
+     * @return The new vector containing frac(key_i * 3 * 5^k)
+     */
+    private double[] valuesFromKeys(double[] keys, int k) {
+        double[] r = new double[keys.length];
+        double scale = 3;
+        for (int i = 0; i < k; i++) {
+            scale = scale * 5;
+        }
+        for (int i = 0; i < keys.length; i++) {
+            r[i] = fractionalPart(keys[i] * scale);
+        }
+        return r;
+    }
+
+    /**
+     * Verifies that keys are in order and that each value corresponds to the keys
+     *
+     * @param key    Array of keys
+     * @param start  The starting offset of keys and values to check
+     * @param length The number of keys and values to check
+     * @param values Arrays of associated values. Value_{ki} = frac(key_i * 3 * 5^k)
+     */
+    private void checkOrder(double[] key, int start, int length, double[]... values) {
+        assert start + length <= key.length;
+
+        for (int i = start; i < start + length - 1; i++) {
+            assertTrue(String.format("bad ordering at %d, %f > %f", i, key[i], key[i + 1]), key[i] <= key[i + 1]);
+        }
+
+        checkValues(key, start, length, values);
+    }
+
+    private void checkValues(double[] key, int start, int length, double[]... values) {
+        double scale = 3;
+        for (int k = 0; k < values.length; k++) {
+            double[] v = values[k];
+            assertEquals(key.length, v.length);
+            for (int i = start; i < length; i++) {
+                assertEquals(String.format("value %d not correlated, key=%.5f, k=%d, v=%.5f", i, key[i], k, values[k][i]),
+                        fractionalPart(key[i] * scale), values[k][i], 0);
+            }
+            scale = scale * 5;
+        }
+    }
+
+
+    private double fractionalPart(double v) {
+        return v - Math.floor(v);
     }
 
     private void checkOrder(int[] order, double[] values) {
