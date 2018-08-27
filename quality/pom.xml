@@ -4,9 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.tdunning</groupId>
+    <parent>
+        <groupId>com.tdunning</groupId>
+        <artifactId>t-digest-parent</artifactId>
+        <version>3.3-SNAPSHOT</version>
+    </parent>
     <artifactId>t-digest-quality</artifactId>
-    <version>1.0-SNAPSHOT</version>
+
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
@@ -29,7 +33,7 @@
         <dependency>
             <groupId>com.tdunning</groupId>
             <artifactId>t-digest</artifactId>
-            <version>3.2</version>
+            <version>${project.parent.version}</version>
         </dependency>
     </dependencies>
 

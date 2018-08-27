@@ -1,27 +1,38 @@
-data = read.csv("accuracy.csv")
-# this makes a nice mark for plotting
-data$lx = round(log10(data$q.raw/(1-data$q.raw)))
+read.data = function(experiment, hash) {
+    assign("watermark", sprintf("%s / %s", experiment, hash), envir=.GlobalEnv)
+    assign("data", read.csv(sprintf("tests/accuracy-%s-%s.csv", experiment, hash)), envir=.GlobalEnv)
+    # this makes a nice mark for plotting
+    data$lx = round(log10(data$q.raw/(1-data$q.raw)))
 
-sizes = read.csv("accuracy-sizes.csv")
-sizes$center = with(sizes, (q.0 + q.1)/2)
+    assign("sizes", read.csv(sprintf("tests/accuracy-sizes-%s-%s.csv", experiment, hash)), envir=.GlobalEnv)
+    sizes$center = with(sizes, (q.0 + q.1)/2)
 
-cdf = read.csv("accuracy-cdf.csv")
-
-buckets = read.csv("accuracy-samples.csv")
-
-plot.cdf = function(sortFlag="sorted", dist="UNIFORM", digest="MERGE", alpha = 0.4, dx=0.000025, cex=1, add=F, col=rgb(1,0,0,alpha=alpha)) {
-    i = sizes$digest == digest & sizes$dist == dist & sizes$sort == sortFlag
-    boxplot(error ~ q, cdf[i,], add=add, col=col)
+    assign("cdf", read.csv(sprintf("tests/accuracy-cdf-%s-%s.csv", experiment, hash)), envir=.GlobalEnv)
 }
 
-plot.fill = function(sortFlag="sorted", dist="UNIFORM", digest="MERGE", alpha = 0.4, dx=0.000025, cex=1) {
+#buckets = read.csv("accuracy-samples.csv")
+
+plot.cdf = function(sortFlag="sorted", compression=100, dist="UNIFORM", digest="MERGE", alpha = 0.4, dx=0.000025, cex=1, add=F, col=rgb(1,0,0,alpha=alpha), bufferSize = NA, offset=0, ylim=c(-0.08,0.08), bars=5) {
+    i = cdf$digest == digest & cdf$dist == dist & cdf$sort == sortFlag & cdf$compression == compression
+    if (!is.na(bufferSize)) {
+        i = i & cdf$bufferSize == bufferSize
+    }
+    n = length(table(cdf$q[i]))
+    boxplot(error ~ q, cdf[i,], add=add, col=col, boxwex=1/(bars+1), at=1:n + offset/bars, xaxt='n', ylim=ylim)
+    axis(side=1, at=1:n, labels=levels(factor(cdf$q[i])))
+    title(watermark, line=-1-offset)
+}
+
+plot.fill = function(sortFlag="sorted", dist="UNIFORM", digest="MERGE", alpha = 0.4, dx=0.000025, cex=1, compression=100) {
     i = sizes$digest == digest & sizes$dist == dist & sizes$sort == sortFlag
     plot(count*compression/1e6/pi*2 ~ center, sizes[i,], pch=21, bg=rgb(0,0,0,alpha=alpha), col=NA, cex=cex)
+    title(watermark, line=-2)
 }
 
 plot.dk = function(sortFlag="sorted", dist="UNIFORM", digest="MERGE", alpha = 0.4, dx=0.000025) {
     i = sizes$digest == digest & sizes$dist == dist & sizes$sort == sortFlag
     plot(dk ~ center, sizes[i,])
+    title(watermark, line=-2)
 }
 
 plot.buckets = function(sortFlag="sorted", alpha = 0.4, clusters=1:7, emphasis=c(), xlim=c(0, 0.003), dx=0.000025, generation=3, digest="MERGE") {
@@ -62,4 +73,5 @@ plot.buckets = function(sortFlag="sorted", alpha = 0.4, clusters=1:7, emphasis=c
         data = buckets[i,]$x
         hist(data, add=T, breaks=b, col=colors[ix], border=colors[ix])
     }        
+    title(watermark, line=-2)
 }
