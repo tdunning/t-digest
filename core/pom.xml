@@ -19,9 +19,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.tdunning</groupId>
+    <parent>
+        <groupId>com.tdunning</groupId>
+        <artifactId>t-digest-parent</artifactId>
+        <version>3.3-SNAPSHOT</version>
+    </parent>
     <artifactId>t-digest</artifactId>
-    <version>3.3-SNAPSHOT</version>
 
     <packaging>jar</packaging>
     <name>T-Digest</name>
@@ -153,8 +156,8 @@
                 <configuration>
                     <verbose>true</verbose>
                     <compilerVersion>1.8</compilerVersion>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>1.7</source>
+                    <target>1.7</target>
                 </configuration>
             </plugin>
             <plugin>

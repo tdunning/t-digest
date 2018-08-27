@@ -33,15 +33,26 @@ public class TDigestBench {
             TDigest create(double compression) {
                 return new MergingDigest(compression, (int) (10 * compression));
             }
+
+            @Override
+            TDigest create() {
+                return create(100);
+            }
         },
         AVL_TREE {
             @Override
             TDigest create(double compression) {
                 return new AVLTreeDigest(compression);
             }
+
+            @Override
+            TDigest create() {
+                return create(20);
+            }
         };
 
         abstract TDigest create(double compression);
+        abstract TDigest create();
     }
 
     public enum DistributionFactory {

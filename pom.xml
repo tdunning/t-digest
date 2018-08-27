@@ -7,7 +7,7 @@
     <groupId>com.tdunning</groupId>
     <artifactId>t-digest-parent</artifactId>
     <packaging>pom</packaging>
-    <version>1.0</version>
+    <version>3.3-SNAPSHOT</version>
     <name>T-digest Parent</name>
 
     <modules>

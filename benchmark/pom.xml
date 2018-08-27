@@ -4,9 +4,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>t-digest-benchmark</groupId>
+    <parent>
+        <groupId>com.tdunning</groupId>
+        <artifactId>t-digest-parent</artifactId>
+        <version>3.3-SNAPSHOT</version>
+    </parent>
     <artifactId>t-digest-benchmark</artifactId>
-    <version>1.0-SNAPSHOT</version>
 
     <dependencies>
         <dependency>
