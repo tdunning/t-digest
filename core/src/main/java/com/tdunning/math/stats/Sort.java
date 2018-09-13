@@ -78,7 +78,7 @@ public class Sort {
         while (end - start > limit) {
 
             // median of three values for the pivot
-            int a = start;
+            int a = start + 1;
             int b = (start + end) / 2;
             int c = end - 1;
 
