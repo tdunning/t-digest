@@ -24,6 +24,7 @@ _region_.prv/
 _region_*
 *.log
 *.aux
+*.dvi
 *.blg
 *.bbl
 *.synctex.gz
