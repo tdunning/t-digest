@@ -86,7 +86,7 @@ and that adjacent sub-sequences cannot be merged by forcing
 \[
 K(i) + K(i+1) > 1
 \]
-for all $i=1\ldots m-1$. These conditions imply that the mean value of $K(i)$ is in $(1/2, 1]$ which means that the number $m$ of such maximally merged groups is bounded according to $ \lfloor\delta\rfloor \le m < 2\left \lceil\delta \right \rceil$. 
+for all $i=1\ldots m-1$. These conditions imply that the mean value of $K(i)$ is in $(1/2, 1]$ and therefore the number $m$ of such maximally merged groups is bounded according to $ \lfloor\delta\rfloor \le m < 2\left \lceil\delta \right \rceil$. 
 
 \begin{figure}[htbp] %  figure placement: here, top, bottom, or page
    \centering
@@ -98,7 +98,7 @@ The introduction of the concept of a scaling function provides a useful way to s
 
 Once we have formed a $t$-digest by binning the original sequence into sub-sequences that satisfy the size limit, we can estimate quantiles using interpolation between the end-points of each bin. This is similar to what is done in other quantile estimation algorithms such as Greenwald-Khanna and will give errors that scale roughly quadratically in the number of samples in each sub-sequence. The $t$-digest, having smaller number of samples in bins near $q=0$ or $q=1$ will obviously have better accuracy there. The only wrinkle is that with a $t$-digest contains the centroids of the samples in a bin instead of the end-points. Estimating quantiles requires that the boundaries of the bins be estimated first and then used to interpolate as before. 
 
-In general, there are many possible partitions of $X$ that form a valid $t$-digest. As long as the result is subject to the size constraint, however, any such $t$-digest will perform similarly in terms of accuracy.
+In general, there are many possible partitions of $X$ that form a valid $t$-digest. As long as the result is subject to the size contraint, however, any such $t$-digest will perform similarly in terms of accuracy.
 
 Figure \ref{fig:linear-interpolation} shows an example of how error bounds are improved by the strategy of keeping bins small near extreme values of $q$. 
 
@@ -114,18 +114,18 @@ Of course, since we have to put every sample into some bin, filling some bins wi
 \subsection{Merging independent $t$-digests}
 In the previous section, the algorithm for forming a $t$-digest took a set of unweighted points as inputs. Nothing, however, would prevent the algorithm from being applied to a set of weighted points. As long as individual weights are smaller than the size limit imposed by the scaling function, the result will still be a well-formed $t$-digest.
 
-If we form independent $t$-digests $t_X$ and $t_Y$ from separate sequences $X$ and $Y$, these $t$-digests can clearly be used to estimate quantiles of $X \cup Y$ by separately computing quantiles for $X$ and $Y$ and combining the results. More usefully, however, we can form a new $t$-digest by taking the union of the centroids from $t_X$ and $t_X$ and merging the centroids whenever they meet the size criterion. The resulting $t$-digest will not necessarily be the same as if we had computed a $t$-digest $t_{X \cup Y}$ from all of the original data at once even though it will meet the same size constraint. Because it meets the same size constraint, a merged $t$-digest gives accuracy comparable to what we would get from $t_{X\cup Y}$ while still having the same size bound.
+If we form independent $t$-digests $t_X$ and $t_X$ from separate sequences $X$ and $Y$, these $t$-digests can clearly be used to estimate quantiles of $X \cup Y$ by separately computing quantiles for $X$ and $Y$ and combining the results. More usefully, however, we can form a new $t$-digest by taking the union of the centroids from $t_X$ and $t_X$ and merging the centroids whenever they meet the size criterion. The resulting $t$-digest will not necessarily be the same as if we had computed a $t$-digest $t_{X \cup Y}$ from all of the original data at once even though it will meet the same size constraint. Because it meets the same size constraint, a merged $t$-digest gives accuracy comparable to what we would get from $t_{X\cup Y}$ while still having the same size bound.
 
-The observation that $t$-digests formed by merging other digests will produce accurate quantile estimates has substantial empirical support, even with highly structured data sets such as ordered data or data with large numbers of repeated values, but there is, as yet, no rigorous proof of any accuracy guarantees. The size bounds are, nevertheless, well established.
+The observation that $t$-digests formed by merging other digests will produce accurate quantile estimates has substantial empirical support, even with highly structured data sets such as ordered data or data with large numbers of repeated values, but there is, as yet, no rigorous proof of any accuracy guarantees. The size bounds are, nevertheless, are well established.
 
 The ability to merge $t$-digests makes parallel processing of large data-sets relatively simple since independent $t$-digests can be formed from disjoint partitions of the input data and then combined to get a $t$-digest representing the complete data-set.
 
 A similar divide and conquer strategy can be used to allow $t$-digests to be used in OLAP systems. The idea is that queries involving quantiles of subsets of data can be approximated quickly by breaking the input data set into subsets corresponding to each unique combination of selection factors. A single $t$-digest is then pre-computed for each unique combination of selection factors. To the extent that all interesting queries can be satisfied by disjoint unions of such primitive subsets, the corresponding $t$-digests can be combined to compute the desired result.
 
 \subsection{Progressive merging algorithm}
-The fact that merging $t$-digests gives good accuracy suggests a practical algorithm for constructing a $t$-digest from a large amount of data. The basic idea is to collect data in a buffer. When the buffer fills, or when a final result is required, sort the buffer and any existing centroids together, and pass through the combined set of points and centroids, merging points or centroids together whenever the size limits can be satisfied by the merged value. With an arbitrarily large buffer, this algorithm reduces to the original approach for constructing a $t$-digest from sorted data since the overall effect is simply a single merging pass through all the data. For smaller buffer sizes, however, many merge passes are required to process a large amount of data. This is essentially equivalent to forming independent $t$-digests on buffers of data and then sequentially merging them to get the final result.
+The observation that merging $t$-digests gives good accuracy suggests a practical algorithm for constructing a $t$-digest from a large amount of data. The basic idea is to collect data in a buffer. When the buffer fills, or when a final result is required, sort the buffer and the existing centroids together, and pass through the combined set of points and centroids, merging points or centroids together whenever the size limits can be satisfied by the merged value. With an arbitrarily large buffer, this algorithm reduces to the original approach for constructing a $t$-digest from sorted data since the overall effect is simply a single merging pass through all the data. For smaller buffer sizes, however, many merge passes are required to process a large amount of data. This is essentially equivalent to forming independent $t$-digests on buffers of data and then sequentially merging them to get the final result.
 
-The operation of merging a buffer's worth of samples into an existing set of centroids is shown in Algorithm \ref{alg:merge}. Note that the check on the size bound is optimized to only require as many evaluations of $k(q)$ during the merge as there are output values in $C'$. This is done by computing the bounding value $q_{limit} = k^{-1}(k(q, \delta) + 1, \delta)$ each time a new centroid is emitted. This allows the conditional to be triggered based on comparisons of $q$ so that if many points are merged, no additional calls to $k$ are needed. If $n \gg 2 \left \lceil \delta \right \rceil$, this can result in a considerable speedup since computing $\sin^{-1}$ is expensive. Note also that this algorithm allows static allocation of all data structures as four arrays of primitive values, avoiding any dynamic allocation or structure boxing/unboxing.
+The operation of merging a buffer's worth of samples into an existing set of centroids is shown in Algorithm \ref{alg:merge}. Note that the check on the size bound is optimized to only require only as many evaluations of $k(q)$ during the merge as there are output values in $C'$. This is done by computing the bounding value $q_{limit} = k^{-1}(k(q, \delta) + 1, \delta)$ each time a new centroid is emitted. This allows the conditional to be triggered based on comparisons of $q$ so that if many points are merged, no additional calls to $k$ are needed. If $n \gg 2 \left \lceil \delta \right \rceil$, this can result in a considerable speedup since computing $\sin^{-1}$ is expensive. Note also that this algorithm allows static allocation of all data structures as four arrays of primitive values, avoiding any dynamic allocation or structure boxing/unboxing.
 \begin{algorithm}[ht]
 \SetKw{KwTo}{in}\SetKwFor{For}{for}{\string:}{}
 \SetKwIF{If}{ElseIf}{Else}{if}{:}{elif}{else:}{}
@@ -176,13 +176,13 @@ This clustering variant is shown more formally as Algorithm \ref{alg:full}.
 \KwIn{Ordered set of weighted centroids $C = \lbrace \rbrace$, sequence of real-valued, weighted points $X = \lbrace (x_1, w_1),\ldots (x_N, w_N)\rbrace$, and accuracy tolerance $\delta$}
 \KwOut{final set $C=[c_1 \ldots c_m]$ of weighted centroids} 
 \For{$(x_n, w_n) \in X$} {
-  $z = \min | c_i.\mathtt{sum}/c_i.\mathtt{count} - x |$\;
-  $S = \lbrace c_i  :  |c_i.\mathtt{sum}/c_i.\mathtt{count} - x| = z \wedge K(c_i+w_1) < 1 \rbrace $\;
+  $z = \min | c_i.\mathtt{mean} - x |$\;
+  $S = \lbrace c_i  :  |c_i.\mathtt{mean} - x| = z \wedge K(c_i+w_1) < 1 \rbrace $\;
+  $S.\mathtt{sort}( key=\lambda (c) \lbrace -c.\mathtt{sum} \rbrace)$\;
   \If {$|S| > 0$} {
-       $S.\mathtt{sort}( key=\lambda (c) \lbrace -c.\mathtt{sum} \rbrace)$\;
        $c \gets S.\mathtt{first()}$ \;
        $c.\mathtt{count} \gets c.\mathtt{count} + w_n$\;
-       $c.\mathtt{sum} \gets c.\mathtt{sum} + x_n w_n$\;
+       $c.\mathtt{mean} \gets c.\mathtt{mean} + (x_n- c.\mathtt{mean})/ c.\mathtt{sum}$\;
      } \Else {
       $C \gets C + (x_n, w_n)$\;
       }
@@ -194,42 +194,9 @@ This clustering variant is shown more formally as Algorithm \ref{alg:full}.
 \caption{Construction of a $t$-Digest by clustering}
 \end{algorithm}
 
-In this algorithm, a centroid object contains a weighted sum and and a count from which the mean can easily be determined.  Alternately, the mean and the count can be kept and updated using Welford's method \cite{wiki:welford, knuth2welford, welford62}.
+In this algorithm, a centroid object contains a mean and and a count.  Updating such an object with a new data-point $(x,w)$ is done using Welford's method \cite{wiki:welford, knuth2welford, welford62}.
 
-The number of points assigned to each centroid is limited so that the new data point is never added to a centroid if the combination would exceed the $t$-digest size constraint. Pathological insertion orders, however, can cause the number of centroids to increase without bound because no comprehensive pass is made to merge existing centroids with each other. To take one problematic case, data presented in ascending order will cause each point will be the new extreme point. This new point can only be merged with one other point (the previous extreme point). Moreover, since the new point is an extreme the size limit will be severe. The result is an unbounded increase in the number of centroids each containing very few points.
-
-To deal with this explosion, whenever the number of centroids exceeds a heuristically chosen limit, the entire set of centroids is consolidated using the merge algorithm given in Algorithm \ref{alg:merge}.  
-
-\subsection{Alternative Size Bound}
-The use of $K$ size as a bound for centroids gives a bound with very nice properties when it comes to the size and accuracy of $t$-digest. The computation of $\sin^-1$, potentially more than once, for each new data point is, however, extremely expensive. The merging variant of the $t$-digest can amortize this cost over many insertions, but the clustering variant cannot. To achieve that amortization, the merging variant must maintain a sizable merge buffer.
-
-One way to limit the cost of computing the size bound in either variant of the algorithm is to use a direct size limit defined in terms of $q$ rather than differences in $k$. Substituting $u=2q-1$,
-\[
-\begin{aligned}
-k &= \delta \left( {\sin^{-1}(2q-1) \over \pi} + {1 \over 2} \right ) \\
-u &= - \cos {\pi k \over \delta} \\
-\end{aligned}
-\]
-The change in $u$ due to unit change in $k$ centered at $u$ can be estimated using small-angle approximations and simple trigonometric identities
-\[
-\begin{aligned}
-\Delta u &= -\left( \cos {\pi (k+1/2) \over \delta} - \cos {\pi (k-1/2) \over \delta} \right) \\
- &\approx    {\pi \over \delta}\sin {\pi k \over \delta}    =    {2\pi \over \delta} \sqrt {1-u^2} \\
-\end{aligned}
-\]
-The change in $q$ is half the change in $u$ and that, in turn, gives the maximum weight for a centroid
-\[
-\begin{aligned}
- \Delta q &\approx { \pi \over \delta} \sqrt {q (1-q)}   \\
-w_{\mathtt max} &\le  { \pi n \over \delta} \sqrt {q (1-q)}   
-\end{aligned}
-\]
-When implementing this alternative bound, using a value of $q$ at the center of each centroid decreases the error in the small-angle approximation by roughly a factor of 4 as well as making the limits symmetrical where $q$ is near either $0$ or $1$.
-\[q(c_i)=\frac{c_i.\mathtt{count}/2 + \sum_{j<i}c_j.\mathtt{count}} {\sum_j c_j.\mathtt{count}}\]
-
-With the merging algorithm the sum in this numerator can be computed progressively as we pass through the centroids being merged while the sum in the denominator can be kept up-to-date as points are added to the digest. In the clustering algorithm, on the other hand, a bit more machinery is required to compute the numerator sum quickly. This can be done by storing the centroids in a data structure such as a balanced binary tree that keeps sums of each sub-tree.  For centroids with identical means, order of creation is used as a tie-breaker to allow an unambiguous ordering.  
-
-Due to the convexity of $\sqrt{q(1-q)}$, the expression above will allow clusters to be slightly larger than desired, especially near $q= 0$ or $q= 1$. This can be remedied by computing the limit at the interpolated boundaries of each cluster and applying the smaller limit. Such a conservative limit increases the number of centroids retained beyond the theoretical limit of $2 \lceil\delta \rceil$. This excess size must be accounted for in sizing the arrays in a merging $t$-digest.
+The number of points assigned to each centroid is limited so no centroid exceeds the $t$-digest size constraint, but pathological insertion orders can cause the number of centroids to increase without bound. Whenever the number of centroids exceeds a heuristically chosen limit, the entire set of centroids is consolidated using the merge algorithm given in Algorithm \ref{alg:merge}.  
 
 \vspace{10mm}
 \hrule
@@ -250,7 +217,7 @@ End of edited text ... text beyond here needs revision to match current release
 \vspace{10mm}
 
 \subsection{Alternative Size Bound}
-The use of $K$ size as a bound for centroids gives a bound with very nice properties when it comes to the size and accuracy of $t$-digest. The computation of $\sin^{-1}$ multiple times for each new data point is, however, extremely expensive. The merging variant of the $t$-digest can amortize this cost over many insertions, but the clustering variant cannot.
+The use of $K$ size as a bound for centroids gives a bound with very nice properties when it comes to the size and accuracy of $t$-digest. The computation of $\sin^-1$ multiple times for each new data point is, however, extremely expensive. The merging variant of the $t$-digest can amortize this cost over many insertions, but the clustering variant cannot.
 
 The algorithm approximates $q$ for centroid $c_i$ by summing the weights for all of the centroids ordered before $c_i$:
 
