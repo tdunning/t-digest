@@ -90,10 +90,10 @@ w \le 2 n / \delta$.
 \section{Size bound for $k_1$}
 We know that $k_1(1) -  k_1(0) = \delta/2$. Since no centroid can have $k$-weight more than $1$ and the average $k$-weight cannot be less than $1/2$, we know that the number of centroids is in $\left[ \delta/2 , \delta \right]$ if $n > \delta$. 
 
-The slope of $k_1(q)$ is $\delta / (2\pi \sqrt{q(1-q))}$ and this achieves a minimum value at $q=1/2$ of 
-$\delta / \pi$. If $n \le \delta/\pi$ then no centroid will have a weight of more than one.
+The slope of $k_1(q)$ is $\delta / ( 2\pi \sqrt{q(1-q)} \, )$. The minimum slope is 
+$\delta / \pi$ at $q=1/2$ so if $n \le \delta/\pi$, no centroid will have a weight of more than one.
 
-For $\delta/\pi > n \le \delta$ the slope at $1/2$ will be such that some centroids can have a weight more than one. This means that the upper bound on the number of centroids will be in the range $[n,\delta]$.
+For $\delta/\pi < n \le \delta$ the slope at $1/2$ will be such that some centroids can have a weight more than one.
 \subsection{Maximum centroid weight}
 
 The maximum weight of centroids can be computed by considering a centroid centered in terms of $k$ around $k(q) = \kappa$. 
@@ -106,35 +106,30 @@ But we know that
 \[
 k^{-1}(\kappa) = \frac 1 2 \left(   \sin \frac {2\pi \kappa} \delta -1  \right)
 \]
-So
+So using multiple angle identities
 \[
 \begin{aligned}
 \Delta q &= \frac 1 2 \left(
   { \sin \frac {2\pi (\kappa+1/2)} \delta  }  -   { \sin \frac {2\pi (\kappa-1/2)} \delta  } 
   \right) \\
-&= \frac 1 2 \left( 
-\sin \frac{2 \pi} \delta (\kappa+1/2) -
-\sin \frac{2 \pi} \delta (\kappa-1/2)
-\right) \\
 &= \frac 1 2 \Biggl( 
 \left( \sin \frac {2 \pi} \delta \kappa \cos \frac \pi \delta  + \cos \frac {2 \pi} \delta \kappa \sin \frac \pi \delta  \right) -
 \left( \sin \frac {2 \pi} \delta \kappa \cos \frac  \pi  \delta  - \cos \frac {2 \pi} \delta \kappa \sin \frac  \pi  \delta  \right) 
 \Biggr) \\
 &=  
-\sin \frac \pi \delta    \cos \frac {2 \pi} \delta \kappa = \left( \sin \frac \pi \delta \right) \sqrt {1-(2q-1)^2}\\
-&=  2 \left( \sin \frac \pi \delta \right)    \sqrt{q(1-q)}\\
+\sin \frac \pi \delta    \cos \frac {2 \pi} \delta \kappa =   2 \left( \sin \frac \pi \delta \right)    \sqrt{q(1-q)}\\
 \end{aligned}
 \]
-The maximum weight of this centroid is just $w_{\max} = n \Delta q$.
+The maximum weight of this centroid is  $w_{\max} = n \Delta q$.
 
-Note, however, the value of $q$ cannot not be known precisely from the information we have in a $t$-digest. Were we to know lower and upper bounds $q_{\min}$ and $q_{\max}$ for a centroid in a $k_1$ digest, we would be able to use whichever value that is furthest from $1/2$ for computing $w_{\max}$.
+Note, however, the value of $q$ cannot not be known precisely from the information we have in a $t$-digest for a centroid. If, indeed, we did know lower and upper bounds $q_{\min}$ and $q_{\max}$ for the points associated with a centroid in a $k_1$ digest, we would be able to use whichever value of $q$ that is furthest from $1/2$ to get a conservative limit $w_{\max}$.
 \[
 q_{\text {worst}} = \begin{cases}
  q_{\min} & \text{if } | q_{\min} - 1/2 | > | q_{\max} - 1/2 | \\
  q_{\max} & \text {otherwise}
 \end{cases} \\
 \]
-Unfortunately, it is not possible to know the actual values of $q_{min}$ and $q_{max}$ in practice if a $t$-digest has been created by merging digests. For a particular centroid $\mathcal C$, if we take $\mathcal W_{\text {left}}$ to be the sum of the weights of centroids with means smaller than $\mathcal C$ and $\mathcal W$ to be the weight of $\mathcal C$ then these estimated values are useful
+Unfortunately, it is not possible to know the actual values of $q_{min}$ and $q_{max}$ in most practical situations such as when a $t$-digest has been created by merging digests. For a particular centroid $\mathcal C$, if we take $\mathcal W_{\text {left}}$ to be the sum of the weights of centroids with means smaller than $\mathcal C$ and $\mathcal W$ to be the weight of $\mathcal C$ then these estimated values are useful
 \[
 \begin{aligned}
 q_{\min} &\approx {\mathcal W_{left}} / n \\
@@ -145,6 +140,7 @@ From that
 \[
 w_{\max} \le 2n \left( \sin \frac \pi \delta\right) \sqrt{q_{\text {worst}} (1-q_{\text {worst}})}
 \]
+Note that in any case, we have no solid guarantees about the distribution of the samples for a particular centroid so that this size limit remains somewhat heuristic in nature.
 \section{Size bounds for $k_2$}
 Unlike $k_1$, both $k_2$ and $k_3$ have unbounded tails at $q=0$ and $q=1$ so we require a different argument to compute the size of a $t$-digest for $k_2$ and $k_3$. Because the smallest weight a centroid can have is $1$ corresponding to a change in $q$ of $\Delta q = 1/n$, the effective slope of the scaling function is limited to a value of $n$ and thus the range from minimum to maximum $k$  is finite. For suitably chosen  $Z(n)$, the size is not only finite, but bounded for any value of $n$.
 
@@ -162,7 +158,7 @@ On the other hand, even if $n$ is considerably larger than this limit, some cent
 \begin{aligned}
 {\frac  {\delta/Z(n)} {q_i (1-q_i) }  } &= n \\
 q_i^2 - q_i + \frac {\delta/Z(n)} n &= 0 \\
-q_i = \frac 1 2 \left( { 1 \pm \sqrt { 1 - 4 \frac {\delta/Z(n)} n } } \, \right)
+q_i &= \frac 1 2 \left( { 1 \pm \sqrt { 1 - 4 \frac {\delta/Z(n)} n } } \, \right)
 \end{aligned}
 \]
 The discriminant here will always be positive for the values $n$ we are examining so we have two solutions symmetric around $1/2$. Moreover, if $n \gg 4\delta / Z$
@@ -176,16 +172,16 @@ q_2 &= 1-q_1
 This means that there will be roughly $\delta/Z(n)$ unit centroids at each extreme with the remaining centroids having a weight greater than one. We can compute an approximate bound on the number of larger centroids
 \[
 \begin{aligned}
-N_{w>1} &\le k(q_2) -k(q_1) \\ 
+n_{w>1} &\le k(q_2) -k(q_1) \\ 
 &\le  \frac \delta {Z(n)} \log {\frac {q_2 (1-q_1)} {(1-q_2) q_1}} = \frac \delta {Z(n)} \log { {q_2^2} / { q_1^2}} \\
 &\approx  \frac {2 \delta} {Z(n)} \left(\log  n/ \delta + \log Z(n)\right)
 \end{aligned}
 \]
 If we pick $Z(n) = 1$, then the total number of centroids grows with increasing $n$ and is roughly
 \[
-N \le 2\delta \left( 1/n + \log n/\delta \right)
+n \le 2\delta \left( 1/n + \log n/\delta \right)
 \]  
-On the other hand, if we pick $Z(n)$ so that it grows with $\log n$,  $\log Z(n)$  will grow extremely slowly. Specifically, choosing $Z(n) = 2 \log n/\delta + 12$ means that 
+On the other hand, if we pick $Z(n)$ so that it grows with $\log n$ then $\log Z(n)$  will grow extremely slowly. Specifically, choosing $Z(n) = 2 \log n/\delta + 12$ means that 
 \[
 \begin{aligned}
 \frac {\log n / \delta + \log Z(n)+1} {Z(n)}  &< 1/2
@@ -196,7 +192,7 @@ for all values of $n/\delta < 2.8 \times 7 \times 10^{61}$ which more than cover
 This means that the total number of centroids after adding back in the $2 \delta / Z(n)$ unit centroids will be bounded as
 \[
 \begin{aligned}
-N&\le   \frac {2 \delta} {Z(n)} \left(  \log  n/ \delta + \log Z(n) + 1\right) \\
+n&\le   \frac {2 \delta} {Z(n)} \left(  \log  n/ \delta + \log Z(n) + 1\right) \\
 &\le  \delta
 \end{aligned}
 \]
