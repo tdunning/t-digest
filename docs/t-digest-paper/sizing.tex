@@ -230,12 +230,12 @@ q_2 &= 1-q_1
 The total number of centroids is thus
 \[
 \begin{aligned}
-N &\le q_1 + k(q_2) - k(q_1) + q_2 \\
+n &\le q_1 + k(q_2) - k(q_1) + q_2 \\
 &= \frac \delta { Z(n)} \left(2/n -\log 2 q_1 - \log 2(1-q_2)\right)\\
 &= \frac {2\delta} { Z(n)} \left(1/n + \log  \frac  { n Z(n)}\delta\right)
 \end{aligned}
 \]
-For $Z(n)$, we have unbounded logarithmic growth in the number of centroids. If we define $Z(n) = 2\log n/\delta + 1$, we get a bound on the number of centroids $N \le \delta$.
+For $Z(n)=1$, we have unbounded logarithmic growth in the number of centroids. If we choose $Z(n) = 2\log n/\delta + 1$ instead, we get a practical bound on the number of centroids $n \le \delta$.
 \subsection{Maximum centroid weight}
 We can follow the same method as with $k_2$ to find the maximum weight for any centroid.
 
