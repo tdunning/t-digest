@@ -87,6 +87,7 @@ The t-digest algorithm has been ported to other languages:
  - Javascript: [tdigest](https://github.com/welch/tdigest)
  - C++: [CPP TDigest](https://github.com/gpichot/cpp-tdigest), [FB's Folly Implementation (high performance)](https://github.com/facebook/folly/blob/master/folly/stats/QuantileEstimator.h)
  - Scala: need link!
+ - C: [tdigestc (w/ bindings to Go, Java, Python, JS via wasm)](https://githb.com/ajwerner/tdigestc)
 
 Continuous Integration
 =================
