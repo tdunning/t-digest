@@ -172,27 +172,30 @@ q_2 &= 1-q_1
 This means that there will be roughly $\delta/Z(n)$ unit centroids at each extreme with the remaining centroids having a weight greater than one. We can compute an approximate bound on the number of larger centroids
 \[
 \begin{aligned}
-n_{w>1} &\le k(q_2) -k(q_1) \\ 
-&\le  \frac \delta {Z(n)} \log {\frac {q_2 (1-q_1)} {(1-q_2) q_1}} = \frac \delta {Z(n)} \log { {q_2^2} / { q_1^2}} \\
-&\approx  \frac {2 \delta} {Z(n)} \left(\log  n/ \delta + \log Z(n)\right)
+m_{w>1} &\le 2\left( k(q_2) -k(q_1) \right) \\ 
+&\le  \frac {2\delta} {Z(n)} \log {\frac {q_2 (1-q_1)} {(1-q_2) q_1}} = \frac {2\delta} {Z(n)} \log { {q_2^2} / { q_1^2}} \\
+&\approx  \frac {4 \delta} {Z(n)} \left(\log  n/ \delta + \log Z(n)\right)
 \end{aligned}
 \]
+Adding back in the unit clusters
+\[
+m \le  \frac {4 \delta} {Z(n)} \left(\log  n/ \delta + \log Z(n) + 1/2\right)
+\]
+
 If we pick $Z(n) = 1$, then the total number of centroids grows with increasing $n$ and is roughly
 \[
-n \le 2\delta \left( 1/n + \log n/\delta \right)
+m \le 4\delta  \log n/\delta + 1/2
 \]  
-On the other hand, if we pick $Z(n)$ so that it grows with $\log n$ then $\log Z(n)$  will grow extremely slowly. Specifically, choosing $Z(n) = 2 \log n/\delta + 12$ means that 
+On the other hand, if we pick $Z(n)$ so that it grows with $\log n$ then $\log Z(n)$  will grow extremely slowly. Specifically, choosing $Z(n) = 4 \log n/\delta + 24$ means that 
 \[
-\begin{aligned}
-\frac {\log n / \delta + \log Z(n)+1} {Z(n)}  &< 1/2
-\end{aligned}
+\frac {\log n / \delta + \log Z(n)+1/2} {Z(n)}  < 1/4
 \]
-for all values of $n/\delta < 2.8 \times 7 \times 10^{61}$ which more than covers the range of practical utility.
+for all values of $n/\delta < 9.1 \times 10^{23}$ which more than covers the range of practical utility.
 
-This means that the total number of centroids after adding back in the $2 \delta / Z(n)$ unit centroids will be bounded as
+This inequality means that the total number of centroids will be bounded 
 \[
 \begin{aligned}
-n&\le   \frac {2 \delta} {Z(n)} \left(  \log  n/ \delta + \log Z(n) + 1\right) \\
+m&\le   \frac {4 \delta} {Z(n)} \left(  \log  n/ \delta + \log Z(n) + 1/2\right) \\
 &\le  \delta
 \end{aligned}
 \]
@@ -230,12 +233,13 @@ q_2 &= 1-q_1
 The total number of centroids is thus
 \[
 \begin{aligned}
-n &\le q_1 + k(q_2) - k(q_1) + q_2 \\
-&= \frac \delta { Z(n)} \left(2/n -\log 2 q_1 - \log 2(1-q_2)\right)\\
-&= \frac {2\delta} { Z(n)} \left(1/n + \log  \frac  { n Z(n)}\delta\right)
+m  &\le  n q_1 + n (1-q_2) + 2(k(q_2) - k(q_1)  ) \\
+  &\le 2\left(  n q_1 + (k(q_2) - k(q_1)  ) \right)\\
+&= \frac { 2\delta} { Z(n)} \left(1  -2\log 2 q_1\right)\\
+&= \frac {4\delta} { Z(n)} \left(1/2- \log 2 + \log  \frac  { n }\delta + \log Z(n)\right)
 \end{aligned}
 \]
-For $Z(n)=1$, we have unbounded logarithmic growth in the number of centroids. If we choose $Z(n) = 2\log n/\delta + 1$ instead, we get a practical bound on the number of centroids $n \le \delta$.
+For $Z(n)=1$, we have unbounded logarithmic growth in the number of centroids. Alternatively, if we choose $Z(n) = 4\log n/\delta + 21$  and take $n/\delta < 10^{20}$ as a reasonable restriction on the area of applicability, we get a bound of $m \le \delta$.
 \subsection{Maximum centroid weight}
 We can follow the same method as with $k_2$ to find the maximum weight for any centroid.
 
