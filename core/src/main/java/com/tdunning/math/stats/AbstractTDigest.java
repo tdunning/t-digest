@@ -57,35 +57,6 @@ public abstract class AbstractTDigest extends TDigest {
         return (x - x0) / (x1 - x0);
     }
 
-    static void encode(ByteBuffer buf, int n) {
-        int k = 0;
-        while (n < 0 || n > 0x7f) {
-            byte b = (byte) (0x80 | (0x7f & n));
-            buf.put(b);
-            n = n >>> 7;
-            k++;
-            if (k >= 6) {
-                throw new IllegalStateException("Size is implausibly large");
-            }
-        }
-        buf.put((byte) n);
-    }
-
-    static int decode(ByteBuffer buf) {
-        int v = buf.get();
-        int z = 0x7f & v;
-        int shift = 7;
-        while ((v & 0x80) != 0) {
-            if (shift > 28) {
-                throw new IllegalStateException("Shift too large in decode");
-            }
-            v = buf.get();
-            z += (v & 0x7f) << shift;
-            shift += 7;
-        }
-        return z;
-    }
-
     abstract void add(double x, int w, Centroid base);
 
     /**
