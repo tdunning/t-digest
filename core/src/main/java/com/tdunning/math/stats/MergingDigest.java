@@ -64,6 +64,7 @@ import java.util.List;
 public class MergingDigest extends AbstractTDigest {
     private int mergeCount = 0;
 
+    private final double publicCompression;
     private final double compression;
 
     // points to the first unused centroid
@@ -96,25 +97,17 @@ public class MergingDigest extends AbstractTDigest {
     private final int[] order;
 
     // if true, alternate upward and downward merge passes
-    public static boolean useAlternatingSort = false;
+    public boolean useAlternatingSort = true;
+    // if true, use higher working value of compression during construction, then reduce on presentation
+    public boolean useTwoLevelCompression = true;
 
-    // if useWeightLimit is false, this makes asin faster
-    static boolean usePieceWiseApproximation = true;
+    private ScaleFunction scale = ScaleFunction.K_2;
 
     // this forces centroid merging based on size limit rather than
-    // based on accumulated k-index. This is much faster since we
-    // never have to compute any sines or square roots
+    // based on accumulated k-index. This can be much faster since we
+    // scale functions are more expensive than the corresponding
+    // weight limits.
     public static boolean useWeightLimit = true;
-
-    // the conservative limit limits centroids to
-    // \delta \log(N) (q/(1-q))
-    // the non-conservative limit is
-    // \delta \sqrt {q/(1-q)}
-    // the conservative limit makes the extreme centroids smaller to
-    // get more accuracy at the edges. Both options result in the
-    // same number of centroids ... it is just that the mass is
-    // distributed differently
-    public static boolean useConservativeLimit = true;
 
     /**
      * Allocates a buffer merging t-digest.  This is the normally used constructor that
@@ -136,7 +129,7 @@ public class MergingDigest extends AbstractTDigest {
      */
     @SuppressWarnings("WeakerAccess")
     public MergingDigest(double compression, int bufferSize) {
-        // we can guarantee that we only need 2 * ceiling(compression).  
+        // we can guarantee that we only need ceiling(compression).
         this(compression, bufferSize, -1);
     }
 
@@ -149,15 +142,34 @@ public class MergingDigest extends AbstractTDigest {
      */
     @SuppressWarnings("WeakerAccess")
     public MergingDigest(double compression, int bufferSize, int size) {
-        if (size == -1) {
-            size = (int) (2 * Math.ceil(compression));
-            if (useWeightLimit) {
-                // the weight limit approach generates smaller centroids than necessary
-                // that can result in using a bit more memory than expected (but is faster)
-                size += 10;
-            }
+        // ensure compression >= 10
+        // default size = ceil(compression)
+        // default bufferSize = 5 * size
+        // scale = max(2, bufferSize / size)
+        // compression, publicCompression = sqrt(scale-1)*compression, compression
+        // ensure size > compression + weightLimitFudge
+        // ensure bufferSize > 2*size
+
+        // force reasonable value. Anything less than 10 doesn't make much sense because
+        // too few centroids are retained
+        if (compression < 10) {
+            compression = 10;
         }
+
+        // the weight limit is too conservative about sizes and can require a bit of extra room
+        double sizeFudge = 0;
+        if (useWeightLimit) {
+            sizeFudge = 10;
+        }
+
+        // default size
+        if (size == -1) {
+            size = (int) Math.ceil(compression + sizeFudge);
+        }
+
+        // default buffer
         if (bufferSize == -1) {
+            // TODO update with current numbers
             // having a big buffer is good for speed
             // experiments show bufferSize = 1 gives half the performance of bufferSize=10
             // bufferSize = 2 gives 40% worse performance than 10
@@ -180,9 +192,35 @@ public class MergingDigest extends AbstractTDigest {
             //   500          2         0.158364
             //   500          5         0.127552
             //   500         10         0.121505
-            bufferSize = (int) (5 * Math.ceil(compression));
+            bufferSize = 5 * size;
         }
-        this.compression = compression;
+
+        // ensure enough space in buffer
+        if (bufferSize <= 2 * size) {
+            bufferSize = 2 * size;
+        }
+
+        // scale is the ratio of extra buffer to the final size
+        // we have to account for the fact that we copy all live centroids into the incoming space
+        double scale = Math.max(1, bufferSize / size - 1);
+        if (!useTwoLevelCompression) {
+            scale = 1;
+        }
+
+        // publicCompression is how many centroids the user asked for
+        // compression is how many we actually keep
+        this.publicCompression = compression;
+        this.compression = Math.sqrt(scale) * publicCompression;
+
+        // changing the compression could cause buffers to be too small, readjust if so
+        if (size < this.compression + sizeFudge) {
+            size = (int) Math.ceil(this.compression + sizeFudge);
+        }
+
+        // ensure enough space in buffer (possibly again)
+        if (bufferSize <= 2 * size) {
+            bufferSize = 2 * size;
+        }
 
         weight = new double[size];
         mean = new double[size];
@@ -226,6 +264,12 @@ public class MergingDigest extends AbstractTDigest {
         tempWeight[where] = w;
         tempMean[where] = x;
         unmergedWeight += w;
+        if (x < min) {
+            min = x;
+        }
+        if (x > max) {
+            max = x;
+        }
 
         if (data != null) {
             if (tempData == null) {
@@ -258,7 +302,7 @@ public class MergingDigest extends AbstractTDigest {
         for (int i = 0; i < count; i++) {
             total += w[i];
         }
-        merge(m, w, count, data, null, total, false);
+        merge(m, w, count, data, null, total, false, compression);
     }
 
     @Override
@@ -308,20 +352,30 @@ public class MergingDigest extends AbstractTDigest {
     }
 
     private void mergeNewValues() {
-        if (unmergedWeight > 0) {
+        mergeNewValues(false, compression);
+    }
+
+    private void mergeNewValues(boolean force, double compression) {
+        if (totalWeight == 0 && unmergedWeight == 0) {
+            // seriously nothing to do
+            return;
+        }
+        if (force || unmergedWeight > 0) {
             // note that we run the merge in reverse every other merge to avoid left-to-right bias in merging
-            merge(tempMean, tempWeight, tempUsed, tempData, order, unmergedWeight, useAlternatingSort & mergeCount % 2 == 1);
+            merge(tempMean, tempWeight, tempUsed, tempData, order, unmergedWeight,
+                    useAlternatingSort & mergeCount % 2 == 1, compression);
             mergeCount++;
             tempUsed = 0;
             unmergedWeight = 0;
             if (data != null) {
                 tempData = new ArrayList<>();
             }
-
         }
     }
 
-    private void merge(double[] incomingMean, double[] incomingWeight, int incomingCount, List<List<Double>> incomingData, int[] incomingOrder, double unmergedWeight, boolean runBackwards) {
+    private void merge(double[] incomingMean, double[] incomingWeight, int incomingCount,
+                       List<List<Double>> incomingData, int[] incomingOrder,
+                       double unmergedWeight, boolean runBackwards, double compression) {
         System.arraycopy(mean, 0, incomingMean, incomingCount, lastUsedCell);
         System.arraycopy(weight, 0, incomingWeight, incomingCount, lastUsedCell);
         incomingCount += lastUsedCell;
@@ -343,12 +397,8 @@ public class MergingDigest extends AbstractTDigest {
         }
 
         totalWeight += unmergedWeight;
-        double normalizer = compression / (2 * Math.PI * totalWeight);
-        if (useConservativeLimit) {
-            normalizer = normalizer / Math.log(totalWeight);
-        }
 
-        assert incomingCount > 0;
+        assert (lastUsedCell + incomingCount) > 0;
         lastUsedCell = 0;
         mean[lastUsedCell] = incomingMean[incomingOrder[0]];
         weight[lastUsedCell] = incomingWeight[incomingOrder[0]];
@@ -358,25 +408,20 @@ public class MergingDigest extends AbstractTDigest {
             data.add(incomingData.get(incomingOrder[0]));
         }
 
-        double k1 = 0;
 
-        // weight will contain all zeros
-        double wLimit;
-        wLimit = totalWeight * integratedQ(k1 + 1);
+        // weight will contain all zeros after this loop
+
+        double k1 = scale.k(0, compression, totalWeight);
+        double wLimit = totalWeight * scale.q(k1 + 1, compression, totalWeight);
         for (int i = 1; i < incomingCount; i++) {
             int ix = incomingOrder[i];
             double proposedWeight = weight[lastUsedCell] + incomingWeight[ix];
             double projectedW = wSoFar + proposedWeight;
             boolean addThis;
             if (useWeightLimit) {
-                double z = proposedWeight * normalizer;
                 double q0 = wSoFar / totalWeight;
                 double q2 = (wSoFar + proposedWeight) / totalWeight;
-                if (useConservativeLimit) {
-                    addThis = z <= q0 * (1 - q0) && z <= q2 * (1 - q2);
-                } else {
-                    addThis = z * z <= q0 * (1 - q0) && z * z <= q2 * (1 - q2);
-                }
+                addThis = proposedWeight <= Math.min(scale.max(q0, compression, totalWeight), scale.max(q2, compression, totalWeight));
             } else {
                 addThis = projectedW <= wLimit;
             }
@@ -400,8 +445,8 @@ public class MergingDigest extends AbstractTDigest {
                 // didn't fit ... move to next output, copy out first centroid
                 wSoFar += weight[lastUsedCell];
                 if (!useWeightLimit) {
-                    k1 = integratedLocation(wSoFar / totalWeight, compression, totalWeight);
-                    wLimit = totalWeight * integratedQ(k1 + 1);
+                    k1 = scale.k(wSoFar / totalWeight, compression, totalWeight);
+                    wLimit = totalWeight * scale.q(k1 + 1, compression, totalWeight);
                 }
 
                 lastUsedCell++;
@@ -454,18 +499,18 @@ public class MergingDigest extends AbstractTDigest {
             n++;
         }
 
-        double k1 = 0;
+        double k1 = scale.k(0, publicCompression, totalWeight);
         double q = 0;
         double left = 0;
         String header = "\n";
         for (int i = 0; i < n; i++) {
             double dq = w[i] / total;
-            double k2 = integratedLocation(q + dq, compression, totalWeight);
+            double k2 = scale.k(q + dq, publicCompression, totalWeight);
             q += dq / 2;
             if (k2 - k1 > 1 && w[i] != 1) {
                 System.out.printf("%sOversize centroid at " +
                                 "%d, k0=%.2f, k1=%.2f, dk=%.2f, w=%.2f, q=%.4f, dq=%.4f, left=%.1f, current=%.2f maxw=%.2f\n",
-                        header, i, k1, k2, k2 - k1, w[i], q, dq, left, w[i], Math.PI * total / compression * Math.sqrt(q * (1 - q)));
+                        header, i, k1, k2, k2 - k1, w[i], q, dq, left, w[i], scale.max(q, publicCompression, totalWeight));
                 header = "";
                 badCount++;
             }
@@ -473,7 +518,7 @@ public class MergingDigest extends AbstractTDigest {
                 throw new IllegalStateException(
                         String.format("Egregiously oversized centroid at " +
                                         "%d, k0=%.2f, k1=%.2f, dk=%.2f, w=%.2f, q=%.4f, dq=%.4f, left=%.1f, current=%.2f, maxw=%.2f\n",
-                                i, k1, k2, k2 - k1, w[i], q, dq, left, w[i], Math.PI * total / compression * Math.sqrt(q * (1 - q))));
+                                i, k1, k2, k2 - k1, w[i], q, dq, left, w[i], scale.max(q, publicCompression, totalWeight)));
             }
             q += dq / 2;
             left += w[i];
@@ -484,144 +529,14 @@ public class MergingDigest extends AbstractTDigest {
     }
 
     /**
-     * Converts a quantile into a centroid scale value.  The centroid scale is nominally
-     * the number k of the centroid that a quantile point q should belong to.  Due to
-     * round-offs, however, we can't align things perfectly without splitting points
-     * and centroids.  We don't want to do that, so we have to allow for offsets.
-     * In the end, the criterion is that any quantile range that spans a centroid
-     * scale range more than one should be split across more than one centroid if
-     * possible.  This won't be possible if the quantile range refers to a single point
-     * or an already existing centroid.
-     * <p>
-     * This mapping is steep near q=0 or q=1 so each centroid there will correspond to
-     * less q range.  Near q=0.5, the mapping is flatter so that centroids there will
-     * represent a larger chunk of quantiles.
-     *
-     * @param q           The quantile scale value to be mapped.
-     * @param compression
-     * @param totalWeight
-     * @return The centroid scale value corresponding to q.
+     * Merges any pending inputs and compresses the data down to the public setting.
+     * Note that this typically loses a bit of precision and thus isn't a thing to
+     * be doing all the time. It is best done only when we want to show results to
+     * the outside world.
      */
-    public static double integratedLocation(double q, double compression, double totalWeight) {
-        if (!useConservativeLimit) {
-            return compression * (asinApproximation(2 * q - 1) + Math.PI / 2) / Math.PI;
-        } else {
-            // the k-scale for the conservative limit has infinite tails that we have to trim off
-            if (q < 1 / totalWeight) {
-                return 0;
-            } else if (1 - q < 1 / totalWeight) {
-                return 1;
-            } else {
-                return compression / 2 * (1 + Math.log(q / (1 - q)) / Math.log(totalWeight - 1));
-            }
-        }
-    }
-
-    /**
-     * Converts a k-scale value into a quantile. This is the inverse of {@link #integratedLocation(double, double, double)}.
-     * The virtue of using this is that sin is much cheaper than asin.
-     *
-     * @param k The k-index to be converted.
-     * @return The value of q.
-     */
-    private double integratedQ(double k) {
-        return (Math.sin(Math.min(k, compression) * Math.PI / compression - Math.PI / 2) + 1) / 2;
-    }
-
-    static double asinApproximation(double x) {
-        if (usePieceWiseApproximation) {
-            if (x < 0) {
-                return -asinApproximation(-x);
-            } else {
-                // this approximation works by breaking that range from 0 to 1 into 5 regions
-                // for all but the region nearest 1, rational polynomial models get us a very
-                // good approximation of asin and by interpolating as we move from region to
-                // region, we can guarantee continuity and we happen to get monotonicity as well.
-                // for the values near 1, we just use Math.asin as our region "approximation".
-
-                // cutoffs for models. Note that the ranges overlap. In the overlap we do
-                // linear interpolation to guarantee the overall result is "nice"
-                double c0High = 0.1;
-                double c1High = 0.55;
-                double c2Low = 0.5;
-                double c2High = 0.8;
-                double c3Low = 0.75;
-                double c3High = 0.9;
-                double c4Low = 0.87;
-                if (x > c3High) {
-                    return Math.asin(x);
-                } else {
-                    // the models
-                    double[] m0 = {0.2955302411, 1.2221903614, 0.1488583743, 0.2422015816, -0.3688700895, 0.0733398445};
-                    double[] m1 = {-0.0430991920, 0.9594035750, -0.0362312299, 0.1204623351, 0.0457029620, -0.0026025285};
-                    double[] m2 = {-0.034873933724, 1.054796752703, -0.194127063385, 0.283963735636, 0.023800124916, -0.000872727381};
-                    double[] m3 = {-0.37588391875, 2.61991859025, -2.48835406886, 1.48605387425, 0.00857627492, -0.00015802871};
-
-                    // the parameters for all of the models
-                    double[] vars = {1, x, x * x, x * x * x, 1 / (1 - x), 1 / (1 - x) / (1 - x)};
-
-                    // raw grist for interpolation coefficients
-                    double x0 = bound((c0High - x) / c0High);
-                    double x1 = bound((c1High - x) / (c1High - c2Low));
-                    double x2 = bound((c2High - x) / (c2High - c3Low));
-                    double x3 = bound((c3High - x) / (c3High - c4Low));
-
-                    // interpolation coefficients
-                    //noinspection UnnecessaryLocalVariable
-                    double mix0 = x0;
-                    double mix1 = (1 - x0) * x1;
-                    double mix2 = (1 - x1) * x2;
-                    double mix3 = (1 - x2) * x3;
-                    double mix4 = 1 - x3;
-
-                    // now mix all the results together, avoiding extra evaluations
-                    double r = 0;
-                    if (mix0 > 0) {
-                        r += mix0 * eval(m0, vars);
-                    }
-                    if (mix1 > 0) {
-                        r += mix1 * eval(m1, vars);
-                    }
-                    if (mix2 > 0) {
-                        r += mix2 * eval(m2, vars);
-                    }
-                    if (mix3 > 0) {
-                        r += mix3 * eval(m3, vars);
-                    }
-                    if (mix4 > 0) {
-                        // model 4 is just the real deal
-                        r += mix4 * Math.asin(x);
-                    }
-                    return r;
-                }
-            }
-        } else {
-            return Math.asin(x);
-        }
-    }
-
-    private static double eval(double[] model, double[] vars) {
-        double r = 0;
-        for (int i = 0; i < model.length; i++) {
-            r += model[i] * vars[i];
-        }
-        return r;
-    }
-
-    private static double bound(double v) {
-        if (v <= 0) {
-            return 0;
-        } else if (v >= 1) {
-            return 1;
-        } else {
-            return v;
-        }
-    }
-
-
     @Override
     public void compress() {
-        mergeNewValues();
+        mergeNewValues(true, publicCompression);
     }
 
     @Override
@@ -652,65 +567,115 @@ public class MergingDigest extends AbstractTDigest {
             }
         } else {
             int n = lastUsedCell;
-            if (x <= min) {
+            if (x < min) {
                 return 0;
             }
 
-            if (x >= max) {
+            if (x > max) {
                 return 1;
             }
 
             // check for the left tail
-            if (x <= mean[0]) {
+            if (x < mean[0]) {
                 // note that this is different than mean[0] > min
                 // ... this guarantees we divide by non-zero number and interpolation works
                 if (mean[0] - min > 0) {
-                    return (x - min) / (mean[0] - min) * weight[0] / totalWeight / 2;
+                    // must be a sample exactly at min
+                    if (x == min) {
+                        return 0.5 / totalWeight;
+                    } else {
+                        return (1 + (x - min) / (mean[0] - min) * (weight[0] / 2 - 1)) / totalWeight;
+                    }
                 } else {
+                    // this should be redundant with the check x < min
                     return 0;
                 }
             }
-            assert x > mean[0];
+            assert x >= mean[0];
 
             // and the right tail
-            if (x >= mean[n - 1]) {
+            if (x > mean[n - 1]) {
                 if (max - mean[n - 1] > 0) {
-                    return 1 - (max - x) / (max - mean[n - 1]) * weight[n - 1] / totalWeight / 2;
+                    if (x == max) {
+                        return 1 - 0.5 / totalWeight;
+                    } else {
+                        // there has to be a single sample exactly at max
+                        double dq = (1 + (max - x) / (max - mean[n - 1]) * (weight[n - 1] / 2 - 1)) / totalWeight;
+                        return 1 - dq;
+                    }
                 } else {
                     return 1;
                 }
             }
-            assert x < mean[n - 1];
 
-            // we know that there are at least two centroids and x > mean[0] && x < mean[n-1]
-            // that means that there are either a bunch of consecutive centroids all equal at x
-            // or there are consecutive centroids, c0 <= x and c1 > x
-            double weightSoFar = weight[0] / 2;
-            for (int it = 0; it < n; it++) {
+            // we know that there are at least two centroids and mean[0] < x < mean[n-1]
+            // that means that there are either one or more consecutive centroids all at exactly x
+            // or there are consecutive centroids, c0 < x < c1
+            double weightSoFar = 0;
+            for (int it = 0; it < n - 1; it++) {
+                // weightSoFar does not include weight[it] yet
                 if (mean[it] == x) {
-                    double w0 = weightSoFar;
-                    while (it < n && mean[it + 1] == x) {
-                        weightSoFar += (weight[it] + weight[it + 1]);
+                    // we have one or more centroids == x, treat them as one
+                    // dw will accumulate the weight of all of the centroids at x
+                    double dw = 0;
+                    while (it < n && mean[it] == x) {
+                        dw += weight[it];
                         it++;
                     }
-                    return (w0 + weightSoFar) / 2 / totalWeight;
-                }
-                if (mean[it] <= x && mean[it + 1] > x) {
+                    return (weightSoFar + dw / 2) / totalWeight;
+                } else if (mean[it] <= x && x < mean[it + 1]) {
+                    // landed between centroids ... check for floating point madness
                     if (mean[it + 1] - mean[it] > 0) {
+                        // note how we handle singleton centroids here
+                        // the point is that for singleton centroids, we know that their entire
+                        // weight is exactly at the centroid and thus shouldn't be involved in
+                        // interpolation
+                        double leftExcludedW = 0;
+                        double rightExcludedW = 0;
+                        if (weight[it] == 1) {
+                            if (weight[it + 1] == 1) {
+                                // two singletons means no interpolation
+                                // left singleton is in, right is out
+                                return (weightSoFar + 1) / totalWeight;
+                            } else {
+                                leftExcludedW = 0.5;
+                            }
+                        } else if (weight[it + 1] == 1) {
+                            rightExcludedW = 0.5;
+                        }
                         double dw = (weight[it] + weight[it + 1]) / 2;
-                        return (weightSoFar + dw * (x - mean[it]) / (mean[it + 1] - mean[it])) / totalWeight;
+
+                        // can't have double singleton (handled that earlier)
+                        assert dw > 1;
+                        assert (leftExcludedW + rightExcludedW) <= 0.5;
+
+                        // adjust endpoints for any singleton
+                        double left = mean[it];
+                        double right = mean[it + 1];
+
+                        double dwNoSingleton = dw - leftExcludedW - rightExcludedW;
+
+                        // adjustments have only limited effect on endpoints
+                        assert dwNoSingleton > dw / 2;
+                        assert right - left > 0;
+                        double base = weightSoFar + weight[it] / 2 + leftExcludedW;
+                        return (base + dwNoSingleton * (x - left) / (right - left)) / totalWeight;
                     } else {
                         // this is simply caution against floating point madness
                         // it is conceivable that the centroids will be different
                         // but too near to allow safe interpolation
                         double dw = (weight[it] + weight[it + 1]) / 2;
-                        return weightSoFar + dw / totalWeight;
+                        return (weightSoFar + dw) / totalWeight;
                     }
+                } else {
+                    weightSoFar += weight[it];
                 }
-                weightSoFar += (weight[it] + weight[it + 1]) / 2;
             }
-            // it should not be possible for the loop fall through
-            throw new IllegalStateException("Can't happen ... loop fell through");
+            if (x == mean[n - 1]) {
+                return 1 - 0.5 / totalWeight;
+            } else {
+                throw new IllegalStateException("Can't happen ... loop fell through");
+            }
         }
     }
 
@@ -721,10 +686,10 @@ public class MergingDigest extends AbstractTDigest {
         }
         mergeNewValues();
 
-        if (lastUsedCell == 0 && weight[lastUsedCell] == 0) {
+        if (lastUsedCell == 0) {
             // no centroids means no data, no way to get a quantile
             return Double.NaN;
-        } else if (lastUsedCell == 0) {
+        } else if (lastUsedCell == 1) {
             // with one data point, all quantiles lead to Rome
             return mean[0];
         }
@@ -735,10 +700,26 @@ public class MergingDigest extends AbstractTDigest {
         // if values were stored in a sorted array, index would be the offset we are interested in
         final double index = q * totalWeight;
 
-        // at the boundaries, we return min or max
+        // beyond the boundaries, we return min or max
+        // usually, the first centroid will have unit weight so this will make it moot
+        if (index <= 1) {
+            return min;
+        }
+
         if (index < weight[0] / 2) {
-            assert weight[0] > 0;
-            return min + 2 * index / weight[0] * (mean[0] - min);
+            assert weight[0] > 1;
+            // there is a single sample at min so we interpolate with less weight
+            return min + 2 * (index - 1) / (weight[0] - 1) * (mean[0] - min);
+        }
+
+        // usually the last centroid will have weight so this test will make it moot
+        if (index >= totalWeight - 1) {
+            return max;
+        }
+
+        if (totalWeight - index < weight[n - 1] / 2) {
+            assert weight[n - 1] > 1;
+            return max - (n - index - 1) / (weight[n - 1] - 1) * (max - mean[n - 1]);
         }
 
         // in between we interpolate between centroids
@@ -747,8 +728,27 @@ public class MergingDigest extends AbstractTDigest {
             double dw = (weight[i] + weight[i + 1]) / 2;
             if (weightSoFar + dw > index) {
                 // centroids i and i+1 bracket our current point
-                double z1 = index - weightSoFar;
-                double z2 = weightSoFar + dw - index;
+
+                // check for unit weight
+                double leftUnit = 0;
+                if (weight[i] == 1) {
+                    if (index - weightSoFar < 0.5) {
+                        // within the singleton's sphere
+                        return mean[i];
+                    } else {
+                        leftUnit = 0.5;
+                    }
+                }
+                double rightUnit = 0;
+                if (weight[i + 1] == 1) {
+                    if (weightSoFar + dw - index <= 0.5) {
+                        // no interpolation needed near singleton
+                        return mean[i + 1];
+                    }
+                    rightUnit = 0.5;
+                }
+                double z1 = index - weightSoFar - rightUnit;
+                double z2 = weightSoFar + dw - index - leftUnit;
                 return weightedAverage(mean[i], z2, mean[i + 1], z1);
             }
             weightSoFar += dw;
@@ -765,6 +765,7 @@ public class MergingDigest extends AbstractTDigest {
 
     @Override
     public int centroidCount() {
+        mergeNewValues();
         return lastUsedCell;
     }
 
@@ -806,7 +807,7 @@ public class MergingDigest extends AbstractTDigest {
 
     @Override
     public double compression() {
-        return compression;
+        return publicCompression;
     }
 
     @Override
@@ -825,6 +826,19 @@ public class MergingDigest extends AbstractTDigest {
         return lastUsedCell * 8 + 30;
     }
 
+    public void setScaleFunction(ScaleFunction scaleFunction) {
+        if (scaleFunction.toString().endsWith("NO_NORM")) {
+            throw new IllegalArgumentException(
+                    String.format("Can't use %s as scale with %s", scaleFunction, this.getClass()));
+        }
+        this.scale = scaleFunction;
+    }
+
+    @SuppressWarnings("WeakerAccess")
+    public ScaleFunction getScaleFunction() {
+        return scale;
+    }
+
     public enum Encoding {
         VERBOSE_ENCODING(1), SMALL_ENCODING(2);
 
@@ -841,7 +855,7 @@ public class MergingDigest extends AbstractTDigest {
         buf.putInt(Encoding.VERBOSE_ENCODING.code);
         buf.putDouble(min);
         buf.putDouble(max);
-        buf.putDouble(compression);
+        buf.putDouble(publicCompression);
         buf.putInt(lastUsedCell);
         for (int i = 0; i < lastUsedCell; i++) {
             buf.putDouble(weight[i]);
@@ -855,7 +869,7 @@ public class MergingDigest extends AbstractTDigest {
         buf.putInt(Encoding.SMALL_ENCODING.code);    // 4
         buf.putDouble(min);                          // + 8
         buf.putDouble(max);                          // + 8
-        buf.putFloat((float) compression);           // + 4
+        buf.putFloat((float) publicCompression);           // + 4
         buf.putShort((short) mean.length);           // + 2
         buf.putShort((short) tempMean.length);       // + 2
         buf.putShort((short) lastUsedCell);          // + 2 = 30
@@ -903,5 +917,14 @@ public class MergingDigest extends AbstractTDigest {
             throw new IllegalStateException("Invalid format for serialized histogram");
         }
 
+    }
+
+    @Override
+    public String toString() {
+        return "MergingDigest"
+                + "-" + getScaleFunction()
+                + "-" + (useWeightLimit ? "weight" : "kSize")
+                + "-" + (useAlternatingSort ? "alternating" : "stable")
+                + "-" + (useTwoLevelCompression ? "twoLevel" : "oneLevel");
     }
 }

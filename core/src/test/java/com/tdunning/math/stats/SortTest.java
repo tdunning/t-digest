@@ -203,57 +203,6 @@ public class SortTest {
     }
 
     @Test
-    public void testRandomizedInPlace() {
-        Random rand = new Random();
-
-        for (int k = 0; k < 100; k++) {
-            double[] keys = new double[30];
-            for (int i = 0; i < 30; i++) {
-                keys[i] = rand.nextDouble();
-            }
-
-            Sort.sort(keys);
-            checkOrder(keys, 0, keys.length);
-        }
-
-        for (int k = 0; k < 100; k++) {
-            double[] keys = new double[30];
-            for (int i = 0; i < 30; i++) {
-                keys[i] = rand.nextDouble();
-            }
-            double[] v0 = valuesFromKeys(keys, 0);
-
-            Sort.sort(keys, v0);
-            checkOrder(keys, 0, keys.length, v0);
-        }
-
-        for (int k = 0; k < 100; k++) {
-            double[] keys = new double[30];
-            for (int i = 0; i < 30; i++) {
-                keys[i] = rand.nextDouble();
-            }
-            double[] v0 = valuesFromKeys(keys, 0);
-            double[] v1 = valuesFromKeys(keys, 1);
-
-            Sort.sort(keys, v0, v1);
-            checkOrder(keys, 0, keys.length, v0, v1);
-        }
-
-        for (int k = 0; k < 100; k++) {
-            double[] keys = new double[30];
-            for (int i = 0; i < 30; i++) {
-                keys[i] = rand.nextDouble();
-            }
-            double[] v0 = valuesFromKeys(keys, 0);
-            double[] v1 = valuesFromKeys(keys, 1);
-            double[] v2 = valuesFromKeys(keys, 2);
-
-            Sort.sort(keys, v0, v1, v2);
-            checkOrder(keys, 0, keys.length, v0, v1, v2);
-        }
-    }
-
-    @Test
     public void testRandomizedShortSort() throws Exception {
         Random rand = new Random();
 
@@ -272,7 +221,7 @@ public class SortTest {
             double[] v1 = valuesFromKeys(keys, 1);
 
             Sort.sort(keys, 10, 10, v0, v1);
-            checkOrder(keys, 10, 20, v0, v1);
+            checkOrder(keys, 10, 10, v0, v1);
             checkValues(keys, 0, keys.length, v0, v1);
             for (int i = 0; i < 10; i++) {
                 assertEquals(i, keys[i], 0);
@@ -281,7 +230,6 @@ public class SortTest {
                 assertEquals(i, keys[i], 0);
             }
         }
-
     }
 
     /**

@@ -352,10 +352,10 @@ public abstract class TDigestTest extends AbstractTest {
             dist.recordAllData();
         }
 
-        List<Double> data = Lists.newArrayList();
+        double[] data = new double[100000];
         for (int i = 0; i < 100000; i++) {
             double x = gen.nextDouble();
-            data.add(x);
+            data[i] = x;
         }
         long t0 = System.nanoTime();
         int sumW = 0;
@@ -365,14 +365,11 @@ public abstract class TDigestTest extends AbstractTest {
         }
         System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 100000);
         System.out.printf("# %d centroids\n", dist.centroids().size());
-        Collections.sort(data);
+        Arrays.sort(data);
 
         double[] xValues = qValues.clone();
         for (int i = 0; i < qValues.length; i++) {
-            double ix = data.size() * qValues[i] - 0.5;
-            int index = (int) Math.floor(ix);
-            double p = ix - index;
-            xValues[i] = data.get(index) * (1 - p) + data.get(index + 1) * p;
+            xValues[i] = Dist.quantile(qValues[i], data);
         }
 
         double qz = 0;
@@ -395,12 +392,12 @@ public abstract class TDigestTest extends AbstractTest {
             errorDump.printf("%s\t%s\t%.8g\t%.8f\t%.8f\n", tag, "cdf", x, q, estimate - q);
             assertEquals(q, estimate, 0.005);
 
-            estimate = cdf(dist.quantile(q), data);
+            estimate = Dist.cdf(dist.quantile(q), data);
             errorDump.printf("%s\t%s\t%.8g\t%.8f\t%.8f\n", tag, "quantile", x, q, estimate - q);
             if (Math.abs(q - estimate) > 0.005) {
                 softErrors++;
             }
-            assertEquals(q, estimate, 0.012);
+            assertEquals(String.format("discrepancy %.5f vs %.5f @ %.5f", q, estimate, x), q, estimate, 0.012);
         }
         assertTrue(softErrors < 3);
 
@@ -588,7 +585,8 @@ public abstract class TDigestTest extends AbstractTest {
                 assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f", z, q, cdf), z + 0.05, cdf, 0.01);
 
                 double estimate = dist.quantile(q);
-                assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f, estimate = %.3f", z, q, cdf, estimate), Math.rint(q * 10) / 10.0, estimate, 0.001);
+                assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f, estimate = %.3f", z, q, cdf, estimate),
+                    Math.rint(q * 10) / 10.0, estimate, 0.001);
             }
         }
     }

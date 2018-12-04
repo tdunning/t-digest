@@ -57,11 +57,11 @@ public class Sort {
      */
     @SuppressWarnings("WeakerAccess")
     public static void sort(int[] order, double[] values, int start, int n) {
-        for (int i = 0; i < n; i++) {
+        for (int i = start; i < start + n; i++) {
             order[i] = i;
         }
-        quickSort(order, values, start, n, 8);
-        insertionSort(order, values, start, n, 8);
+        quickSort(order, values, start, start + n, 8);
+        insertionSort(order, values, start, start + n, 8);
     }
 
     /**
@@ -221,7 +221,7 @@ public class Sort {
     @SuppressWarnings("WeakerAccess")
     public static void sort(double[] key, int start, int n, double[]... values) {
         quickSort(key, values, start, start + n, 8);
-        insertionSort(key, values, start, n, 8);
+        insertionSort(key, values, start, start + n, 8);
     }
 
     /**
@@ -370,15 +370,19 @@ public class Sort {
      */
     @SuppressWarnings("SameParameterValue")
     private static void insertionSort(double[] key, double[][] values, int start, int end, int limit) {
+        // loop invariant: all values start ... i-1 are ordered
         for (int i = start + 1; i < end; i++) {
             double v = key[i];
             int m = Math.max(i - limit, start);
             for (int j = i; j >= m; j--) {
-                if (j == 0 || key[j - 1] <= v) {
+                if (j == m || key[j - 1] <= v) {
                     if (j < i) {
                         System.arraycopy(key, j, key, j + 1, i - j);
+                        key[j] = v;
                         for (double[] value : values) {
+                            double tmp = value[i];
                             System.arraycopy(value, j, value, j + 1, i - j);
+                            value[j] = tmp;
                         }
                     }
                     break;
