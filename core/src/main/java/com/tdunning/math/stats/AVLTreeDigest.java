@@ -409,12 +409,12 @@ public class AVLTreeDigest extends AbstractTDigest {
             AVLTreeDigest r = new AVLTreeDigest(compression);
             r.setMinMax(min, max);
             int n = buf.getInt();
-            double[] means = new double[n];
             // MIN CENTROID SIZE: 4 (float = mean delta) + 1 (encoding = count) => 5 bytes
             final int expectedCentroids = buf.remaining() / 5;
             if (n > expectedCentroids) {
                 throw new IllegalStateException("Centroid count is invalid: " + n + ". Limit is: " + expectedCentroids);
             }
+            double[] means = new double[n];
             double x = 0;
             for (int i = 0; i < n; i++) {
                 double delta = buf.getFloat();
