@@ -17,7 +17,6 @@
 
 package com.tdunning.math.stats;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
