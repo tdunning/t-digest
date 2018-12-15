@@ -702,27 +702,29 @@ public class MergingDigest extends AbstractTDigest {
 
         // beyond the boundaries, we return min or max
         // usually, the first centroid will have unit weight so this will make it moot
-        if (index <= 1) {
+        if (index < 1) {
             return min;
         }
 
-        if (index < weight[0] / 2) {
-            assert weight[0] > 1;
+        // if the left centroid has more than one sample, we still know
+        // that one sample occurred at min so we can do some interpolation
+        if (weight[0] > 1 && index < weight[0] / 2) {
             // there is a single sample at min so we interpolate with less weight
-            return min + 2 * (index - 1) / (weight[0] - 1) * (mean[0] - min);
+            return min + (index - 1) / (weight[0] / 2 - 1) * (mean[0] - min);
         }
 
-        // usually the last centroid will have weight so this test will make it moot
-        if (index >= totalWeight - 1) {
+        // usually the last centroid will have unit weight so this test will make it moot
+        if (index > totalWeight - 1) {
             return max;
         }
 
-        if (totalWeight - index < weight[n - 1] / 2) {
-            assert weight[n - 1] > 1;
-            return max - (n - index - 1) / (weight[n - 1] - 1) * (max - mean[n - 1]);
+        // if the right-most centroid has more than one sample, we still know
+        // that one sample occurred at max so we can do some interpolation
+        if (weight[n-1] > 1 && totalWeight - index <= weight[n - 1] / 2) {
+            return max - (totalWeight - index - 1) / (weight[n - 1] / 2 - 1) * (max - mean[n - 1]);
         }
 
-        // in between we interpolate between centroids
+        // in between extremes we interpolate between centroids
         double weightSoFar = weight[0] / 2;
         for (int i = 0; i < n - 1; i++) {
             double dw = (weight[i] + weight[i + 1]) / 2;
@@ -747,12 +749,14 @@ public class MergingDigest extends AbstractTDigest {
                     }
                     rightUnit = 0.5;
                 }
-                double z1 = index - weightSoFar - rightUnit;
-                double z2 = weightSoFar + dw - index - leftUnit;
+                double z1 = index - weightSoFar - leftUnit;
+                double z2 = weightSoFar + dw - index - rightUnit;
                 return weightedAverage(mean[i], z2, mean[i + 1], z1);
             }
             weightSoFar += dw;
         }
+        // we handled singleton at end up above
+        assert weight[n - 1] > 1;
         assert index <= totalWeight;
         assert index >= totalWeight - weight[n - 1] / 2;
 

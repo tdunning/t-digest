@@ -9,6 +9,13 @@ affect operation except to compromise accuracy or to increase the size of
 a digest. The tests in this module aim to highlight how and where an
 implementation may be going wrong.
 
+Cluster Overlap
+--------------
+
+Run `com.tdunning.tdigest.quality.AccuracyTest#testBucketFill` to
+generate test data and then `accuracy.r` to generate
+`cluster-spread.pdf` which shows how clusters don't overlap.
+
 Basic Accuracy
 --------------
 
