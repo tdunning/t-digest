@@ -17,10 +17,13 @@
 
 package com.tdunning.math.stats;
 
+import java.util.Random;
+
 /**
  * Static sorting methods
  */
 public class Sort {
+    private static final Random prng = new Random(); // for choosing pivots during quicksort
     /**
      * Quick sort using an index array.  On return,
      * values[order[i]] is in order as i goes 0..values.length
@@ -77,53 +80,9 @@ public class Sort {
         // the while loop implements tail-recursion to avoid excessive stack calls on nasty cases
         while (end - start > limit) {
 
-            // median of three values for the pivot
-            int a = start;
-            int b = (start + end) / 2;
-            int c = end - 1;
-
-            int pivotIndex;
-            double pivotValue;
-            double va = values[order[a]];
-            double vb = values[order[b]];
-            double vc = values[order[c]];
-            //noinspection Duplicates
-            if (va > vb) {
-                if (vc > va) {
-                    // vc > va > vb
-                    pivotIndex = a;
-                    pivotValue = va;
-                } else {
-                    // va > vb, va >= vc
-                    if (vc < vb) {
-                        // va > vb > vc
-                        pivotIndex = b;
-                        pivotValue = vb;
-                    } else {
-                        // va >= vc >= vb
-                        pivotIndex = c;
-                        pivotValue = vc;
-                    }
-                }
-            } else {
-                // vb >= va
-                if (vc > vb) {
-                    // vc > vb >= va
-                    pivotIndex = b;
-                    pivotValue = vb;
-                } else {
-                    // vb >= va, vb >= vc
-                    if (vc < va) {
-                        // vb >= va > vc
-                        pivotIndex = a;
-                        pivotValue = va;
-                    } else {
-                        // vb >= vc >= va
-                        pivotIndex = c;
-                        pivotValue = vc;
-                    }
-                }
-            }
+            // pivot by a random element
+            int pivotIndex = start + prng.nextInt(end - start);
+            double pivotValue = values[order[pivotIndex]];
 
             // move pivot to beginning of array
             swap(order, start, pivotIndex);
