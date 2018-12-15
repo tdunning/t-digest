@@ -24,6 +24,54 @@ In summary, the particularly interesting characteristics of the t-digest are tha
 * can be used with map-reduce very easily because digests can be merged
 * recent versions are simple, very fast, and require no dynamic allocation after creation
 
+Recent News
+-----------
+Lots has happened in t-digest lately. The basic gist of all the changes are that the
+core algorithms have been made much more rigorous and the associated papers have been 
+updated to match the reality of the most advanced implementations. The general areas of improvement
+include a new framework for dealing with scale functions, real proofs of size bounds and invariants
+for all current scale functions, much improved interpolation algorithms, better accuracy
+testing and splitting the entire distribution into parts for the core algorithms, quality testing, benchmarking and documentation.
+ 
+### Scale Functions
+The idea of scale functions is the heart of the t-digest. But things don't quite work the way that
+we originally thought. Originally, it was presumed that accuracy should be proportional to the 
+square of the size of a cluster. That isn't true in practice. That means that scale functions need
+to be much more aggressive about controlling cluster sizes near the tails. We now have 4 scale functions 
+supported for the `MergingDigest` to all different trade-offs in terms of accuracy.
+
+These scale functions now have associated proofs that they all preserve the key invariants necessary
+to build an accurate digest and that they all give tight bounds on the size of a digest. This means that we 
+can get much better tail accuracy than before without losing much in terms of median accuracy. It also means
+that insertion into a `MergingDigest` is much faster than before since we
+have been able to eliminate all fancy functions like sqrt, log or sin.
+ 
+### Better Interpolation
+The better accuracy achieved by the new scale functions partly comes from the fact that the most extreme clusters
+near q=0 or q=1 are limited to only a single sample. Handling these singletons well makes a huge difference in the 
+accuracy of tail estimates. Handling the transition to non-singletons is also very important.
+  
+Both cases are handled much better than before.
+  
+### Two-level Merging
+We now have a trick that uses a higher value of the compression parameter (delta) while we are accumulating
+a t-digest and a lower value when we are about to store or display a t-digest. This two-level merging has 
+a small (negative) effect on speed, but a substantial (positive) effect on accuracy because clusters are
+ordered more strongly. This better ordering of clusters means that the effects of the improved interpolation
+are much easier to observe.
+ 
+### Repo Reorg
+The t-digest repository is now split into different functional areas. This is important because it simplifies
+the code used in production by extracting the (slow) code that generates data for accuracy testing, but also 
+because it lets us avoid any dependencies on GPL code (notable the jmh benchmarking tools) in the released artifacts.
+ 
+The major areas are
+ 
+ * core - this is where the t-digest and unit tests live
+ * docs - the main paper and auxillary proofs live here
+ * benchmarks - this is the code that tests the speed of the digest algos
+ * quality - this is the code that generates and analyzes accuracy information
+
 FloatHistogram
 --------------
 
