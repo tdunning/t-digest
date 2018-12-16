@@ -17,20 +17,38 @@
 
 package com.tdunning.math.stats;
 
-import com.clearspring.analytics.stream.quantile.QDigest;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.mahout.common.RandomUtils;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
 import org.apache.mahout.math.jet.random.Normal;
 import org.apache.mahout.math.jet.random.Uniform;
-import org.junit.*;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
-import java.io.*;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.ByteBuffer;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -582,81 +600,6 @@ public abstract class TDigestTest extends AbstractTest {
         for (int i = 0; i < 3000; i++) {
             int n = AbstractTDigest.decode(buf);
             assertEquals(String.format("%d:", i), ref.get(i).intValue(), n);
-        }
-    }
-
-    @Test
-    public void compareToQDigest() throws FileNotFoundException {
-        Random rand = getRandom();
-        try (PrintWriter out = new PrintWriter(new FileOutputStream("qd-tree-comparison.csv"))) {
-            for (int i = 0; i < repeats(); i++) {
-                compareQD(out, new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
-                compareQD(out, new Uniform(0, 1, rand), "uniform", 1L << 48);
-            }
-        }
-    }
-
-    private void compareQD(PrintWriter out, AbstractContinousDistribution gen, String tag, long scale) {
-        for (double compression : new double[]{10, 20, 50, 100, 200, 500, 1000, 2000}) {
-            QDigest qd = new QDigest(compression);
-            TDigest dist = factory(compression).create();
-            List<Double> data = Lists.newArrayList();
-            for (int i = 0; i < 100000; i++) {
-                double x = gen.nextDouble();
-                dist.add(x);
-                qd.offer((long) (x * scale));
-                data.add(x);
-            }
-            dist.compress();
-            Collections.sort(data);
-
-            for (double q : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99, 0.999}) {
-                double x1 = dist.quantile(q);
-                double x2 = (double) qd.getQuantile(q) / scale;
-                double e1 = cdf(x1, data) - q;
-                out.printf("%s\t%.0f\t%.8f\t%.10g\t%.10g\t%d\t%d\n", tag, compression, q, e1, cdf(x2, data) - q, dist.smallByteSize(), QDigest.serialize(qd).length);
-
-            }
-        }
-    }
-
-    @Test
-    public void compareToStreamingQuantile() throws FileNotFoundException {
-        Random rand = getRandom();
-
-        try (PrintWriter out = new PrintWriter(new FileOutputStream("sq-tree-comparison.csv"))) {
-            for (int i = 0; i < repeats(); i++) {
-                compareSQ(out, new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
-                compareSQ(out, new Uniform(0, 1, rand), "uniform", 1L << 48);
-            }
-        }
-    }
-
-    private void compareSQ(PrintWriter out, AbstractContinousDistribution gen, String tag, long scale) {
-        double[] quantiles = {0.001, 0.01, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99, 0.999};
-        for (double compression : new double[]{10, 20, 50, 100, 200, 500, 1000, 2000}) {
-            QuantileEstimator sq = new QuantileEstimator(1001);
-            TDigest dist = factory(compression).create();
-            List<Double> data = Lists.newArrayList();
-            for (int i = 0; i < 100000; i++) {
-                double x = gen.nextDouble();
-                dist.add(x);
-                sq.add(x);
-                data.add(x);
-            }
-            dist.compress();
-            Collections.sort(data);
-
-            List<Double> qz = sq.getQuantiles();
-            for (double q : quantiles) {
-                double x1 = dist.quantile(q);
-                double x2 = qz.get((int) (q * 1000 + 0.5));
-                double e1 = cdf(x1, data) - q;
-                double e2 = cdf(x2, data) - q;
-                out.printf("%s\t%.0f\t%.8f\t%.10g\t%.10g\t%d\t%d\n",
-                        tag, compression, q, e1, e2, dist.smallByteSize(), sq.serializedSize());
-
-            }
         }
     }
 
