@@ -43,7 +43,7 @@ One early algorithm for computing on-line quantiles is described by Chen, Lamber
 
 Munro and Paterson\cite{munro1980} provided an alternative algorithm to get a precise estimate of the median.  This is done by keeping $s$ samples from the $N$ samples seen so far where $s << N$ by the time the entire data set has been seen.  If the data are presented in random order and if $s = \theta(N^{1/2} \log N)$, then Munro and Paterson's algorithm has a high probability of being able to retain a set of samples that contains the median.  This algorithm can be adapted to find a number of pre-specified quantiles at the same time at proportional cost in memory.  The memory consumption of Munro-Paterson algorithm is, however, excessive if precise results are desired.  Approximate results can be had with less memory, however.  
 
-A more subtle problem is that the implementation of Munro and Paterson's algorithm in Sawzall\cite{sawzall} and the Datafu library\cite{datafu} uses a number of buckets computed from the GCD of the desired quantiles.  This means that if you want to compute the $99$-th, $99.9$-th and $99.99$-th percentiles, a thousand buckets are required, each of which requires the retention of many samples. We will refer to this implementation of Munro and Paterson's algorithm as MP01 in results presented here.
+A more subtle problem is that the implementation of Munro and Paterson's algorithm in Sawzall\cite{sawzall} and the Datafu library\cite{datafu} uses a number of buckets computed from the GCD of the desired quantiles.  This means that if you want to compute the $99$-th, $99.9$-th and $99.99$-th percentiles, ten thousand buckets are required, each of which requires the retention of many samples. We will refer to this implementation of Munro and Paterson's algorithm as MP01 in results presented here.
 
 One of the most important results of the work by Munro and Paterson was a proof that computing any particular quantile exactly in $p$ passes through the data requires $\Omega(N^{1/p})$ memory. For the on-line case, $p=1$, which implies that on-line algorithms cannot guarantee to produce the precise value of any particular quantile. This result together with the importance of the on-line case drove subsequent work to focus on algorithms to produce approximate values of quantiles.
 
@@ -116,11 +116,11 @@ In a fully merged $t$-digest adjacent clusters, cannot be merged because the res
 \[
 |\mathcal C_i \cup \mathcal C_{i+1} |_k = |\mathcal C_i|_k + |\mathcal C_{i+1}|_k > 1
 \]
-Together, these conditions imply that for a fully merged $t$-digest using $k_1$ with at least $\delta/2$ samples, the number of clusters $m$ is in the range $ \lfloor\delta/2\rfloor \le m < \left \lceil\delta \,\right \rceil + 1$. 
+Together, these conditions imply that for a fully merged $t$-digest using $k_1$ with at least $\delta/2$ samples, the number of clusters $m$ is in the range $ \lfloor\delta/2\rfloor \le m \le \left \lceil\delta \,\right \rceil $. 
 
 \subsection{The effect of a scale function}
 
-The only really necessary characteristic of a scale function up to now is that be non-decreasing. As such,  a linear scale function $k_0(q) = \delta q$ can be used instead of  $k_1$. Using a linear scale function results in nearly uniform cluster sizes and constant absolute error in $q$  which is similar to the behavior of most previously reported quantile approximation algorithms. 
+The only really necessary characteristic of a scale function up to now is that be non-decreasing. As such,  a linear scale function $k_0(q) = \delta q/2$ can be used instead of  $k_1$. Using a linear scale function results in nearly uniform cluster sizes and constant absolute error in $q$  which is similar to the behavior of most previously reported quantile approximation algorithms. 
 
 Figure \ref{fig:linear-interpolation} shows how  estimating $q$ near tails is improved for a strongly ordered, fully merged $t$-digest constructed with a scale function that keeps clusters small near extreme values of $q$. 
 \begin{figure}[h] %  figure placement: here, top, bottom, or page
@@ -182,20 +182,20 @@ $C'\mathtt{.append}(\sigma)$\;
 
 The run-time cost of the merge variant of the $t$-digest is a mixture of the frequent buffer inserts  and the rare  merges. The buffer inserts are very fast since they consist of an array write, index increment and an overflow test. The merges consist of the buffer sort and the merge itself. The merge involves a scan through both the buffer and the existing centroids plus a number of calls to the scale function roughly equal to the size of the result which is bounded by $ \lceil \delta \rceil$ for all common scale functions. If $c_1$ is the input buffer size, the dominant costs are the sort and the scale function calls so the amortized cost per input value is roughly $C_1 \log c_1 + C_2 \lceil \delta \rceil / c_1$ where $C_1$ and $C_2$ are parameters representing the sort and scale function costs respectively. This overall amortized cost has a minimum where $c_1 \approx \delta\, C_2  / C_1$. The constant of proportionality should be determined by experiment, but micro-benchmarks indicate that $C_2 / C_1$ is in the range from $5$ to $20$ for a single core of an Intel i7 processor. In these micro-benchmarks, increasing the buffer size to $10 \lceil \delta \rceil$ dramatically improves the average speed but further buffer size increases have much less effect. 
 
-Further optimization in the case of the scale function $k_1$ is possible by speeding up the evaluation of $\sin^{-1}$. It is difficult to build a high quality approximation of $\sin^{-1}$ over the entire domain $[0,1]$ without using other high cost functions such as a square root, but by limiting the domain where the approximation is used to $q \in [\epsilon, 1-\epsilon]$, where $\epsilon \approx 0.01$, simple and fast approximations are available.
+Further optimization in the case of the scale function $k_1$ is possible by speeding up the evaluation of $\sin^{-1}$. It is difficult to build a very fast and still high quality approximation of $\sin^{-1}$ over the entire domain $[0,1]$, but by limiting the domain where the approximation is used to $q \in [\epsilon, 1-\epsilon]$, where $\epsilon \approx 0.01$, simple and fast approximations are available.
 
-It is also possible to avoid evaluation of $k$ and $k^{-1}$ by estimating the maximum number of samples that can be in each candidate cluster. Such estimates typically under-estimate the number of samples allowed, especially near the tails, but the size of the $t$-digest is not substantially increased and accuracy can be somewhat increased. The major benefit of such a weight limit is speed, particularly with $k_0$, $k_2$ and $k_3$. For $k_1$, the size limit involves a square root. Since the weight limit must be evaluated for every point, the square root makes the weight limit slower than using the scale function limit for $k_1$. 
+It is also possible to avoid evaluation of $k$ and $k^{-1}$ by estimating the maximum number of samples that can be in each candidate cluster. Such estimates typically under-estimate the number of samples allowed, especially near the tails, but the size of the $t$-digest is not substantially increased and accuracy can be somewhat increased. The major benefit of such a weight limit is speed, particularly with $k_0$, and the $k_2$ and $k_3$ scale functions that will be defined in a later section. For $k_1$, the size limit involves a square root. Since the weight limit must be evaluated for every point, the square root makes the weight limit slower than using the scale function limit for $k_1$. 
 
 Finally, in practice, merge-based algorithms as shown here can be subject to problems due to the fact that samples are always considered in ascending order as they are merged with existing centroids. This can cause centroids near $q=0$ to grow in an asymmetric fashion with the effect that the centroid drifts a bit as the digest is constructed. This drift means that the resulting digest is more weakly ordered than desired. This problem can be mitigated to a degree by alternating the scan order in the merge (ascending in one pass, descending the next). 
 
 Another approach is to use a temporarily larger value of the compression parameter $\delta$ while points are being added. When it is necessary to finally store the digest, a final pass can be made to fully merge the digest with the final compression parameter. To some degree, this can be framed in the context of a three-way tradeoff between memory space, speed and accuracy. For highest speed with constant memory use, a large buffer and a smaller value of $\delta$ can be used. For highest accuracy, a large buffer and a temporarily larger value value of $\delta$ can be used. For smallest memory, a smaller buffer and an unchanged value of $\delta$ should be used. 
 
-To give a specific example of this trade-off, for high accuracy, a buffer size of $10\times\delta$ would be used as is commonly done but merging could be done with a compression parameter of $3\times\delta$. This would require no more memory than typically used, but would cause merging to be done about 20\% more often, and would result in 3 times as many centroids being retained between merges which would make each merge significantly more expensive. If the resulting digest is only weakly ordered, say with ordering parameter $\Delta \le 3$ due to being constructed incrementally, the final merge is likely reduce the digest very nearly to a strongly ordered state as the number of centroids and ordering parameter are both reduced by roughly a factor of 3 to 1. In practice, the reduction in ordering parameter results dramatically smaller errors.
+To give a specific example of this trade-off, for high accuracy, a buffer size of $10\times\delta$ would be used as is commonly done but merging could be done with a compression parameter of $3\times\delta$. This would require no more memory than typically used, but would cause merging to be done about 20\% more often, and would result in 3 times as many centroids being retained between merges which would make each merge significantly more expensive. If the resulting digest is only weakly ordered, say with ordering parameter $\Delta \le 3$ due to being constructed incrementally, the final merge is likely to reduce the digest to very nearly a strongly ordered state as the number of centroids and ordering parameter are both reduced by roughly a factor of 3 to 1. In practice, the reduction in ordering parameter results in dramatically smaller errors.
 
 \subsection{The clustering variant}
 If we allow the buffer in the merging variant of the $t$-digest algorithm to contain just a single element so that merges take place every time a new point is added, the algorithm takes on a new character and becomes much more like clustering than buffering and merging.
 
-The basic outline of the clustering algorithm for constructing a $t$-digest is quite simple.  An initially empty ordered list of centroids, $C = [ c_1 \ldots c_m ]$ is kept.  Each centroid consists of a mean and a count.  To add a new value $x_n$ with a weight $w_n$, the set of centroids is found that have minimum distance to $x_n$.  This set is reduced by retaining only centroids whose $k$-size after adding $w_n$ would meet the size bound.  If more than one centroid remains, the one with maximum weight is selected.  If a acceptable centroid is found, then the new point, $(x_n,w_n)$, is added to that centroid. If no satisfactory centroid is found then $(x_n,w_n)$ is used to form a new centroid with weight $w_n$ and the next point is considered. 
+The basic outline of the clustering algorithm for constructing a $t$-digest is quite simple.  An initially empty ordered list of centroids, $C = [ c_1 \ldots c_m ]$ is kept.  Each centroid consists of a mean and a count.  To add a new value $x_n$ with a weight $w_n$, the set of centroids is found that have minimum distance to $x_n$.  This set is reduced by retaining only centroids whose $k$-size after adding $w_n$ would meet the size bound.  If more than one centroid remains, the one with maximum weight is selected.  If an acceptable centroid is found, then the new point, $(x_n,w_n)$, is added to that centroid. If no satisfactory centroid is found then $(x_n,w_n)$ is used to form a new centroid with weight $w_n$ and the next point is considered. 
 
 This clustering variant is shown more formally as Algorithm \ref{alg:full}.
  \begin{algorithm}[htb]
@@ -205,12 +205,13 @@ This clustering variant is shown more formally as Algorithm \ref{alg:full}.
 \SetKwFor{For}{for}{\string:}{}
  \label{alg:full}
 \SetNoFillComment
-\KwIn{Ordered set of weighted centroids $C = \lbrace \rbrace$, sequence of real-valued, weighted points $X = \lbrace (x_1, w_1),\ldots (x_N, w_N)\rbrace$, and accuracy tolerance $\delta$}
+\KwIn{Ordered set of weighted centroids $C = \lbrace \rbrace$, sequence of real-valued, weighted points $X = \lbrace (x_1, w_1),\ldots (x_N, w_N)\rbrace$, accuracy tolerance $\delta$, and limit on excess growth $K$ typically in the range $3\ldots10$}
 \KwOut{final set $C=[c_1 \ldots c_m]$ of weighted centroids} 
 \For{$(x_n, w_n) \in X$} {
   $z = \min | c_i.\mathtt{mean} - x |$\;
   $S = \lbrace c_i  :  |c_i.\mathtt{mean} - x| = z \wedge |c_i+w_1|_k < 1 \rbrace $\;
   \If {$|S| > 0$} {
+       \tcp{sort by descending distance}
        $S.\mathtt{sort}( key=\lambda (c) \lbrace -c.\mathtt{sum} \rbrace)$\;
        $c \gets S.\mathtt{first()}$ \;
        $c.\mathtt{count} \gets c.\mathtt{count} + w_n$\;
@@ -222,6 +223,7 @@ This clustering variant is shown more formally as Algorithm \ref{alg:full}.
          $C \gets \mathtt{merge}( C, \lbrace\rbrace ) $\;
        }
 } 
+$C \gets \mathtt{merge}( C, \lbrace\rbrace ) $\;
 \Return $ C $\\
 \caption{Construction of a $t$-Digest by clustering}
 \end{algorithm}
@@ -247,7 +249,7 @@ k_3(q) &= \frac \delta {4\log n/\delta + 21}\begin{cases}
 Each of these scale functions to build a $t$-digest gives the following two guarantees
 \begin{itemize}
 \item
-The number of centroids in a fully merged $t$-digest is bounded by $\delta$ as the number of samples increases without bound (for $k_2$ and $k_3$ as given above, this applies up to about $10^60$ samples and will grow at a rate of about $O(\log \log n)$ above this)
+The number of centroids in a fully merged $t$-digest is bounded by $\delta$ as the number of samples increases without bound (for $k_2$ and $k_3$ as given above, this applies up to about $10^{60}$ samples and will grow at a rate of about $O(\log \log n)$ above this)
 \item
 The union of the centroids from multiple $t$-digests will meet the size bound and thus be a $t$-digest for a value of $\delta$ equal to the smallest $\delta$ of any of the individual digests.
 \end{itemize}
