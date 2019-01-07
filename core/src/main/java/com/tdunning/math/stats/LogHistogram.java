@@ -113,4 +113,20 @@ public class LogHistogram extends Histogram {
     void readObject(ObjectInputStream in) throws IOException {
 
     }
+
+    @Override
+    void add(Iterable<Histogram> others) {
+        for (Histogram other : others) {
+            if (!this.getClass().equals(other.getClass())) {
+                throw new IllegalArgumentException(String.format("Cannot add %s to LogHistogram", others.getClass()));
+            }
+            LogHistogram actual = (LogHistogram) other;
+            if (actual.min != min || actual.max != max || actual.counts.length != counts.length) {
+                throw new IllegalArgumentException("Can only merge histograms with identical bounds and precision");
+            }
+            for (int i = 0; i < counts.length; i++) {
+                counts[i] += other.counts[i];
+            }
+        }
+    }
 }

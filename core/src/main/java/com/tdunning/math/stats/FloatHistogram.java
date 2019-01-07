@@ -134,4 +134,20 @@ public class FloatHistogram extends Histogram {
     private void readObjectNoData() throws ObjectStreamException {
         throw new InvalidObjectException("Stream data required");
     }
+
+    @Override
+    void add(Iterable<Histogram> others) {
+        for (Histogram other : others) {
+            if (!this.getClass().equals(other.getClass())) {
+                throw new IllegalArgumentException(String.format("Cannot add %s to FloatHistogram", others.getClass()));
+            }
+            FloatHistogram actual = (FloatHistogram) other;
+            if (actual.min != min || actual.max != max || actual.counts.length != counts.length) {
+                throw new IllegalArgumentException("Can only merge histograms with identical bounds and precision");
+            }
+            for (int i = 0; i < counts.length; i++) {
+                counts[i] += other.counts[i];
+            }
+        }
+    }
 }

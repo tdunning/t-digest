@@ -276,6 +276,11 @@ public enum ScaleFunction {
 
     /**
      * Computes q as a function of k. This is faster than finding k as a function of q for some scales.
+     *
+     * @param k           The index value to convert into q scale.
+     * @param compression The compression factor (often written as &delta;)
+     * @param n           The number of samples already in the digest.
+     * @return The value of q that corresponds to k
      */
     abstract public double q(double k, double compression, double n);
 

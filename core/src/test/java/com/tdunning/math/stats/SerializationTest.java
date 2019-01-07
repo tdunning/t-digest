@@ -34,7 +34,6 @@ public class SerializationTest {
         out.add(42.5);
         out.add(1);
         out.add(24.0);
-//        assertEquals(40.649, out.quantile(0.95), 0.001);
 
         final ByteBuffer output = ByteBuffer.allocate(out.smallByteSize());
         out.asSmallBytes(output);
@@ -58,7 +57,7 @@ public class SerializationTest {
         }
 
         input = ByteBuffer.wrap(output.array());
-        final TDigest in = AVLTreeDigest.fromBytes(input);
-        assertEquals(40.649, in.quantile(0.95), 0.001);
+        final TDigest in = MergingDigest.fromBytes(input);
+        assertEquals(out.quantile(0.95), in.quantile(0.95), 0.001);
     }
 }

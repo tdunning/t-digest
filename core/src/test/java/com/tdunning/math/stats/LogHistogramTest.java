@@ -61,7 +61,7 @@ public class LogHistogramTest extends HistogramTestCases {
 
     @Test
     public void testBins() {
-        super.testBins(72, 129, new LogHistogram(10e-6, 5, 0.1));
+        super.testBinSizes(72, 129, new LogHistogram(10e-6, 5, 0.1));
     }
 
     @Test

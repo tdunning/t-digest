@@ -36,7 +36,7 @@ public class FloatHistogramTest extends HistogramTestCases {
 
     @Test
     public void testBins() {
-        super.testBins(79, 141, new FloatHistogram(10e-6, 5, 20));
+        super.testBinSizes(79, 141, new FloatHistogram(10e-6, 5, 20));
     }
 
     @Test

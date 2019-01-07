@@ -91,4 +91,6 @@ public abstract class Histogram implements Serializable {
 
     @SuppressWarnings("WeakerAccess")
     abstract void readObject(java.io.ObjectInputStream in) throws IOException;
+
+    abstract void add(Iterable<Histogram> others);
 }
