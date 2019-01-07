@@ -17,11 +17,14 @@
 
 package com.tdunning.math.stats;
 
-import org.apache.commons.lang3.SerializationUtils;
 import org.junit.Test;
 
-import java.nio.ByteBuffer;
-import java.util.Collection;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.Iterator;
 import java.util.Random;
 
@@ -31,30 +34,47 @@ import static org.junit.Assert.assertNotNull;
 
 /**
  * Verifies that the various TDigest implementations can be serialized.
- *
+ * <p>
  * Serializability is important, for example, if we want to use t-digests with Spark.
  */
 public class TDigestSerializationTest {
     @Test
-    public void testMergingDigest() {
+    public void testMergingDigest() throws IOException {
         assertSerializesAndDeserializes(new MergingDigest(100));
     }
 
     @Test
-    public void testAVLTreeDigest() {
+    public void testAVLTreeDigest() throws IOException {
         assertSerializesAndDeserializes(new AVLTreeDigest(100));
     }
 
-    private <T extends TDigest> void assertSerializesAndDeserializes(T tdigest) {
-        assertNotNull(SerializationUtils.deserialize(SerializationUtils.serialize(tdigest)));
+    private <T extends TDigest> void assertSerializesAndDeserializes(T tdigest) throws IOException {
+        assertNotNull(deserialize(serialize(tdigest)));
 
         final Random gen = new Random();
         for (int i = 0; i < 100000; i++) {
             tdigest.add(gen.nextDouble());
         }
-        T roundTrip = SerializationUtils.deserialize(SerializationUtils.serialize(tdigest));
+        T roundTrip = deserialize(serialize(tdigest));
 
         assertTDigestEquals(tdigest, roundTrip);
+    }
+
+    private static byte[] serialize(Serializable obj) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(5120);
+        try (ObjectOutputStream out = new ObjectOutputStream(baos)){
+            out.writeObject(obj);
+            return baos.toByteArray();
+        }
+    }
+
+    private static <T> T deserialize(byte[] objectData) throws IOException {
+        try (ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(objectData))) {
+            //noinspection unchecked
+            return (T) in.readObject();
+        } catch (ClassCastException | ClassNotFoundException | IOException e) {
+            throw new IOException(e);
+        }
     }
 
     private void assertTDigestEquals(TDigest t1, TDigest t2) {

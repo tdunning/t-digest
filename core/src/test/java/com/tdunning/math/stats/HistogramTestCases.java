@@ -28,7 +28,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class HistogramTestCases {
+public abstract class HistogramTestCases extends AbstractTest {
     boolean useLinearBuckets;
     HistogramFactory factory;
 
@@ -166,7 +166,7 @@ public class HistogramTestCases {
         }
     }
 
-    void testBins(int baseBinIndex, int bigBinIndex, Histogram histogram) {
+    public void testBins(int baseBinIndex, int bigBinIndex, Histogram histogram) {
         assertEquals(baseBinIndex, histogram.bucket(10.01e-3));
         assertEquals(baseBinIndex, histogram.bucket(10e-3));
         assertEquals(bigBinIndex, histogram.bucket(2.235));
