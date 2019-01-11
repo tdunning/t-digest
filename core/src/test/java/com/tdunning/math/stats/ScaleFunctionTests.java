@@ -51,7 +51,7 @@ public class ScaleFunctionTests {
     @Test
     public void testSize() throws FileNotFoundException {
         try (PrintWriter out = new PrintWriter("scale-function-sizes.csv")) {
-            out.printf("alg,delta,n,m\n");
+            out.printf("alg,delta,n,m,singles\n");
             for (double compression : new double[]{20, 50, 100, 200, 500}) {
                 for (double n : new double[]{100, 200, 500, 1e3, 5e3, 10e3, 100e3, 1e6}) {
                     Map<String, Integer> clusterCount = new HashMap<>();
@@ -71,7 +71,12 @@ public class ScaleFunctionTests {
                                 singles++;
                             }
                             double size = max(k.max(i / (n - 1), compression, n), k.max((i + cnt) / (n - 1), compression, n));
-                            if (!k.toString().endsWith("NO_NORM")) {
+
+                            // check that we didn't cross the midline (which makes the size limit very conservative)
+                            double left = i - (n - 1) / 2;
+                            double right = i + cnt - (n - 1) / 2;
+                            boolean sameSide = left * right > 0;
+                            if (!k.toString().endsWith("NO_NORM") && sameSide) {
                                 assertTrue(String.format("%s %.0f %.0f %.3f vs %.3f @ %.3f", k, compression, n, cnt, size, i / (n - 1)),
                                         cnt == 1 || cnt <= max(1.1 * size, size + 1));
                             }
@@ -92,6 +97,27 @@ public class ScaleFunctionTests {
                 }
             }
         }
+    }
+
+    /**
+     * Validates the fast asin approximation
+     */
+    @Test
+    public void testApproximation() {
+        double worst = 0;
+        double old = Double.NEGATIVE_INFINITY;
+        for (double x = -1; x < 1; x += 0.00001) {
+            double ex = Math.asin(x);
+            double actual = ScaleFunction.fastAsin(x);
+            double error = ex - actual;
+//            System.out.printf("%.8f, %.8f, %.8f, %.12f\n", x, ex, actual, error * 1e6);
+            assertEquals("Bad approximation", 0, error, 1e-6);
+            assertTrue("Not monotonic", actual >= old);
+            worst = Math.max(worst, Math.abs(error));
+            old = actual;
+        }
+        assertEquals(Math.asin(1), ScaleFunction.fastAsin(1), 0);
+        System.out.printf("worst = %.5g\n", worst);
     }
 
     /**

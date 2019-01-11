@@ -117,6 +117,59 @@ public abstract class TDigestTest extends AbstractTest {
         return factory(100);
     }
 
+    @Test
+    public void testSmallCountQuantile() {
+        List<Double> data = Lists.newArrayList(15.0, 20.0, 32.0, 60.0);
+        TDigest td = factory(200).create();
+        for (Double datum : data) {
+            td.add(datum);
+        }
+        assertEquals(20, td.quantile(0.4), 1e-10);
+        assertEquals(20, td.quantile(0.25), 1e-10);
+        assertEquals(15, td.quantile(0.25 - 1e-10), 1e-10);
+        assertEquals(20, td.quantile(0.5 - 1e-10), 1e-10);
+        assertEquals(32, td.quantile(0.5), 1e-10);
+    }
+
+    /**
+     * Brute force test that cdf and quantile give reference behavior in digest made up of all singletons.
+     */
+    @Test
+    public void singletonQuantiles() {
+        double[] data = new double[20];
+        TDigest digest = factory(100).create();
+        for (int i = 0; i < 20; i++) {
+            digest.add(i);
+            data[i] = i;
+        }
+
+        for (double x = digest.getMin() - 0.1; x <= digest.getMax() + 0.1; x += 1e-3) {
+            assertEquals(Dist.cdf(x, data), digest.cdf(x), 0);
+        }
+
+        for (double q = 0; q <= 1; q += 1e-3) {
+            assertEquals(Dist.quantile(q, data), digest.quantile(q), 0);
+        }
+    }
+
+    /**
+     * Verifies behavior involving interpolation (or lack of same, really) between singleton centroids.
+     */
+    @Test
+    public void singleSingleRange() {
+        TDigest digest = factory(100).create();
+        digest.add(1);
+        digest.add(2);
+        digest.add(3);
+
+        // verify the cdf is a step between singletons
+        assertEquals(0.5 / 3.0, digest.cdf(1), 0);
+        assertEquals(1 / 3.0, digest.cdf(1 + 1e-10), 0);
+        assertEquals(1 / 3.0, digest.cdf(2 - 1e-10), 0);
+        assertEquals(1.5 / 3.0, digest.cdf(2), 0);
+        assertEquals(2 / 3.0, digest.cdf(2 + 1e-10), 0);
+    }
+
     protected abstract TDigest fromBytes(ByteBuffer bytes);
 
     @Test

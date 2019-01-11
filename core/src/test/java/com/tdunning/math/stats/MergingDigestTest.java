@@ -53,27 +53,6 @@ public class MergingDigestTest extends TDigestTest {
         RandomUtils.useTestSeed();
     }
 
-    /**
-     * Validates the fast asin approximation
-     */
-    @Test
-    public void testApproximation() {
-        double worst = 0;
-        double old = Double.NEGATIVE_INFINITY;
-        for (double x = -1; x < 1; x += 0.00001) {
-            double ex = Math.asin(x);
-            double actual = ScaleFunction.fastAsin(x);
-            double error = ex - actual;
-//            System.out.printf("%.8f, %.8f, %.8f, %.12f\n", x, ex, actual, error * 1e6);
-            assertEquals("Bad approximation", 0, error, 1e-6);
-            assertTrue("Not monotonic", actual >= old);
-            worst = Math.max(worst, Math.abs(error));
-            old = actual;
-        }
-        assertEquals(Math.asin(1), ScaleFunction.fastAsin(1), 0);
-        System.out.printf("worst = %.5g\n", worst);
-    }
-
     //    @Test
     public void testFill() {
         int delta = 300;
@@ -103,20 +82,6 @@ public class MergingDigestTest extends TDigestTest {
             q0 = q1;
             i++;
         }
-    }
-
-    @Test
-    public void testSmallCountQuantile() {
-        List<Double> data = Lists.newArrayList(15.0, 20.0, 32.0, 60.0);
-        TDigest td = new MergingDigest(200);
-        for (Double datum : data) {
-            td.add(datum);
-        }
-        assertEquals(20, td.quantile(0.4), 1e-10);
-        assertEquals(20, td.quantile(0.25), 1e-10);
-        assertEquals(15, td.quantile(0.25 - 1e-10), 1e-10);
-        assertEquals(20, td.quantile(0.5 - 1e-10), 1e-10);
-        assertEquals(32, td.quantile(0.5), 1e-10);
     }
 
     /**
@@ -191,45 +156,6 @@ public class MergingDigestTest extends TDigestTest {
         double x = 4 - digest.quantile(1 - 1.01 / digest.size());
         assertEquals(slope * 0.01, x, 1e-10);
         assertEquals(last.mean(), digest.quantile(1 - last.count() / 2.0 / digest.size()), 1e-10);
-    }
-
-    /**
-     * Brute force test that cdf and quantile give reference behavior in digest made up of all singletons.
-     */
-    @Test
-    public void singletonQuantiles() {
-        double[] data = new double[20];
-        MergingDigest digest = new MergingDigest(100);
-        for (int i = 0; i < 20; i++) {
-            digest.add(i);
-            data[i] = i;
-        }
-
-        for (double x = digest.getMin() - 0.1; x <= digest.getMax() + 0.1; x += 1e-3) {
-            assertEquals(Dist.cdf(x, data), digest.cdf(x), 0);
-        }
-
-        for (double q = 0; q <= 1; q += 1e-3) {
-            assertEquals(Dist.quantile(q, data), digest.quantile(q), 0);
-        }
-    }
-
-    /**
-     * Verifies behavior involving interpolation (or lack of same, really) between singleton centroids.
-     */
-    @Test
-    public void singleSingleRange() {
-        MergingDigest digest = new MergingDigest(100);
-        digest.add(1);
-        digest.add(2);
-        digest.add(3);
-
-        // verify the cdf is a step between singletons
-        assertEquals(0.5 / 3.0, digest.cdf(1), 0);
-        assertEquals(1 / 3.0, digest.cdf(1 + 1e-10), 0);
-        assertEquals(1 / 3.0, digest.cdf(2 - 1e-10), 0);
-        assertEquals(1.5 / 3.0, digest.cdf(2), 0);
-        assertEquals(2 / 3.0, digest.cdf(2 + 1e-10), 0);
     }
 
     /**
