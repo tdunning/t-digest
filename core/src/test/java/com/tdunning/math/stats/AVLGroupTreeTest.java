@@ -33,6 +33,7 @@ public class AVLGroupTreeTest extends AbstractTest {
         AVLGroupTree x = new AVLGroupTree(false);
         assertEquals(IntAVLTree.NIL, x.floor(34));
         assertEquals(IntAVLTree.NIL, x.first());
+        assertEquals(IntAVLTree.NIL, x.last());
         assertEquals(0, x.size());
         assertEquals(0, x.sum());
 
@@ -83,10 +84,13 @@ public class AVLGroupTreeTest extends AbstractTest {
             x.add(randomDouble(), randomIntBetween(1, 10), null);
         }
         long sum = 0;
+        long last = -1;
         for (int node = x.first(); node != IntAVLTree.NIL; node = x.next(node)) {
             assertEquals(sum, x.headSum(node));
             sum += x.count(node);
+            last = x.count(node);
         }
+        assertEquals(last, x.count(x.last()));
     }
 
     @Test

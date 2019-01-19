@@ -223,6 +223,14 @@ final class AVLGroupTree extends AbstractCollection<Centroid> implements Seriali
     }
 
     /**
+     * Return the least node in the tree.
+     */
+    @SuppressWarnings("WeakerAccess")
+    public int last() {
+        return tree.last(tree.root());
+    }
+
+    /**
      * Compute the number of elements and sum of counts for every entry that
      * is strictly before <code>node</code>.
      */

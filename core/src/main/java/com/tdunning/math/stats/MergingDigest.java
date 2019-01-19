@@ -143,11 +143,11 @@ public class MergingDigest extends AbstractTDigest {
     @SuppressWarnings("WeakerAccess")
     public MergingDigest(double compression, int bufferSize, int size) {
         // ensure compression >= 10
-        // default size = ceil(compression)
+        // default size = 2 * ceil(compression)
         // default bufferSize = 5 * size
-        // scale = max(2, bufferSize / size)
+        // scale = max(2, bufferSize / size - 1)
         // compression, publicCompression = sqrt(scale-1)*compression, compression
-        // ensure size > compression + weightLimitFudge
+        // ensure size > 2 * compression + weightLimitFudge
         // ensure bufferSize > 2*size
 
         // force reasonable value. Anything less than 10 doesn't make much sense because
@@ -164,8 +164,10 @@ public class MergingDigest extends AbstractTDigest {
 
         // default size
         if (size == -1) {
-            size = (int) Math.ceil(compression + sizeFudge);
+            size = (int) Math.ceil(2 * compression + sizeFudge);
         }
+
+        size = (int) Math.max(2 * compression + sizeFudge, size);
 
         // default buffer
         if (bufferSize == -1) {

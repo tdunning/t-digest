@@ -208,43 +208,169 @@ public class AVLTreeDigest extends AbstractTDigest {
         if (values.size() == 0) {
             return Double.NaN;
         } else if (values.size() == 1) {
-            return x < values.mean(values.first()) ? 0 : 1;
+            if (x < values.mean(values.first())) return 0;
+            else if (x > values.mean(values.first())) return 1;
+            else return 0.5;
         } else {
-            double r = 0;
+            if (x < min) {
+                return 0;
+            } else if (x == min) {
+                return 0.5 / size();
+            }
+            assert x > min;
+
+            if (x > max) {
+                return 1;
+            } else if (x == max) {
+                long n = size();
+                return (n - 0.5) / n;
+            }
+            assert x < max;
+
+            int first = values.first();
+            double firstMean = values.mean(first);
+            if (x > min && x < firstMean) {
+                int firstCount = values.count(first);
+                assert firstCount > 1;
+                if (firstCount == 2) {
+                    // other sample in first centroid must be on the other side of the mean
+                    return 1.0 / size();
+                } else {
+                    // how much weight is available for interpolation?
+                    double weight = firstCount / 2.0 - 1;
+                    // how much is between min and here?
+                    double partialWeight = (x - min) / (firstMean - min) * weight;
+                    // account for sample at min along with interpolated weight
+                    return (partialWeight + 1.0) / size();
+                }
+            }
+
+            int last = values.last();
+            double lastMean = values.mean(last);
+            if (x < max && x > lastMean) {
+                int lastCount = values.count(last);
+                assert lastCount > 1;
+                if (lastCount == 2) {
+                    // other sample in first centroid must be on the other side of the mean
+                    return 1.0 / size();
+                } else {
+                    // how much weight is available for interpolation?
+                    double weight = lastCount / 2.0 - 1;
+                    // how much is between min and here?
+                    double partialWeight = (max - x) / (max - lastMean) * weight;
+                    // account for sample at min along with interpolated weight
+                    return (partialWeight + 1.0) / size();
+                }
+            }
+            assert values.size() >= 2;
+            assert x >= firstMean;
+            assert x <= lastMean;
 
             // we scan a across the centroids
             Iterator<Centroid> it = values.iterator();
             Centroid a = it.next();
+            double aMean = a.mean();
+            double aWeight = a.count();
+            a = it.next();
+            while (a != null && a.mean() == aMean) {
+                aWeight += a.count();
+                if (it.hasNext()) {
+                    a = it.next();
+                } else {
+                    a = null;
+                }
+            }
+
+            if (x == aMean) {
+                return aWeight / 2.0 / size();
+            }
+            assert x > firstMean;
+
+            if (a == null) {
+                // all centroids were at the exact same place: firstMean == lastMean
+                // but we know that x > firstMean && x <= lastMean
+                // contradiction!!!!
+                throw new IllegalStateException("Logical contradiction");
+            }
 
             // b is the look-ahead to the next centroid
-            Centroid b = it.next();
+            Centroid b = a;
+            double bMean = Double.NaN;
+            double bWeight = 0;
+            while (b != null && (Double.isNaN(bMean) || bMean == b.mean())) {
+                bMean = b.mean();
+                bWeight += b.count();
 
-            // initially, we set left width equal to right width
-            double left = (b.mean() - a.mean()) / 2;
-            double right = left;
-
-            // scan to next to last element
-            while (it.hasNext()) {
-                if (x < a.mean() + right) {
-                    double value = (r + a.count() * interpolate(x, a.mean() - left, a.mean() + right)) / count;
-                    return value > 0.0 ? value : 0.0;
+                if (it.hasNext()) {
+                    b = it.next();
+                } else {
+                    b = null;
                 }
-
-                r += a.count();
-
-                a = b;
-                left = right;
-
-                b = it.next();
-                right = (b.mean() - a.mean()) / 2;
             }
 
-            // for the last element, assume right width is same as left
-            if (x < a.mean() + right) {
-                return (r + a.count() * interpolate(x, a.mean() - left, a.mean() + right)) / count;
-            } else {
-                return 1;
+            assert bMean > aMean;
+
+            // b is now the next centroid after current interval or null
+
+            double weightSoFar = 0;
+
+            // scan to last element
+            while (bWeight != 0) {
+                assert x > aMean;
+                if (x == bMean) {
+                    assert bMean > aMean;
+                    return (weightSoFar + aWeight + bWeight / 2.0) / size();
+                }
+                assert x < bMean || x > bMean;
+
+                if (x < bMean) {
+                    // we are strictly between a and b
+                    if (aWeight == 1) {
+                        // but a might be a singleton
+                        if (bWeight == 1) {
+                            // we have passed all of a, but none of b, no interpolation
+                            return (weightSoFar + 1.0) / size();
+                        } else {
+                            // only get to interpolate b's weight because a is a singleton
+                            assert x > aMean;
+                            assert bMean > aMean;
+
+                            double partialWeight = (x - aMean) / (bMean - aMean) * bWeight / 2.0;
+                            return (weightSoFar + 1.0 + partialWeight) / size();
+                        }
+                    } else if (bWeight == 1) {
+                        // only get to interpolate a's weight because b is a singleton
+                        double partialWeight = (x - aMean) / (bMean - aMean) * aWeight / 2.0;
+                        return (weightSoFar + aWeight / 2.0 + partialWeight) / size();
+                    } else {
+                        // neither is singleton
+                        double partialWeight = (x - aMean) / (bMean - aMean) * (aWeight + bWeight) / 2.0;
+                        return (weightSoFar + aWeight / 2.0 + partialWeight) / size();
+                    }
+                }
+                weightSoFar += aWeight;
+
+                assert x > bMean;
+
+                aMean = bMean;
+                aWeight = bWeight;
+
+                bMean = Double.NaN;
+                bWeight = 0;
+                while (b != null && (Double.isNaN(bMean) || bMean == b.mean())) {
+                    bMean = b.mean();
+                    bWeight += b.count();
+
+                    if (it.hasNext()) {
+                        b = it.next();
+                    } else {
+                        b = null;
+                    }
+                }
+                assert bMean > aMean;
             }
+            // shouldn't be possible because x <= lastMean
+            throw new IllegalStateException("Ran out of centroids");
         }
     }
 

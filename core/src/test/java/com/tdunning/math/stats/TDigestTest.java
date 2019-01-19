@@ -168,6 +168,9 @@ public abstract class TDigestTest extends AbstractTest {
         assertEquals(1 / 3.0, digest.cdf(2 - 1e-10), 0);
         assertEquals(1.5 / 3.0, digest.cdf(2), 0);
         assertEquals(2 / 3.0, digest.cdf(2 + 1e-10), 0);
+        assertEquals(2 / 3.0, digest.cdf(3 - 1e-10), 0);
+        assertEquals(2.5 / 3.0, digest.cdf(3), 0);
+        assertEquals(1.0, digest.cdf(3 + 1e-10), 0);
     }
 
     protected abstract TDigest fromBytes(ByteBuffer bytes);
@@ -791,7 +794,7 @@ public abstract class TDigestTest extends AbstractTest {
     }
 
     @Test
-    public void testMontonicity() throws Exception {
+    public void testMonotonicity() throws Exception {
         TDigest digest = factory().create();
         final Random gen = getRandom();
         for (int i = 0; i < 100000; i++) {

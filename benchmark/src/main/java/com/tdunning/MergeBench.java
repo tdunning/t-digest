@@ -18,7 +18,7 @@
 package com.tdunning;
 
 import com.tdunning.math.stats.MergingDigest;
-import com.tdunning.math.stats.TDigest;
+import com.tdunning.math.stats.ScaleFunction;
 
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 @Warmup(iterations = 3, time = 3, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 5, time = 2, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 5, time = 3, timeUnit = TimeUnit.SECONDS)
 @Fork(1)
 @Threads(1)
 @State(Scope.Thread)
@@ -48,13 +48,16 @@ public class MergeBench {
     private Random gen = new Random();
     private double[] data;
 
-    @Param({"50", "100", "200", "500"})
+    @Param({"20", "50", "100", "200", "500"})
     public int compression;
 
     @Param({"1", "2", "5", "10"})
     public int factor;
 
-    private TDigest td;
+    @Param({"K_1", "K_2", "K_3"})
+    public String scaleFunction;
+
+    private MergingDigest td;
 
     @Setup
     public void setup() {
@@ -62,12 +65,13 @@ public class MergeBench {
         for (int i = 0; i < data.length; i++) {
             data[i] = gen.nextDouble();
         }
-        td = new MergingDigest(compression, (factor + 1) * compression, 2 * compression);
+        td = new MergingDigest(compression, (factor + 1) * compression, compression);
+        td.setScaleFunction(ScaleFunction.valueOf(scaleFunction));
 
         // First values are very cheap to add, we are more interested in the steady state,
-        // when the summary is full. Summaries are expected to contain about 2*compression
-        // centroids, hence the 5 factor
-        for (int i = 0; i < 5 * compression; ++i) {
+        // when the summary is full. Summaries are expected to contain about 0.6*compression
+        // centroids, hence the 5 * compression * (factor+1)
+        for (int i = 0; i < 5 * compression * (factor + 1); ++i) {
             td.add(gen.nextDouble());
         }
     }
