@@ -110,7 +110,7 @@ Another class called `LogHistogram` is also available in `t-digest`. The `LogHis
 Compile and Test
 ================
 
-You have to have Java 1.7 to compile and run this code.  You will also need maven (3+ preferred)
+You have to have Java 1.8 to compile and run this code.  You will also need maven (3+ preferred)
 to compile and test this software.  In order to build the images that go into the theory paper, you will need R.
 In order to format the paper, you will need latex.  A pre-built pdf version of the paper is provided.
 
