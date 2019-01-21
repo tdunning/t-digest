@@ -18,20 +18,34 @@ In summary, the particularly interesting characteristics of the t-digest are tha
 * has smaller summaries than Q-digest
 * works on doubles as well as integers.
 * provides part per million accuracy for extreme quantiles and typically <1000 ppm accuracy for middle quantiles
-* is fast
-* is very simple
+* is very fast (~ 140 ns per add)
+* is very simple (~ 5000 lines of code total, <1000 for the most advanced implementation alone)
 * has a reference implementation that has > 90% test coverage
 * can be used with map-reduce very easily because digests can be merged
-* recent versions are simple, very fast, and require no dynamic allocation after creation
+* recent implementations are simple, yet still very fast, and require no dynamic allocation after initial creation
+* has no runtime dependencies
 
 Recent News
 -----------
 Lots has happened in t-digest lately. The basic gist of all the changes are that the
 core algorithms have been made much more rigorous and the associated papers have been 
 updated to match the reality of the most advanced implementations. The general areas of improvement
-include a new framework for dealing with scale functions, real proofs of size bounds and invariants
-for all current scale functions, much improved interpolation algorithms, better accuracy
-testing and splitting the entire distribution into parts for the core algorithms, quality testing, benchmarking and documentation.
+include substantial speedups, a new framework for dealing with scale functions, real proofs of size 
+bounds and invariants for all current scale functions, much improved interpolation algorithms, better 
+accuracy testing and splitting the entire distribution into parts for the core algorithms, quality 
+testing, benchmarking and documentation.
+
+I am working on a 4.0 release that incorporates all of these improvements. The remaining punch list for 
+the release is roughly:
+
+* verify all tests are clean and not disabled
+* integrate all scale functions into `AVLTreeDigest`
+* describe accuracy using the quality suite
+* extend benchmarks to include `AVLTreeDigest` as first-class alternative
+
+I am also converging the main paper for submission and will be preparing a more implementation-oriented paper 
+intended for submission to the Journal of Statistical Software. Potential co-authors would could accelerate these 
+submissions are enouraged to speak up!
  
 ### Scale Functions
 The idea of scale functions is the heart of the t-digest. But things don't quite work the way that
@@ -45,6 +59,10 @@ to build an accurate digest and that they all give tight bounds on the size of a
 can get much better tail accuracy than before without losing much in terms of median accuracy. It also means
 that insertion into a `MergingDigest` is much faster than before since we
 have been able to eliminate all fancy functions like sqrt, log or sin.
+
+The `AVLTreeDigest` does not support any scale functions beyond what it historically has supported. This means 
+that digests will be much larger than would be produced by `MergingDigest` for the same compression. Work is 
+(slowly) ongoing to support all scale functions in the `AVLTreeDigest`.
  
 ### Better Interpolation
 The better accuracy achieved by the new scale functions partly comes from the fact that the most extreme clusters
@@ -52,13 +70,18 @@ near q=0 or q=1 are limited to only a single sample. Handling these singletons w
 accuracy of tail estimates. Handling the transition to non-singletons is also very important.
   
 Both cases are handled much better than before.
+
+So far, the better interpolation has been fully integrated and tested in the `MergingDigest` with very good improvements in accuracy, but applying these improvements has exposed bugs in the way that `AVLTreeDigest` handles data with many repeated points.
   
 ### Two-level Merging
-We now have a trick that uses a higher value of the compression parameter (delta) while we are accumulating
-a t-digest and a lower value when we are about to store or display a t-digest. This two-level merging has 
-a small (negative) effect on speed, but a substantial (positive) effect on accuracy because clusters are
-ordered more strongly. This better ordering of clusters means that the effects of the improved interpolation
-are much easier to observe.
+We now have a trick for the `MergingDigest` that uses a higher value of the compression parameter (delta) 
+while we are accumulating a t-digest and a lower value when we are about to store or display a t-digest. 
+This two-level merging has a small (negative) effect on speed, but a substantial (positive) effect on accuracy 
+because clusters are ordered more strongly. This better ordering of clusters means that the effects of the 
+improved interpolation are much easier to observe.
+
+Extending this to `AVLTreeDigest` is theoretically possible, but it isn't clear the effect it will have, 
+particularly if done before proper scale functions are added to the tree digest.
  
 ### Repo Reorg
 The t-digest repository is now split into different functional areas. This is important because it simplifies
