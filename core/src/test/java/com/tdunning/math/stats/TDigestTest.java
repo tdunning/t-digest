@@ -49,6 +49,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
@@ -212,28 +213,9 @@ public abstract class TDigestTest extends AbstractTest {
         // for this value of the compression, the tree shouldn't have merged any node
         assertEquals(digest.centroids().size(), values.size());
         for (double q : new double[]{0, 1e-10, r.nextDouble(), 0.5, 1 - 1e-10, 1}) {
-            double q1 = quantile(q, values);
+            double q1 = Dist.quantile(q, values);
             double q2 = digest.quantile(q);
             assertEquals(String.format("At q=%g, expected %.2f vs %.2f", q, q1, q2), q1, q2, 0.03);
-        }
-    }
-
-    private double quantile(final double q, List<Double> data) {
-        if (data.size() == 0) {
-            return Double.NaN;
-        }
-        if (q == 1 || data.size() == 1) {
-            return data.get(data.size() - 1);
-        }
-        double index = q * data.size();
-        if (index < 0.5) {
-            return data.get(0);
-        } else if (data.size() - index < 0.5) {
-            return data.get(data.size() - 1);
-        } else {
-            index -= 0.5;
-            final int intIndex = (int) index;
-            return data.get(intIndex + 1) * (index - intIndex) + data.get(intIndex) * (intIndex + 1 - index);
         }
     }
 
@@ -657,13 +639,15 @@ public abstract class TDigestTest extends AbstractTest {
         // very slow running data generator.  Don't want to run this normally.  To run slow tests use
         // mvn test -DrunSlowTests=true
 //        assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
+        final AtomicInteger live = new AtomicInteger(0);
+        final AtomicInteger pending = new AtomicInteger(0);
 
         final Random gen0 = getRandom();
         try (final PrintWriter out = new PrintWriter(new FileOutputStream(String.format("scaling-%s.tsv", digestName)))) {
-            out.printf("k\tsamples\tcompression\tsize1\tsize2\n");
+            out.printf("k\tsamples\tcompression\tcentroids\tsize1\tsize2\n");
 
             List<Callable<String>> tasks = Lists.newArrayList();
-            for (int k = 0; k < 20; k++) {
+            for (int k = 0; k < 10; k++) {
                 for (final int size : new int[]{10, 100, 1000, 10000}) {
                     final int currentK = k;
                     tasks.add(new Callable<String>() {
@@ -672,26 +656,45 @@ public abstract class TDigestTest extends AbstractTest {
                         @Override
                         public String call() throws Exception {
                             System.out.printf("Starting %d,%d\n", currentK, size);
-                            StringWriter s = new StringWriter();
-                            PrintWriter out = new PrintWriter(s);
-                            for (double compression : new double[]{20, 50, 100, 200, 500, 1000}) {
-                                TDigest dist = factory(compression).create();
-                                for (int i = 0; i < size * 1000; i++) {
-                                    dist.add(gen.nextDouble());
+                            live.incrementAndGet();
+                            try {
+                                StringWriter s = new StringWriter();
+                                PrintWriter out = new PrintWriter(s);
+                                for (double compression : new double[]{20, 50, 100, 200, 500, 1000}) {
+                                    try {
+                                        TDigest dist = factory(compression).create();
+                                        for (int i = 0; i < size * 1000; i++) {
+                                            dist.add(gen.nextDouble());
+                                        }
+                                        out.printf("%d\t%d\t%.0f\t%d\t%d\t%d\n", currentK, size, compression, dist.centroidCount(), dist.smallByteSize(), dist.byteSize());
+                                        out.flush();
+                                    } catch (Throwable e) {
+                                        System.out.printf("                         Exception %s, %d, %.0f, %d\n", e.toString(), currentK, compression, size);
+                                        throw e;
+                                    }
                                 }
-                                out.printf("%d\t%d\t%.0f\t%d\t%d\n", currentK, size, compression, dist.smallByteSize(), dist.byteSize());
-                                out.flush();
+                                out.close();
+                                return s.toString();
+                            } finally {
+                                live.decrementAndGet();
+                                pending.decrementAndGet();
+                                System.out.printf("                   %d,%d (%d live threads, %d pending tasks)\n", currentK, size, live.get(), pending.get());
                             }
-                            out.close();
-                            return s.toString();
                         }
                     });
                 }
             }
+            pending.set(tasks.size());
 
-            ExecutorService executor = Executors.newFixedThreadPool(20);
+            ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 2);
+            System.out.printf("---------------------------------------------------\n");
             for (Future<String> result : executor.invokeAll(tasks)) {
-                out.write(result.get());
+                try {
+                    out.write(result.get());
+                } catch (Throwable e) {
+                    e.printStackTrace();
+                }
+                System.err.printf("\n\n");
             }
             executor.shutdownNow();
             assertTrue("Dangling executor thread", executor.awaitTermination(5, TimeUnit.SECONDS));
@@ -775,7 +778,7 @@ public abstract class TDigestTest extends AbstractTest {
         // [ 5, 10, 15, 20, 30, 40, 50, 60, 70]
         List<Double> values = Arrays.asList(5., 10., 15., 20., 30., 35., 40., 45., 50.);
         for (double q : new double[]{1.5 / 9, 3.5 / 9, 6.5 / 9}) {
-            assertEquals(String.format("q=%.2f ", q), quantile(q, values), digest.quantile(q), 0.01);
+            assertEquals(String.format("q=%.2f ", q), Dist.quantile(q, values), digest.quantile(q), 0.01);
         }
     }
 

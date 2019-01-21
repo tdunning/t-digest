@@ -160,13 +160,10 @@ public class MergingDigest extends AbstractTDigest {
         double sizeFudge = 0;
         if (useWeightLimit) {
             sizeFudge = 10;
+            if (compression < 30) sizeFudge += 20;
         }
 
         // default size
-        if (size == -1) {
-            size = (int) Math.ceil(2 * compression + sizeFudge);
-        }
-
         size = (int) Math.max(2 * compression + sizeFudge, size);
 
         // default buffer

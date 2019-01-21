@@ -43,7 +43,7 @@ public class MergingDigestTest extends TDigestTest {
         return new DigestFactory() {
             @Override
             public TDigest create() {
-                return new MergingDigest(4 * compression);
+                return new MergingDigest(compression);
             }
         };
     }
