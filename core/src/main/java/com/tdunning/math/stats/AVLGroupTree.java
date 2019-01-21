@@ -170,10 +170,17 @@ final class AVLGroupTree extends AbstractCollection<Centroid> implements Seriali
      */
     @SuppressWarnings("WeakerAccess")
     public void update(int node, double centroid, int count, List<Double> data) {
-        this.centroid = centroid;
-        this.count = count;
-        this.data = data;
-        tree.update(node);
+        if (centroid == centroids[node]) {
+            // we prefer to update in place so repeated values don't shuffle around
+            counts[node] = count;
+            datas[node] = data;
+        } else {
+            // have to do full scale update
+            this.centroid = centroid;
+            this.count = count;
+            this.data = data;
+            tree.update(node);
+        }
     }
 
     /**
