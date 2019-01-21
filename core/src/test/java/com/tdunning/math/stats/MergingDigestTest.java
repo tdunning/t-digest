@@ -137,7 +137,7 @@ public class MergingDigestTest extends TDigestTest {
         assertEquals(0, digest.quantile(0.5 / digest.size()), 0);
         assertEquals(0, digest.quantile(1.0 / digest.size() - 1e-10), 0);
         assertEquals(0, digest.quantile(1.0 / digest.size()), 0);
-        assertEquals(2.0 / first.count() / 100, digest.quantile(1.01 / digest.size()), 2e-5);
+        assertEquals(2.0 / first.count() / 100, digest.quantile(1.01 / digest.size()), 5e-5);
         assertEquals(first.mean(), digest.quantile(first.count() / 2.0 / digest.size()), 1e-5);
 
         digest.add(4);

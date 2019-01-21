@@ -271,76 +271,56 @@ public class AVLTreeDigest extends AbstractTDigest {
             Centroid a = it.next();
             double aMean = a.mean();
             double aWeight = a.count();
-            a = it.next();
-            while (a != null && a.mean() == aMean) {
-                aWeight += a.count();
-                if (it.hasNext()) {
-                    a = it.next();
-                } else {
-                    a = null;
-                }
-            }
 
             if (x == aMean) {
                 return aWeight / 2.0 / size();
             }
-            assert x > firstMean;
-
-            if (a == null) {
-                // all centroids were at the exact same place: firstMean == lastMean
-                // but we know that x > firstMean && x <= lastMean
-                // contradiction!!!!
-                throw new IllegalStateException("Logical contradiction");
-            }
+            assert x > aMean;
 
             // b is the look-ahead to the next centroid
-            Centroid b = a;
-            double bMean = Double.NaN;
-            double bWeight = 0;
-            while (b != null && (Double.isNaN(bMean) || bMean == b.mean())) {
-                bMean = b.mean();
-                bWeight += b.count();
+            Centroid b = it.next();
+            double bMean = b.mean();
+            double bWeight = b.count();
 
-                if (it.hasNext()) {
-                    b = it.next();
-                } else {
-                    b = null;
-                }
-            }
-
-            assert bMean > aMean;
-
-            // b is now the next centroid after current interval or null
+            assert bMean >= aMean;
 
             double weightSoFar = 0;
 
             // scan to last element
-            while (bWeight != 0) {
+            while (bWeight > 0) {
                 assert x > aMean;
                 if (x == bMean) {
                     assert bMean > aMean;
+                    weightSoFar += aWeight;
+                    while (it.hasNext()) {
+                        b = it.next();
+                        if (x == b.mean()) {
+                            bWeight += b.count();
+                        } else {
+                            break;
+                        }
+                    }
                     return (weightSoFar + aWeight + bWeight / 2.0) / size();
                 }
                 assert x < bMean || x > bMean;
 
                 if (x < bMean) {
                     // we are strictly between a and b
+                    assert aMean < bMean;
                     if (aWeight == 1) {
                         // but a might be a singleton
                         if (bWeight == 1) {
                             // we have passed all of a, but none of b, no interpolation
                             return (weightSoFar + 1.0) / size();
                         } else {
-                            // only get to interpolate b's weight because a is a singleton
-                            assert x > aMean;
-                            assert bMean > aMean;
-
+                            // only get to interpolate b's weight because a is a singleton and to our left
                             double partialWeight = (x - aMean) / (bMean - aMean) * bWeight / 2.0;
                             return (weightSoFar + 1.0 + partialWeight) / size();
                         }
                     } else if (bWeight == 1) {
                         // only get to interpolate a's weight because b is a singleton
                         double partialWeight = (x - aMean) / (bMean - aMean) * aWeight / 2.0;
+                        // half of a is to left of aMean, and half is interpolated
                         return (weightSoFar + aWeight / 2.0 + partialWeight) / size();
                     } else {
                         // neither is singleton
@@ -352,22 +332,18 @@ public class AVLTreeDigest extends AbstractTDigest {
 
                 assert x > bMean;
 
-                aMean = bMean;
-                aWeight = bWeight;
+                if (it.hasNext()) {
+                    aMean = bMean;
+                    aWeight = bWeight;
 
-                bMean = Double.NaN;
-                bWeight = 0;
-                while (b != null && (Double.isNaN(bMean) || bMean == b.mean())) {
+                    b = it.next();
                     bMean = b.mean();
-                    bWeight += b.count();
+                    bWeight = b.count();
 
-                    if (it.hasNext()) {
-                        b = it.next();
-                    } else {
-                        b = null;
-                    }
+                    assert bMean >= aMean;
+                } else {
+                    bWeight = 0;
                 }
-                assert bMean > aMean;
             }
             // shouldn't be possible because x <= lastMean
             throw new IllegalStateException("Ran out of centroids");
@@ -395,35 +371,88 @@ public class AVLTreeDigest extends AbstractTDigest {
 
         // if values were stored in a sorted array, index would be the offset we are interested in
         final double index = q * count;
+
+        // deal with min and max as a special case singletons
+        if (index < 1) {
+            return min;
+        }
+
+        if (index >= count - 1) {
+            return max;
+        }
+
         int currentNode = values.first();
         int currentWeight = values.count(currentNode);
+
+        if (currentWeight == 2 && index <= 2) {
+            // first node is a doublet with one sample at min
+            // so we can infer location of other sample
+            return 2 * values.mean(currentNode) - min;
+        }
+
+        if (values.count(values.last()) == 2 && index > count - 2) {
+            // likewise for last centroid
+            return 2 * values.mean(values.last()) - max;
+        }
+
+        // special edge cases are out of the way now ... continue with normal stuff
 
         // weightSoFar represents the total mass to the left of the center of the current node
         double weightSoFar = currentWeight / 2.0;
 
         // at left boundary, we interpolate between min and first mean
         if (index < weightSoFar) {
-            return (min * index + values.mean(currentNode) * (weightSoFar - index)) / weightSoFar;
+            // we know that there was a sample exactly at min so we exclude that
+            // from the interpolation
+            return weightedAverage(min, weightSoFar - index, values.mean(currentNode), index - 1);
         }
         for (int i = 0; i < values.size() - 1; i++) {
             int nextNode = values.next(currentNode);
             int nextWeight = values.count(nextNode);
             // this is the mass between current center and next center
             double dw = (currentWeight + nextWeight) / 2.0;
-            if (weightSoFar + dw > index) {
+            if (index < weightSoFar + dw) {
+                // index is bracketed between centroids
+
+                // deal with singletons if present
+                double leftExclusion = 0;
+                double rightExclusion = 0;
+                if (currentWeight == 1) {
+                    if (index < weightSoFar + 0.5) {
+                        return values.mean(currentNode);
+                    } else {
+                        leftExclusion = 0.5;
+                    }
+                }
+                if (nextWeight == 1) {
+                    if (index >= weightSoFar + dw - 0.5) {
+                        return values.mean(nextNode);
+                    } else {
+                        rightExclusion = 0.5;
+                    }
+                }
+                // if both are singletons, we will have returned a result already
+                assert leftExclusion + rightExclusion < 1;
+                assert dw > 1;
                 // centroids i and i+1 bracket our current point
-                double z1 = index - weightSoFar;
-                double z2 = weightSoFar + dw - index;
-                return weightedAverage(values.mean(currentNode), z2, values.mean(nextNode), z1);
+                // we interpolate, but the weights are diminished if singletons are present
+                double w1 = index - weightSoFar - leftExclusion;
+                double w2 = weightSoFar + dw - index - rightExclusion;
+                return weightedAverage(values.mean(currentNode), w2, values.mean(nextNode), w1);
             }
             weightSoFar += dw;
             currentNode = nextNode;
             currentWeight = nextWeight;
         }
         // index is in the right hand side of the last node, interpolate to max
-        double z1 = index - weightSoFar;
-        double z2 = currentWeight / 2.0 - z1;
-        return weightedAverage(values.mean(currentNode), z2, max, z1);
+        // we have already handled the case were last centroid is a singleton
+        assert currentWeight > 1;
+        assert index - weightSoFar < currentWeight / 2 - 1;
+        assert count - weightSoFar > 0.5;
+
+        double w1 = index - weightSoFar;
+        double w2 = count - 1 - index;
+        return weightedAverage(values.mean(currentNode), w2, max, w1);
     }
 
     @Override

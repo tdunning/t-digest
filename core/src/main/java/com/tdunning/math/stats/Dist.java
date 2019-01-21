@@ -17,6 +17,9 @@
 
 package com.tdunning.math.stats;
 
+import java.util.Collection;
+import java.util.List;
+
 /**
  * Reference implementations for cdf and quantile if we have all data.
  */
@@ -29,6 +32,16 @@ public class Dist {
             n2 += (v == x) ? 1 : 0;
         }
         return (n1 + n2 / 2.0) / data.length;
+    }
+
+    public static double cdf(final double x, Collection<Double> data) {
+        int n1 = 0;
+        int n2 = 0;
+        for (Double v : data) {
+            n1 += (v < x) ? 1 : 0;
+            n2 += (v == x) ? 1 : 0;
+        }
+        return (n1 + n2 / 2.0) / data.size();
     }
 
     public static double quantile(final double q, double[] data) {
@@ -44,5 +57,20 @@ public class Dist {
             index = n - 1;
         }
         return data[(int) Math.floor(index)];
+    }
+
+    public static double quantile(final double q, List<Double> data) {
+        int n = data.size();
+        if (n == 0) {
+            return Double.NaN;
+        }
+        double index = q * n;
+        if (index < 0) {
+            index = 0;
+        }
+        if (index > n - 1) {
+            index = n - 1;
+        }
+        return data.get((int) Math.floor(index));
     }
 }

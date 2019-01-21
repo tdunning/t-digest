@@ -61,12 +61,15 @@ public abstract class TDigestTest extends AbstractTest {
     private static PrintWriter errorDump = null;
     private static PrintWriter deviationDump = null;
 
+    private static String digestName;
+
     @BeforeClass
     public static void freezeSeed() {
         RandomUtils.useTestSeed();
     }
 
     public static void setup(String digestName) throws IOException {
+        TDigestTest.digestName = digestName;
         synchronized (lock) {
             sizeDump = new PrintWriter(new FileWriter("sizes-" + digestName + ".csv"));
             sizeDump.printf("tag\ti\tq\tk\tactual\n");
@@ -213,16 +216,6 @@ public abstract class TDigestTest extends AbstractTest {
             double q2 = digest.quantile(q);
             assertEquals(String.format("At q=%g, expected %.2f vs %.2f", q, q1, q2), q1, q2, 0.03);
         }
-    }
-
-    private double cdf(final double x, List<Double> data) {
-        int n1 = 0;
-        int n2 = 0;
-        for (Double v : data) {
-            n1 += (v < x) ? 1 : 0;
-            n2 += (v <= x) ? 1 : 0;
-        }
-        return (n1 + n2) / 2.0 / data.size();
     }
 
     private double quantile(final double q, List<Double> data) {
@@ -504,7 +497,7 @@ public abstract class TDigestTest extends AbstractTest {
 
                 double estimate = dist.quantile(q);
                 assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f, estimate = %.3f", z, q, cdf, estimate),
-                    Math.rint(q * 10) / 10.0, estimate, 0.001);
+                        Math.rint(q * 10) / 10.0, estimate, 0.001);
             }
         }
     }
@@ -663,54 +656,53 @@ public abstract class TDigestTest extends AbstractTest {
     public void testSizeControl() throws IOException, InterruptedException, ExecutionException {
         // very slow running data generator.  Don't want to run this normally.  To run slow tests use
         // mvn test -DrunSlowTests=true
-        assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
+//        assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
 
         final Random gen0 = getRandom();
-        final PrintWriter out = new PrintWriter(new FileOutputStream("scaling.tsv"));
-        out.printf("k\tsamples\tcompression\tsize1\tsize2\n");
+        try (final PrintWriter out = new PrintWriter(new FileOutputStream(String.format("scaling-%s.tsv", digestName)))) {
+            out.printf("k\tsamples\tcompression\tsize1\tsize2\n");
 
-        List<Callable<String>> tasks = Lists.newArrayList();
-        for (int k = 0; k < 20; k++) {
-            for (final int size : new int[]{10, 100, 1000, 10000}) {
-                final int currentK = k;
-                tasks.add(new Callable<String>() {
-                    final Random gen = new Random(gen0.nextLong());
+            List<Callable<String>> tasks = Lists.newArrayList();
+            for (int k = 0; k < 20; k++) {
+                for (final int size : new int[]{10, 100, 1000, 10000}) {
+                    final int currentK = k;
+                    tasks.add(new Callable<String>() {
+                        final Random gen = new Random(gen0.nextLong());
 
-                    @Override
-                    public String call() throws Exception {
-                        System.out.printf("Starting %d,%d\n", currentK, size);
-                        StringWriter s = new StringWriter();
-                        PrintWriter out = new PrintWriter(s);
-                        for (double compression : new double[]{2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
-                            TDigest dist = factory(compression).create();
-                            for (int i = 0; i < size * 1000; i++) {
-                                dist.add(gen.nextDouble());
+                        @Override
+                        public String call() throws Exception {
+                            System.out.printf("Starting %d,%d\n", currentK, size);
+                            StringWriter s = new StringWriter();
+                            PrintWriter out = new PrintWriter(s);
+                            for (double compression : new double[]{20, 50, 100, 200, 500, 1000}) {
+                                TDigest dist = factory(compression).create();
+                                for (int i = 0; i < size * 1000; i++) {
+                                    dist.add(gen.nextDouble());
+                                }
+                                out.printf("%d\t%d\t%.0f\t%d\t%d\n", currentK, size, compression, dist.smallByteSize(), dist.byteSize());
+                                out.flush();
                             }
-                            out.printf("%d\t%d\t%.0f\t%d\t%d\n", currentK, size, compression, dist.smallByteSize(), dist.byteSize());
-                            out.flush();
+                            out.close();
+                            return s.toString();
                         }
-                        out.close();
-                        return s.toString();
-                    }
-                });
+                    });
+                }
             }
-        }
 
-        ExecutorService executor = Executors.newFixedThreadPool(20);
-        for (Future<String> result : executor.invokeAll(tasks)) {
-            out.write(result.get());
+            ExecutorService executor = Executors.newFixedThreadPool(20);
+            for (Future<String> result : executor.invokeAll(tasks)) {
+                out.write(result.get());
+            }
+            executor.shutdownNow();
+            assertTrue("Dangling executor thread", executor.awaitTermination(5, TimeUnit.SECONDS));
         }
-        executor.shutdown();
-        executor.awaitTermination(5, TimeUnit.SECONDS);
-
-        out.close();
     }
 
     @Test
     public void testScaling() throws FileNotFoundException, InterruptedException, ExecutionException {
         final Random gen0 = getRandom();
 
-        try (PrintWriter out = new PrintWriter(new FileOutputStream("error-scaling.tsv"))) {
+        try (PrintWriter out = new PrintWriter(new FileOutputStream(String.format("error-scaling-%s.tsv", digestName)))) {
             out.printf("pass\tcompression\tq\terror\tsize\n");
 
             Collection<Callable<String>> tasks = Lists.newArrayList();
@@ -755,20 +747,14 @@ public abstract class TDigestTest extends AbstractTest {
             }
 
             ExecutorService exec = Executors.newFixedThreadPool(16);
-            try {
-                for (Future<String> result : exec.invokeAll(tasks)) {
-                    out.write(result.get());
-                }
-                exec.shutdown();
-                if (exec.awaitTermination(5, TimeUnit.SECONDS)) {
-                    return;
-                }
-
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } catch (Throwable e) {
-                e.printStackTrace();
+            for (Future<String> result : exec.invokeAll(tasks)) {
+                out.write(result.get());
             }
+            exec.shutdown();
+            if (exec.awaitTermination(5, TimeUnit.SECONDS)) {
+                return;
+            }
+
             exec.shutdownNow();
             assertTrue("Dangling executor thread", exec.awaitTermination(5, TimeUnit.SECONDS));
         }
@@ -834,32 +820,32 @@ public abstract class TDigestTest extends AbstractTest {
 //        }
 //    }
 
-    private double ks(double[] data, int length, TDigest digest) {
-        double d1 = 0;
-        double d2 = 0;
-        Arrays.sort(data, 0, length);
-        int i = 0;
-        for (Centroid centroid : digest.centroids()) {
-            double x = centroid.mean();
-            while (i < length && data[i] <= x) {
-                i++;
-            }
-            double q0a = (double) i / (length - 1);
-            double q0b = (double) (i + 1) / (length - 1);
-            double q0;
-            if (i > 0) {
-                if (i < length) {
-                    q0 = (q0a * (data[i] - x) + q0b * (x - data[i - 1])) / (data[i] - data[i - 1]);
-                } else {
-                    q0 = 1;
-                }
-            } else {
-                q0 = 0;
-            }
-            double q1 = digest.cdf(x);
-            d1 = Math.max(q1 - q0, d1);
-            d2 = Math.max(q0 - q1, d2);
-        }
-        return Math.max(d1, d2);
-    }
+//    private double ks(double[] data, int length, TDigest digest) {
+//        double d1 = 0;
+//        double d2 = 0;
+//        Arrays.sort(data, 0, length);
+//        int i = 0;
+//        for (Centroid centroid : digest.centroids()) {
+//            double x = centroid.mean();
+//            while (i < length && data[i] <= x) {
+//                i++;
+//            }
+//            double q0a = (double) i / (length - 1);
+//            double q0b = (double) (i + 1) / (length - 1);
+//            double q0;
+//            if (i > 0) {
+//                if (i < length) {
+//                    q0 = (q0a * (data[i] - x) + q0b * (x - data[i - 1])) / (data[i] - data[i - 1]);
+//                } else {
+//                    q0 = 1;
+//                }
+//            } else {
+//                q0 = 0;
+//            }
+//            double q1 = digest.cdf(x);
+//            d1 = Math.max(q1 - q0, d1);
+//            d2 = Math.max(q0 - q1, d2);
+//        }
+//        return Math.max(d1, d2);
+//    }
 }
