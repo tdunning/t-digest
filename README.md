@@ -38,8 +38,8 @@ testing, benchmarking and documentation.
 I am working on a 4.0 release that incorporates all of these improvements. The remaining punch list for 
 the release is roughly:
 
-* verify all tests are clean and not disabled
-* integrate all scale functions into `AVLTreeDigest`
+* verify all tests are clean and not disabled  (done!)
+* integrate all scale functions into `AVLTreeDigest` (done!)
 * describe accuracy using the quality suite
 * extend benchmarks to include `AVLTreeDigest` as first-class alternative
 
@@ -52,17 +52,14 @@ The idea of scale functions is the heart of the t-digest. But things don't quite
 we originally thought. Originally, it was presumed that accuracy should be proportional to the 
 square of the size of a cluster. That isn't true in practice. That means that scale functions need
 to be much more aggressive about controlling cluster sizes near the tails. We now have 4 scale functions 
-supported for the `MergingDigest` to all different trade-offs in terms of accuracy.
+supported for both major digest forms (`MergingDigest` and `AVLTreeDigest`) to allow different trade-offs 
+in terms of accuracy.
 
 These scale functions now have associated proofs that they all preserve the key invariants necessary
 to build an accurate digest and that they all give tight bounds on the size of a digest. This means that we 
 can get much better tail accuracy than before without losing much in terms of median accuracy. It also means
-that insertion into a `MergingDigest` is much faster than before since we
-have been able to eliminate all fancy functions like sqrt, log or sin.
-
-The `AVLTreeDigest` does not support any scale functions beyond what it historically has supported. This means 
-that digests will be much larger than would be produced by `MergingDigest` for the same compression. Work is 
-(slowly) ongoing to support all scale functions in the `AVLTreeDigest`.
+that insertion into a `MergingDigest` is much faster than before since we have been able to eliminate all fancy 
+functions like sqrt, log or sin from the critical path.
  
 ### Better Interpolation
 The better accuracy achieved by the new scale functions partly comes from the fact that the most extreme clusters
@@ -71,7 +68,9 @@ accuracy of tail estimates. Handling the transition to non-singletons is also ve
   
 Both cases are handled much better than before.
 
-So far, the better interpolation has been fully integrated and tested in the `MergingDigest` with very good improvements in accuracy, but applying these improvements has exposed bugs in the way that `AVLTreeDigest` handles data with many repeated points.
+The better interpolation has been fully integrated and tested in both the `MergingDigest` and `AVLTreeDigest` with 
+very good improvements in accuracy. The bug detected in the `AVLTreeDigest` that affected data with many repeated values
+has also been fixed.
   
 ### Two-level Merging
 We now have a trick for the `MergingDigest` that uses a higher value of the compression parameter (delta) 
@@ -80,8 +79,7 @@ This two-level merging has a small (negative) effect on speed, but a substantial
 because clusters are ordered more strongly. This better ordering of clusters means that the effects of the 
 improved interpolation are much easier to observe.
 
-Extending this to `AVLTreeDigest` is theoretically possible, but it isn't clear the effect it will have, 
-particularly if done before proper scale functions are added to the tree digest.
+Extending this to `AVLTreeDigest` is theoretically possible, but it isn't clear the effect it will have.
  
 ### Repo Reorg
 The t-digest repository is now split into different functional areas. This is important because it simplifies
