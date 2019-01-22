@@ -887,7 +887,7 @@ public abstract class TDigestTest extends AbstractTest {
             for (Future<String> result : exec.invokeAll(tasks)) {
                 try {
                     out.write(result.get());
-                } catch (InterruptedException | ExecutionException e) {
+                } catch (Throwable e) {
                     e.printStackTrace();
                 }
             }
