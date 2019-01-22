@@ -480,6 +480,7 @@ public class AVLTreeDigest extends AbstractTDigest {
      */
     @Override
     public int byteSize() {
+        compress();
         return 32 + summary.size() * 12;
     }
 

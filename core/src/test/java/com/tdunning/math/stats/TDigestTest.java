@@ -800,6 +800,7 @@ public abstract class TDigestTest extends AbstractTest {
                                         for (int i = 0; i < size * 1000; i++) {
                                             dist.add(gen.nextDouble());
                                         }
+                                        dist.compress();
                                         out.printf("%d\t%d\t%.0f\t%d\t%d\t%d\n", currentK, size, compression, dist.centroidCount(), dist.smallByteSize(), dist.byteSize());
                                         out.flush();
                                     } catch (Throwable e) {
@@ -821,7 +822,6 @@ public abstract class TDigestTest extends AbstractTest {
             pending.set(tasks.size());
 
             ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 2);
-            System.out.printf("---------------------------------------------------\n");
             for (Future<String> result : executor.invokeAll(tasks)) {
                 try {
                     out.write(result.get());
@@ -885,7 +885,11 @@ public abstract class TDigestTest extends AbstractTest {
 
             ExecutorService exec = Executors.newFixedThreadPool(16);
             for (Future<String> result : exec.invokeAll(tasks)) {
-                out.write(result.get());
+                try {
+                    out.write(result.get());
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                }
             }
             exec.shutdown();
             if (exec.awaitTermination(5, TimeUnit.SECONDS)) {
