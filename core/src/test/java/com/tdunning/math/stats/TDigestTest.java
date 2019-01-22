@@ -177,6 +177,141 @@ public abstract class TDigestTest extends AbstractTest {
         assertEquals(1.0, digest.cdf(3 + 1e-10), 0);
     }
 
+    //    @Test
+    public void testFill() {
+        int delta = 300;
+        MergingDigest x = new MergingDigest(delta);
+        Random gen = new Random();
+        ScaleFunction scale = x.getScaleFunction();
+        double compression = x.compression();
+        for (int i = 0; i < 1000000; i++) {
+            x.add(gen.nextGaussian());
+        }
+        double q0 = 0;
+        int i = 0;
+        System.out.printf("i, q, mean, count, dk\n");
+        for (Centroid centroid : x.centroids()) {
+            double q = q0 + centroid.count() / 2.0 / x.size();
+            double q1 = q0 + (double) centroid.count() / x.size();
+            double dk = scale.k(q1, compression, x.size()) - scale.k(q0, compression, x.size());
+            if (centroid.count() > 1) {
+                assertTrue(String.format("K-size for centroid %d at %.3f is %.3f", i, centroid.mean(), dk), dk <= 1);
+            } else {
+                dk = 1;
+            }
+            System.out.printf("%d,%.7f,%.7f,%d,%.7f\n", i, q, centroid.mean(), centroid.count(), dk);
+            if (Double.isNaN(dk)) {
+                System.out.printf(">>>> %.8f, %.8f\n", q0, q1);
+            }
+            q0 = q1;
+            i++;
+        }
+    }
+
+    /**
+     * Tests cases where min or max is not the same as the extreme centroid
+     * which has weight>1. In these cases min and max give us a little information
+     * we wouldn't otherwise have.
+     */
+    @Test
+    public void singletonAtEnd() {
+        MergingDigest digest = new MergingDigest(100);
+        digest.add(1);
+        digest.add(2);
+        digest.add(3);
+
+        assertEquals(1, digest.getMin(), 0);
+        assertEquals(3, digest.getMax(), 0);
+        assertEquals(3, digest.centroidCount());
+        assertEquals(0, digest.cdf(0), 0);
+        assertEquals(0, digest.cdf(1 - 1e-9), 0);
+        assertEquals(0.5 / 3, digest.cdf(1), 1e-10);
+        assertEquals(1.0 / 3, digest.cdf(1 + 1e-10), 1e-10);
+        assertEquals(2.0 / 3, digest.cdf(3 - 1e-9), 0);
+        assertEquals(2.5 / 3, digest.cdf(3), 0);
+        assertEquals(1.0, digest.cdf(3 + 1e-9), 0);
+
+        digest.add(1);
+        assertEquals(1.0 / 4, digest.cdf(1), 0);
+
+        // normally min == mean[0] because weight[0] == 1
+        // we can force this not to be true for testing
+        digest = new MergingDigest(1);
+        digest.setScaleFunction(ScaleFunction.K_0);
+        for (int i = 0; i < 100; i++) {
+            digest.add(1);
+            digest.add(2);
+            digest.add(3);
+        }
+        // This sample will be added to the first cluster that already exists
+        // the effect will be to (slightly) nudge the mean of that cluster
+        // but also decrease the min. As such, near q=0, cdf and quantiles
+        // should reflect this single sample as a singleton
+        digest.add(0);
+        assertTrue(digest.centroidCount() > 0);
+        Centroid first = digest.centroids().iterator().next();
+        assertTrue(first.count() > 1);
+        assertTrue(first.mean() > digest.getMin());
+        assertEquals(0.0, digest.getMin(), 0);
+        assertEquals(0, digest.cdf(0 - 1e-9), 0);
+        assertEquals(0.5 / digest.size(), digest.cdf(0), 1e-10);
+        assertEquals(1.0 / digest.size(), digest.cdf(1e-9), 1e-10);
+
+        assertEquals(0, digest.quantile(0), 0);
+        assertEquals(0, digest.quantile(0.5 / digest.size()), 0);
+        assertEquals(0, digest.quantile(1.0 / digest.size() - 1e-10), 0);
+        assertEquals(0, digest.quantile(1.0 / digest.size()), 0);
+        assertEquals(2.0 / first.count() / 100, digest.quantile(1.01 / digest.size()), 5e-5);
+        assertEquals(first.mean(), digest.quantile(first.count() / 2.0 / digest.size()), 1e-5);
+
+        digest.add(4);
+        Centroid last = Lists.reverse(Lists.newArrayList(digest.centroids())).iterator().next();
+        assertTrue(last.count() > 1);
+        assertTrue(last.mean() < digest.getMax());
+        assertEquals(1.0, digest.cdf(digest.getMax() + 1e-9), 0);
+        assertEquals(1 - 0.5 / digest.size(), digest.cdf(digest.getMax()), 0);
+        assertEquals(1 - 1.0 / digest.size(), digest.cdf((digest.getMax() - 1e-9)), 1e-10);
+
+        assertEquals(4, digest.quantile(1), 0);
+        assertEquals(4, digest.quantile(1 - 0.5 / digest.size()), 0);
+        assertEquals(4, digest.quantile(1 - 1.0 / digest.size() + 1e-10), 0);
+        assertEquals(4, digest.quantile(1 - 1.0 / digest.size()), 0);
+        double slope = 1.0 / (last.count() / 2.0 - 1) * (digest.getMax() - last.mean());
+        double x = 4 - digest.quantile(1 - 1.01 / digest.size());
+        assertEquals(slope * 0.01, x, 1e-10);
+        assertEquals(last.mean(), digest.quantile(1 - last.count() / 2.0 / digest.size()), 1e-10);
+    }
+
+    /**
+     * Verifies interpolation between a singleton and a larger centroid.
+     */
+    @Test
+    public void singleMultiRange() {
+        MergingDigest digest = new MergingDigest(10);
+        digest.setScaleFunction(ScaleFunction.K_0);
+        for (int i = 0; i < 100; i++) {
+            digest.add(1);
+            digest.add(2);
+            digest.add(3);
+        }
+        // this check is, of course true, but it also forces merging before we change scale
+        assertTrue(digest.centroidCount() < 300);
+        digest.setScaleFunction(ScaleFunction.K_2);
+        digest.add(0);
+        // we now have a digest with a singleton first, then a heavier centroid next
+        Iterator<Centroid> ix = digest.centroids().iterator();
+        Centroid first = ix.next();
+        Centroid second = ix.next();
+        assertEquals(1, first.count());
+        assertEquals(0, first.mean(), 0);
+        assertTrue(second.count() > 1);
+        assertEquals(1.0, second.mean(), 0);
+
+        assertEquals(0.5 / digest.size(), digest.cdf(0), 0);
+        assertEquals(1.0 / digest.size(), digest.cdf(1e-10), 1e-10);
+        assertEquals((1 + second.count() / 8.0) / digest.size(), digest.cdf(0.25), 1e-10);
+    }
+
     protected abstract TDigest fromBytes(ByteBuffer bytes);
 
     @Test
@@ -235,11 +370,10 @@ public abstract class TDigestTest extends AbstractTest {
      * checking position of quantiles with a single value for desired accuracy.
      *
      * @param gen           Random number generator that generates desired values.
-     * @param sizeGuide     Control for size of the histogram.
      * @param tag           Label for the output lines
      * @param recordAllData True if the internal histogrammer should be set up to record all data it sees for
      */
-    private void runTest(DigestFactory factory, AbstractContinousDistribution gen, @SuppressWarnings("SameParameterValue") double sizeGuide, double[] qValues, String tag, boolean recordAllData) {
+    private void runTest(DigestFactory factory, AbstractContinousDistribution gen, double[] qValues, String tag, boolean recordAllData) {
         TDigest dist = factory.create();
         if (recordAllData) {
             dist.recordAllData();
@@ -273,17 +407,18 @@ public abstract class TDigestTest extends AbstractTest {
             qz += centroid.count();
             iz++;
         }
-        assertEquals(qz, dist.size(), 1e-10);
         assertEquals(iz, dist.centroids().size());
+        dist.compress();
+        assertEquals(qz, dist.size(), 1e-10);
 
-        assertTrue(String.format("Summary is too large (got %d, wanted < %.1f)", dist.centroids().size(), 20 * sizeGuide), dist.centroids().size() < 20 * sizeGuide);
+        assertTrue(String.format("Summary is too large (got %d, wanted <= %.1f)", dist.centroids().size(), dist.compression()), dist.centroids().size() <= dist.compression());
         int softErrors = 0;
         for (int i = 0; i < xValues.length; i++) {
             double x = xValues[i];
             double q = qValues[i];
             double estimate = dist.cdf(x);
             errorDump.printf("%s\t%s\t%.8g\t%.8f\t%.8f\n", tag, "cdf", x, q, estimate - q);
-            assertEquals(q, estimate, 0.005);
+            assertEquals(q, estimate, 0.08);
 
             estimate = Dist.cdf(dist.quantile(q), data);
             errorDump.printf("%s\t%s\t%.8g\t%.8f\t%.8f\n", tag, "quantile", x, q, estimate - q);
@@ -389,7 +524,7 @@ public abstract class TDigestTest extends AbstractTest {
     public void testUniform() {
         Random gen = getRandom();
         for (int i = 0; i < repeats(); i++) {
-            runTest(factory(), new Uniform(0, 1, gen), 100,
+            runTest(factory(), new Uniform(0, 1, gen),
                     new double[]{0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999},
                     "uniform", true);
         }
@@ -403,7 +538,7 @@ public abstract class TDigestTest extends AbstractTest {
         // varies by over 11 orders of magnitude.
         Random gen = getRandom();
         for (int i = 0; i < repeats(); i++) {
-            runTest(factory(), new Gamma(0.1, 0.1, gen), 100,
+            runTest(factory(200), new Gamma(0.1, 0.1, gen),
 //                    new double[]{6.0730483624079e-30, 6.0730483624079e-20, 6.0730483627432e-10, 5.9339110446023e-03,
 //                            2.6615455373884e+00, 1.5884778179295e+01, 3.3636770117188e+01},
                     new double[]{0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999},
@@ -433,7 +568,7 @@ public abstract class TDigestTest extends AbstractTest {
         };
 
         for (int i = 0; i < repeats(); i++) {
-            runTest(factory(), mix, 100, new double[]{0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99, 0.999}, "mixture", false);
+            runTest(factory(400), mix, new double[]{0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99, 0.999}, "mixture", false);
         }
     }
 
@@ -449,9 +584,9 @@ public abstract class TDigestTest extends AbstractTest {
             }
         };
 
-        TDigest dist = factory(1000).create();
+        TDigest dist = factory(400).create();
         List<Double> data = Lists.newArrayList();
-        for (int i1 = 0; i1 < 100000; i1++) {
+        for (int i1 = 0; i1 < 1000000; i1++) {
             double x = mix.nextDouble();
             data.add(x);
         }
@@ -461,11 +596,10 @@ public abstract class TDigestTest extends AbstractTest {
             dist.add(x);
         }
 
-        System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 100000);
+        System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 1000000);
         System.out.printf("# %d centroids\n", dist.centroids().size());
 
-        // I would be happier with 5x compression, but repeated values make things kind of weird
-        assertTrue("Summary is too large: " + dist.centroids().size(), dist.centroids().size() < 10 * (double) 1000);
+        assertTrue("Summary is too large: " + dist.centroids().size(), dist.centroids().size() < dist.compression());
 
         // all quantiles should round to nearest actual value
         for (int i = 0; i < 10; i++) {
@@ -475,11 +609,11 @@ public abstract class TDigestTest extends AbstractTest {
                 double q = z + delta;
                 double cdf = dist.cdf(q);
                 // we also relax the tolerances for repeated values
-                assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f", z, q, cdf), z + 0.05, cdf, 0.01);
+                assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f", z, q, cdf), z + 0.05, cdf, 0.03);
 
                 double estimate = dist.quantile(q);
                 assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f, estimate = %.3f", z, q, cdf, estimate),
-                        Math.rint(q * 10) / 10.0, estimate, 0.001);
+                        Math.rint(q * 10) / 10.0, estimate, 0.02);
             }
         }
     }
@@ -495,7 +629,7 @@ public abstract class TDigestTest extends AbstractTest {
                             base += Math.PI * 1e-5;
                             return base;
                         }
-                    }, 100, new double[]{0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999},
+                    }, new double[]{0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999},
                     "sequential", true);
         }
     }
@@ -647,7 +781,7 @@ public abstract class TDigestTest extends AbstractTest {
             out.printf("k\tsamples\tcompression\tcentroids\tsize1\tsize2\n");
 
             List<Callable<String>> tasks = Lists.newArrayList();
-            for (int k = 0; k < 10; k++) {
+            for (int k = 0; k < 5; k++) {
                 for (final int size : new int[]{10, 100, 1000, 10000}) {
                     final int currentK = k;
                     tasks.add(new Callable<String>() {
@@ -660,7 +794,7 @@ public abstract class TDigestTest extends AbstractTest {
                             try {
                                 StringWriter s = new StringWriter();
                                 PrintWriter out = new PrintWriter(s);
-                                for (double compression : new double[]{20, 50, 100, 200, 500, 1000}) {
+                                for (double compression : new double[]{50, 100, 200, 500}) {
                                     try {
                                         TDigest dist = factory(compression).create();
                                         for (int i = 0; i < size * 1000; i++) {

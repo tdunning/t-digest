@@ -28,7 +28,6 @@ import java.util.List;
  * A tree of t-digest centroids.
  */
 final class AVLGroupTree extends AbstractCollection<Centroid> implements Serializable {
-
     /* For insertions into the tree */
     private double centroid;
     private int count;
@@ -169,11 +168,14 @@ final class AVLGroupTree extends AbstractCollection<Centroid> implements Seriali
      * Update values associated with a node, readjusting the tree if necessary.
      */
     @SuppressWarnings("WeakerAccess")
-    public void update(int node, double centroid, int count, List<Double> data) {
-        if (centroid == centroids[node]) {
-            // we prefer to update in place so repeated values don't shuffle around
+    public void update(int node, double centroid, int count, List<Double> data, boolean forceInPlace) {
+        if (centroid == centroids[node]||forceInPlace) {
+            // we prefer to update in place so repeated values don't shuffle around and for merging
+            centroids[node] = centroid;
             counts[node] = count;
-            datas[node] = data;
+            if (datas != null) {
+                datas[node] = data;
+            }
         } else {
             // have to do full scale update
             this.centroid = centroid;
@@ -181,6 +183,10 @@ final class AVLGroupTree extends AbstractCollection<Centroid> implements Seriali
             this.data = data;
             tree.update(node);
         }
+    }
+
+    public void remove(int node) {
+        tree.remove(node);
     }
 
     /**

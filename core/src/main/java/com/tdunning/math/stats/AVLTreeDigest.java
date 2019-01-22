@@ -113,21 +113,21 @@ public class AVLTreeDigest extends AbstractTDigest {
             }
 
             int closest = IntAVLTree.NIL;
-            long sum = summary.headSum(start);
             double n = 0;
             for (int neighbor = start; neighbor != lastNeighbor; neighbor = summary.next(neighbor)) {
                 assert minDistance == Math.abs(summary.mean(neighbor) - x);
-                double q = count == 1 ? 0.5 : (sum + (summary.count(neighbor) - 1) / 2.0) / (count - 1);
-                double k = 4 * count * q * (1 - q) / compression;
+                double q0 = (double) summary.headSum(neighbor) / count;
+                double q1 = q0 + (double) summary.count(neighbor) / count;
+                double k = Math.min(scale.max(q0, compression, count), scale.max(q1, compression, count));
 
                 // this slightly clever selection method improves accuracy with lots of repeated points
+                // what it does is sample uniformly from all clusters that have room
                 if (summary.count(neighbor) + w <= k) {
                     n++;
                     if (gen.nextDouble() < 1 / n) {
                         closest = neighbor;
                     }
                 }
-                sum += summary.count(neighbor);
             }
 
             if (closest == IntAVLTree.NIL) {
@@ -147,7 +147,7 @@ public class AVLTreeDigest extends AbstractTDigest {
                 }
                 centroid = weightedAverage(centroid, count, x, w);
                 count += w;
-                summary.update(closest, centroid, count, d);
+                summary.update(closest, centroid, count, d, false);
             }
             count += w;
 
@@ -164,26 +164,44 @@ public class AVLTreeDigest extends AbstractTDigest {
             return;
         }
 
-        AVLGroupTree centroids = summary;
-        this.summary = new AVLGroupTree(recordAllData);
+        double n0 = 0;
+        double k0 = scale.max(n0 / count, compression, count);
+        int node = summary.first();
+        int w0 = summary.count(node);
+        double n1 = n0 + summary.count(node);
 
-        final int[] nodes = new int[centroids.size()];
-        nodes[0] = centroids.first();
-        for (int i = 1; i < nodes.length; ++i) {
-            nodes[i] = centroids.next(nodes[i - 1]);
-            assert nodes[i] != IntAVLTree.NIL;
-        }
-        assert centroids.next(nodes[nodes.length - 1]) == IntAVLTree.NIL;
+        int w1 = 0;
+        double k1;
+        while (node != IntAVLTree.NIL) {
+            int after = summary.next(node);
+            while (after != IntAVLTree.NIL) {
+                w1 = summary.count(after);
+                k1 = scale.max((n1 + w1) / count, compression, count);
+                if (w0 + w1 > Math.min(k0, k1)) {
+                    break;
+                } else {
+                    double mean = weightedAverage(summary.mean(node), w0, summary.mean(after), w1);
+                    List<Double> d1 = summary.data(node);
+                    List<Double> d2 = summary.data(after);
+                    if (d1 != null && d2 != null) {
+                        d1.addAll(d2);
+                    }
+                    summary.update(node, mean, w0 + w1, d1, true);
 
-        for (int i = centroids.size() - 1; i > 0; --i) {
-            final int other = gen.nextInt(i + 1);
-            final int tmp = nodes[other];
-            nodes[other] = nodes[i];
-            nodes[i] = tmp;
-        }
-
-        for (int node : nodes) {
-            add(centroids.mean(node), centroids.count(node), centroids.data(node));
+                    int tmp = summary.next(after);
+                    summary.remove(after);
+                    after = tmp;
+                    n1 += w1;
+                    w0 += w1;
+                }
+            }
+            node = after;
+            if (node != IntAVLTree.NIL) {
+                n0 = n1;
+                k0 = scale.max(n0 / count, compression, count);
+                w0 = w1;
+                n1 = n0 + w0;
+            }
         }
     }
 
@@ -230,37 +248,13 @@ public class AVLTreeDigest extends AbstractTDigest {
             int first = values.first();
             double firstMean = values.mean(first);
             if (x > min && x < firstMean) {
-                int firstCount = values.count(first);
-                assert firstCount > 1;
-                if (firstCount == 2) {
-                    // other sample in first centroid must be on the other side of the mean
-                    return 1.0 / size();
-                } else {
-                    // how much weight is available for interpolation?
-                    double weight = firstCount / 2.0 - 1;
-                    // how much is between min and here?
-                    double partialWeight = (x - min) / (firstMean - min) * weight;
-                    // account for sample at min along with interpolated weight
-                    return (partialWeight + 1.0) / size();
-                }
+                return interpolateTail(values, x, first, firstMean, min);
             }
 
             int last = values.last();
             double lastMean = values.mean(last);
             if (x < max && x > lastMean) {
-                int lastCount = values.count(last);
-                assert lastCount > 1;
-                if (lastCount == 2) {
-                    // other sample in first centroid must be on the other side of the mean
-                    return 1.0 / size();
-                } else {
-                    // how much weight is available for interpolation?
-                    double weight = lastCount / 2.0 - 1;
-                    // how much is between min and here?
-                    double partialWeight = (max - x) / (max - lastMean) * weight;
-                    // account for sample at min along with interpolated weight
-                    return (partialWeight + 1.0) / size();
-                }
+                return 1 - interpolateTail(values, x, last, lastMean, max);
             }
             assert values.size() >= 2;
             assert x >= firstMean;
@@ -347,6 +341,22 @@ public class AVLTreeDigest extends AbstractTDigest {
             }
             // shouldn't be possible because x <= lastMean
             throw new IllegalStateException("Ran out of centroids");
+        }
+    }
+
+    private double interpolateTail(AVLGroupTree values, double x, int node, double mean, double extremeValue) {
+        int count = values.count(node);
+        assert count > 1;
+        if (count == 2) {
+            // other sample must be on the other side of the mean
+            return 1.0 / size();
+        } else {
+            // how much weight is available for interpolation?
+            double weight = count / 2.0 - 1;
+            // how much is between min and here?
+            double partialWeight = (extremeValue - x) / (extremeValue - mean) * weight;
+            // account for sample at min along with interpolated weight
+            return (partialWeight + 1.0) / size();
         }
     }
 

@@ -101,8 +101,6 @@ public class MergingDigest extends AbstractTDigest {
     // if true, use higher working value of compression during construction, then reduce on presentation
     public boolean useTwoLevelCompression = true;
 
-    private ScaleFunction scale = ScaleFunction.K_2;
-
     // this forces centroid merging based on size limit rather than
     // based on accumulated k-index. This can be much faster since we
     // scale functions are more expensive than the corresponding
@@ -827,14 +825,6 @@ public class MergingDigest extends AbstractTDigest {
         // format code(int), compression(float), buffer-size(short), temp-size(short), #centroids-1(short),
         // then two floats per centroid
         return lastUsedCell * 8 + 30;
-    }
-
-    public void setScaleFunction(ScaleFunction scaleFunction) {
-        if (scaleFunction.toString().endsWith("NO_NORM")) {
-            throw new IllegalArgumentException(
-                    String.format("Can't use %s as scale with %s", scaleFunction, this.getClass()));
-        }
-        this.scale = scaleFunction;
     }
 
     @SuppressWarnings("WeakerAccess")
