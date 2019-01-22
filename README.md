@@ -101,12 +101,14 @@ This package also has an implementation of `FloatHistogram` which is another way
 Since the bins for `FloatHistogram`'s are static rather than adaptive, they can be combined very easily. Thus you can store a histogram for short periods of time and combined them at query time if you are looking at metrics for your system. You can also reweight histograms to avoid errors due to structured
 omission.
 
+Another class called `LogHistogram` is also available in `t-digest`. The `LogHistogram` is very much like the `FloatHistogram`, but it incorporates a clever quadratic update step (thanks to Otmar Ertl) so that the bucket widths vary more precisely and thus the number of buckets can be decreased by about 40% while getting the same accuracy. This is particularly important when you are maintaining only modest accuracy and want small histograms.
+
 
 
 Compile and Test
 ================
 
-You have to have Java 1.7 to compile and run this code.  You will also need maven (3+ preferred)
+You have to have Java 1.8 to compile and run this code.  You will also need maven (3+ preferred)
 to compile and test this software.  In order to build the images that go into the theory paper, you will need R.
 In order to format the paper, you will need latex.  A pre-built pdf version of the paper is provided.
 
