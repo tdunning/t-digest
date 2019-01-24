@@ -79,7 +79,7 @@ public class MegaMergeTest {
                 tasks.add(new Callable<MergingDigest>() {
                     @Override
                     public MergingDigest call() throws Exception {
-                        MergingDigest rx = new MergingDigest(1000);
+                        MergingDigest rx = new MergingDigest(100);
                         rx.add(Lists.newArrayList(elements));
                         return rx;
                     }
@@ -103,5 +103,41 @@ public class MegaMergeTest {
                     r[150].quantile(0.99), r[250].quantile(0.99));
             System.out.printf("%d,%.3f\n", threads, t3 - t2);
         }
+    }
+
+    @Test
+    public void megaMerge() throws Exception {
+        assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
+        final int SUMMARIES = 1000;
+        final int POINTS = 1000000;
+        double t0 = System.nanoTime() * 1e-9;
+        double[] data = new double[10013];
+        Random gen = new Random();
+        for (int i = 0; i < data.length; i++) {
+            data[i] = gen.nextGaussian();
+        }
+        double t1 = System.nanoTime() * 1e-9;
+        System.out.printf("Data has been generated\n");
+
+        // record the basic summaries
+        final MergingDigest[] td = new MergingDigest[SUMMARIES];
+        int k = 0;
+        for (int i = 0; i < SUMMARIES; i++) {
+            if (i % 100 == 0) {
+                System.out.printf("%d\n", i);
+            }
+            td[i] = new MergingDigest(200);
+            for (int j = 0; j < POINTS; j++) {
+                td[i].add(data[k]);
+                k = (k + 1) % data.length;
+            }
+        }
+        System.out.printf("Partials built\n");
+        double t2 = System.nanoTime() * 1e-9;
+
+        MergingDigest tAll = new MergingDigest(200);
+        tAll.add(Lists.<TDigest>newArrayList(td));
+        double t3 = System.nanoTime() * 1e-9;
+        System.out.printf("%.3f, %.3f, %.3f\n", t1 - t0, t2 - t1, t3 - t2);
     }
 }

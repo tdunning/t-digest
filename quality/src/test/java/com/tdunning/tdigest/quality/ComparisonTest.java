@@ -48,7 +48,8 @@ public class ComparisonTest {
 
             for (int i = 0; i < M; i++) {
                 compareQD(out, new Gamma(0.1, 0.1, rand), "gamma", 1L << 48);
-                compareQD(out, new Uniform(0, 1, rand), "uniform", 1L << 48);
+                // the bounds for the uniform distribution are varied to avoid round off effects
+                compareQD(out, new Uniform(0, rand.nextDouble() * 0.05 + 1.01, rand), "uniform", 1L << 48);
             }
         }
     }
@@ -71,7 +72,8 @@ public class ComparisonTest {
                 double x1 = dist.quantile(q);
                 double x2 = (double) qd.getQuantile(q) / scale;
                 double e1 = Dist.cdf(x1, data) - q;
-                out.printf("%s,%.0f,%.8f,%.10g,%.10g,%d,%d\n", tag, compression, q, e1, Dist.cdf(x2, data) - q, dist.smallByteSize(), QDigest.serialize(qd).length);
+                double e2 = Dist.cdf(x2, data) - q;
+                out.printf("%s,%.0f,%.8f,%.10g,%.10g,%d,%d\n", tag, compression, q, e1, e2, dist.smallByteSize(), QDigest.serialize(qd).length);
             }
         }
     }

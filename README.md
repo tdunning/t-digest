@@ -38,10 +38,13 @@ testing, benchmarking and documentation.
 I am working on a 4.0 release that incorporates all of these improvements. The remaining punch list for 
 the release is roughly:
 
-* verify all tests are clean and not disabled  (done!)
-* integrate all scale functions into `AVLTreeDigest` (done!)
+* ~~verify all tests are clean and not disabled~~  (done!)
+* ~~integrate all scale functions into AVLTreeDigest~~ (done!)
 * describe accuracy using the quality suite
 * extend benchmarks to include `AVLTreeDigest` as first-class alternative
+* measure merging performance
+* consider [issue #87](https://github.com/tdunning/t-digest/issues/87)
+* review all outstanding issues (add unit tests if necessary or close if not)
 
 I am also converging the main paper for submission and will be preparing a more implementation-oriented paper 
 intended for submission to the Journal of Statistical Software. Potential co-authors would could accelerate these 

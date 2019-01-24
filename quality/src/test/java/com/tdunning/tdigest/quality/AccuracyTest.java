@@ -34,7 +34,7 @@ public class AccuracyTest {
             out.printf("type,parts,q,e0,e1,e2,e2.rel,e3\n");
 
             List<Callable<String>> tasks = Lists.newArrayList();
-            for (int k = 0; k < 50; k++) {
+            for (int k = 0; k < 20; k++) {
                 final int currentK = k;
                 tasks.add(new Callable<String>() {
                     final Random gen = new Random(seedGenerator.nextLong());
@@ -43,6 +43,7 @@ public class AccuracyTest {
                     public String call() {
                         StringWriter s = new StringWriter();
                         PrintWriter out = new PrintWriter(s);
+                        System.out.printf("Starting %d\n", currentK);
 
                         for (int parts : new int[]{2, 5, 10, 20, 50, 100}) {
                             ArrayList<Double> data = Lists.newArrayList();
@@ -150,14 +151,14 @@ public class AccuracyTest {
                             }
                             out.flush();
                         }
-                        System.out.printf("Iteration %d\n", currentK + 1);
+                        System.out.printf("    Finishing %d\n", currentK + 1);
                         out.close();
                         return s.toString();
                     }
                 });
             }
 
-            ExecutorService executor = Executors.newFixedThreadPool(20);
+            ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 2);
             try {
                 for (Future<String> result : executor.invokeAll(tasks)) {
                     out.write(result.get());
@@ -277,7 +278,7 @@ public class AccuracyTest {
                                             //                                    for (Util.Factory factory : Util.Factory.values()) {
                                             TDigest digest = factory.create(compression);
                                             MergingDigest.useWeightLimit = useWeightLimit;
-                                            ((MergingDigest) digest).setScaleFunction(scale);
+                                            digest.setScaleFunction(scale);
                                             for (double datum : raw) {
                                                 digest.add(datum);
                                             }
@@ -388,7 +389,7 @@ public class AccuracyTest {
                             digest.recordAllData();
                             digest.setScaleFunction(scale);
 
-                            evaluate2(finalK, dist, samples, "unsorted", raw, compression, digest);
+                            evaluate2(finalK, dist, samples, raw, compression, digest);
 //                            evaluate2(finalK, dist, samples, "sorted", factory, sorted, compression);
                         }
                     }
@@ -405,7 +406,7 @@ public class AccuracyTest {
         samples.close();
     }
 
-    private void evaluate2(int k, Util.Distribution dist, PrintWriter samples, String sort,
+    private void evaluate2(int k, Util.Distribution dist, PrintWriter samples,
                            double[] data, double compression, TDigest digest) {
 
         for (double datum : data) {
@@ -423,7 +424,7 @@ public class AccuracyTest {
                 synchronized (samples) {
                     for (Double x : centroid.data()) {
                         samples.printf("%s,%s,%s,%.0f,%d,%d,%d,%d,%.8f,%.8f,%.8f,%.8f\n",
-                                digest, dist, sort, compression,
+                                digest, dist, "unsorted", compression,
                                 k, cx, centroids.size() - cx - 1, sx, x, centroid.mean(), qx, qx + dq);
                         sx++;
                     }
