@@ -38,7 +38,7 @@ import java.util.Random;
  */
 public class BinFill {
     @Test
-    public void sampleFill() throws Exception {
+    public void sampleFill() {
         System.out.printf("scale,delta,centroid,mean,count\n");
         for (double delta : new double[]{5, 10}) {
             double[] data = {0, 0, 3, 4, 1, 6, 0, 5, 2, 0, 3, 3, 2, 3, 0, 2, 5, 0, 3, 1};
@@ -95,7 +95,7 @@ public class BinFill {
                             if (dist instanceof MergingDigest) {
                                 // can only set scale function on merging digest right now ...
                                 // ability for TreeDigest coming soon
-                                ((MergingDigest) dist).setScaleFunction(f);
+                                dist.setScaleFunction(f);
                             }
                             for (int j = 0; j < N; j++) {
                                 dist.add(gen.nextDouble());

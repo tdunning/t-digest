@@ -215,7 +215,7 @@ public class ComparisonTest {
     }
 
     @Test
-    public void ks() throws Exception {
+    public void ks() {
         Random r = new Random();
         double mean = 0;
         double s2 = 0;
@@ -242,7 +242,7 @@ public class ComparisonTest {
     }
 
     @Test
-    public void compareLogHistograms() throws Exception {
+    public void compareLogHistograms() {
         Random r = new Random();
         int failed = 0;
 

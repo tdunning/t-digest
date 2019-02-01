@@ -50,7 +50,7 @@ public class LogHistogramTest extends HistogramTestCases {
     }
 
     @Test
-    public void testInverse() throws Exception {
+    public void testInverse() {
         for (double x = 0.001; x <= 100; x += 1e-3) {
             double log = LogHistogram.approxLog2(x);
             double roundTrip = LogHistogram.pow2(log);
@@ -75,7 +75,7 @@ public class LogHistogramTest extends HistogramTestCases {
     }
 
     @Override
-    public void testSerialization() throws IOException, ClassNotFoundException {
+    public void testSerialization() {
         //ignore
     }
 }

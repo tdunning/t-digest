@@ -28,7 +28,7 @@ import static org.junit.Assert.assertTrue;
 
 public class SortTest {
     @Test
-    public void testReverse() throws Exception {
+    public void testReverse() {
         int[] x = new int[0];
 
         // don't crash with no input
@@ -203,7 +203,7 @@ public class SortTest {
     }
 
     @Test
-    public void testRandomizedShortSort() throws Exception {
+    public void testRandomizedShortSort() {
         Random rand = new Random();
 
         for (int k = 0; k < 100; k++) {

@@ -769,7 +769,7 @@ public abstract class TDigestTest extends AbstractTest {
     }
 
     @Test()
-    public void testSizeControl() throws IOException, InterruptedException, ExecutionException {
+    public void testSizeControl() throws IOException, InterruptedException {
         // very slow running data generator.  Don't want to run this normally.  To run slow tests use
         // mvn test -DrunSlowTests=true
 //        assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
@@ -788,7 +788,7 @@ public abstract class TDigestTest extends AbstractTest {
                         final Random gen = new Random(gen0.nextLong());
 
                         @Override
-                        public String call() throws Exception {
+                        public String call() {
                             System.out.printf("Starting %d,%d\n", currentK, size);
                             live.incrementAndGet();
                             try {
@@ -836,7 +836,7 @@ public abstract class TDigestTest extends AbstractTest {
     }
 
     @Test
-    public void testScaling() throws FileNotFoundException, InterruptedException, ExecutionException {
+    public void testScaling() throws FileNotFoundException, InterruptedException {
         final Random gen0 = getRandom();
 
         try (PrintWriter out = new PrintWriter(new FileOutputStream(String.format("error-scaling-%s.tsv", digestName)))) {
@@ -850,7 +850,7 @@ public abstract class TDigestTest extends AbstractTest {
                     final Random gen = new Random(gen0.nextLong());
 
                     @Override
-                    public String call() throws Exception {
+                    public String call() {
                         System.out.printf("Start %d\n", currentK);
                         StringWriter s = new StringWriter();
                         PrintWriter out = new PrintWriter(s);
@@ -921,7 +921,7 @@ public abstract class TDigestTest extends AbstractTest {
     }
 
     @Test
-    public void testMonotonicity() throws Exception {
+    public void testMonotonicity() {
         TDigest digest = factory().create();
         final Random gen = getRandom();
         for (int i = 0; i < 100000; i++) {

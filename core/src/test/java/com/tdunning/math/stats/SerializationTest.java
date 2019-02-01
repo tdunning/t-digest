@@ -29,7 +29,7 @@ import static org.junit.Assert.assertTrue;
 
 public class SerializationTest {
     @Test
-    public void mergingDigestSerDes() throws Exception {
+    public void mergingDigestSerDes() {
         final TDigest out = MergingDigest.createDigest(100);
         out.add(42.5);
         out.add(1);

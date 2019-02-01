@@ -28,12 +28,12 @@ public final class ReproduceInfoPrinterRunListener extends RunListener {
     private boolean failed = false;
 
     @Override
-    public void testFailure(Failure failure) throws Exception {
+    public void testFailure(Failure failure) {
         failed = true;
     }
 
     @Override
-    public void testRunFinished(Result result) throws Exception {
+    public void testRunFinished(Result result) {
         if (failed) {
             printReproLine();
         }

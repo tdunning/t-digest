@@ -78,7 +78,7 @@ public class MegaMergeTest {
                 final MergingDigest[] elements = td[i];
                 tasks.add(new Callable<MergingDigest>() {
                     @Override
-                    public MergingDigest call() throws Exception {
+                    public MergingDigest call() {
                         MergingDigest rx = new MergingDigest(100);
                         rx.add(Lists.newArrayList(elements));
                         return rx;
@@ -106,7 +106,7 @@ public class MegaMergeTest {
     }
 
     @Test
-    public void megaMerge() throws Exception {
+    public void megaMerge() {
         assumeTrue(Boolean.parseBoolean(System.getProperty("runSlowTests")));
         final int SUMMARIES = 1000;
         final int POINTS = 1000000;
