@@ -48,7 +48,7 @@ Where $Z$ is a normalization value that may depend on the number of data points 
 Figure \ref{fig:k-q-plot-full} shows how a scaling function converts quantiles (the $q$ axis) into $k$ values. In this figure, values of $k$ are marked  and how unit steps in $k$ cause variable sized steps in $q$. This limit is the fundamental idea behind $t$-digests together with the idea of representing the distribution of interest by a set of centroids, each of which summarizes a localized subset of the samples. Making some subsets smaller means that the error due to summarizing the distribution is reduced near the extreme values of $q$.
 \begin{figure}[htbp] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=2.3in]{k-q-plot.pdf} 
+   \includegraphics[width=2.3in]{../t-digest-paper/k-q-plot.pdf} 
    \caption{The scaling function translates the quantile $q$ to the scaling factor $k$ in order to give variable size steps in $q$. This limits the number of samples that are included in any particular centroid, particularly near $q=0$ or $q=1$ which in turn allows more accurate estimation of the distribution near these limits. }
    \label{fig:k-q-plot-full}
 \end{figure}
@@ -58,7 +58,7 @@ These boundaries in $q$ are, however, not precisely realizable in practice since
 Figure \ref{fig:k-q-limits} illustrates how this works out in practice. Taking the case of one particular centroid $\mathcal C$, then if we assume that the samples that contribute to all of the centroids with smaller mean values are less than the samples that define $\mathcal C$ and similarly that all of the samples for centroids with larger mean values are to the right of all of the samples in $\mathcal C$, we can make some statements about how many samples can be in $\mathcal C$. Depending on how the $t$-digest was constructed, this assumption may not be quite true, but it will be close to true.
 \begin{figure}[htbp] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=3.5in]{k-q-diagram/k-q-limits.pdf} 
+   \includegraphics[width=3.5in]{../t-digest-paper/k-q-diagram/k-q-limits.pdf} 
    \caption{Looking in detail at a magnified part of the scaling function, taking unit steps in $k$ gives idealized boundaries for centroids, but the weights of centroids are  constrained to integral values. }
    \label{fig:k-q-limits}
 \end{figure}
@@ -68,7 +68,7 @@ As can be seen from these figures, if the scaling curve is too steep, $q_2-q_1 <
 
 \begin{figure}[htbp] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=3.5in]{k-q-diagram/slope-limiting.pdf} 
+   \includegraphics[width=3.5in]{../t-digest-paper/k-q-diagram/slope-limiting.pdf} 
    \caption{When the slope becomes too steep, centroids have unit weight. The effect is that the scaling function (black and gray thick line) is effectively modified (dashed lines) so that the slope is at most $n$, the total number of samples.  }
    \label{fig:k-q-slope}
 \end{figure}
