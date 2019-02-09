@@ -272,7 +272,7 @@ public class AccuracyTest {
                                             || scale.toString().contains("FAST") || scale.toString().contains("kSize")) {
                                         continue;
                                     }
-                                    for (double compression : new double[]{100, 200, 500, 1000}) {
+                                    for (double compression : new double[]{50, 100, 200, 500, 1000}) {
                                         //                            for (double compression : new double[]{100, 200, 500}) {
                                         for (Util.Factory factory : Collections.singleton(Util.Factory.MERGE)) {
                                             //                                    for (Util.Factory factory : Util.Factory.values()) {
@@ -344,11 +344,6 @@ public class AccuracyTest {
                 cdf.printf("%s,%s,%s,%.8f,%.8f,%.8g,%.0f,%.8g,%d,%d\n", digest, dist, sort, x1, x0, error, compression, q, k, clusters);
             }
         }
-    }
-
-    private double kIndex(double q, double compression) {
-        double u = 2 * q - 1;
-        return Math.acos(-u) * compression / Math.PI;
     }
 
     /**
