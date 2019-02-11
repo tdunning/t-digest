@@ -32,13 +32,15 @@ This short paper describes how to recreate the figures in the larger article
 The figures in the $t$-digest paper are generated using a variety of Java test cases, R scripts and hand-drawn figures. To regenerate these figures generally requires that you run the Java test cases to produce data that is reduced by R and then plotted in pdf form.
 
 This document describes how to replicate all of the figures. The figures are included at the end of this document for reference together with their original captions.
+
+Note that all figures must be moved to the {\tt docs/t-digest-paper/figures} directory to be available when formatting the paper.
 \section{Figure \ref{fig:k-q-plot}}
 Figure \ref{fig:k-q-plot} includes {\tt k-q-plot.pdf} which is produced by {\tt ./docs/t-digest-paper/k-q-plot.r }without using any external data.
 \section{Figure \ref{fig:linear-interpolation}}
 Figure \ref{fig:linear-interpolation} is based on {\tt linear-interpolation.pdf} which is produced by the R script {\tt linear-interpolation.r} found in {\tt ./docs/t-digest-paper/}. No external data is read by this script, but the sizes of the clusters on line 46 were taken from an actual $t$-digest.
 
 \section{Figures \ref{fig:interpolation}, \ref{fig:singletons} and \ref{fig:endpoint}}
-Figures \ref{fig:interpolation}, \ref{fig:singletons} and \ref{fig:endpoint} were all hand-drawn in Omnigraffle. The source for all of them is in {\tt quantile-figures.graffle}. Figure \ref{fig:interpolation} is found on canvas 5, Figure \ref{fig:singletons} is on canvas 4 and Figure \ref{fig:endpoint} is on canvas 6. To recreate the figures themselves, use File $>$ Export to bring up a dialog that will write all artboards to separate PDF files. The  \LaTeX source code assumes that these figures will be in the directory {\tt quantile-figures} and that directory has to be set during the export process.
+Figures \ref{fig:interpolation}, \ref{fig:singletons} and \ref{fig:endpoint} were all hand-drawn in Omnigraffle. The source for all of them is in {\tt quantile-figures.graffle}. Figure \ref{fig:interpolation} is found on canvas 5, Figure \ref{fig:singletons} is on canvas 4 and Figure \ref{fig:endpoint} is on canvas 6. To recreate the figures themselves, use File $>$ Export to bring up a dialog that will write all artboards to separate PDF files. The  \LaTeX source code assumes that these figures will be in the directory {\tt figures} and that directory has to be set during the export process.
 \section{Figure \ref{fig:by-scale}}
 Figure \ref{fig:by-scale} illustrates error rates for different scale functions and values of $q$. Production of the two graphs in this figure requires a series of steps to first generate the data in question and then to process and plot the data. Note that this figure will vary a fair bit each time you generate new data. This is due to the fact that the number of iterations used to generate the data is pretty small in order to keep the time required for the test to a reasonable level.
 
@@ -108,48 +110,48 @@ Figure \ref{fig:accuracy-scaling} uses the data in {\tt quality/tests} similarly
 > draw.accuracy.fig()
 \end{verbatim}
 \section{Figure \ref{fig:merge}}
-Figure \ref{fig:merge} is produced by the script {\tt quality/merge.r} which processes data produced by the test {\tt com.tdunning.tdigest.quality.AccuracyTest\#merges}. All that is required to produce the diagram is run the test and then run the R script, both with a working directory of {\tt quality/merge}. The diagram is stored in {\tt merge.pdf} which must be moved to the {\tt docs/t-digest/paper} manually.
+Figure \ref{fig:merge} is produced by the script {\tt quality/merge.r} which processes data produced by the test {\tt com.tdunning.tdigest.quality.AccuracyTest\#merges}. All that is required to produce the diagram is run the test and then run the R script, both with a working directory of {\tt quality/merge}. The diagram is stored in {\tt merge.pdf} which must be moved to the {\tt docs/t-digest-paper/figures} manually.
 \section{Figure \ref{fig:qd-comparison}}
-Figure \ref{fig:qd-comparison} is produced by the {\tt quality/comparison.r} script. This script consumes data produced by the {\tt com.tdunning.tdigest.quality.ComparisonTest\#compareToQDigest} unit test. Again, running the unit test and then the R script in the {\tt quality} directory will produce the {\tt qd-sizes.pdf} figure which must then be manually moved to the {\tt docs/t-digest-paper} directory.
+Figure \ref{fig:qd-comparison} is produced by the {\tt quality/comparison.r} script. This script consumes data produced by the {\tt com.tdunning.tdigest.quality.ComparisonTest\#compareToQDigest} unit test. Again, running the unit test and then the R script in the {\tt quality} directory will produce the {\tt qd-sizes.pdf} figure which must then be manually moved to the {\tt docs/t-digest-paper/figures} directory.
 \begin{figure}[p] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=2.5in]{k-q-plot.pdf} 
+   \includegraphics[width=2.5in]{figures/k-q-plot.pdf} 
    \caption{The scale function translates the quantile $q$ to the scale factor $k$ in order to give variable size steps in $q$. Limiting cluster sizes allows better accuracy near $q=0$ or $q=1$. }
    \label{fig:k-q-plot}
 \end{figure}
 \begin{figure}[p] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[height=2.in, clip]{linear-interpolation.pdf} 
+   \includegraphics[height=2.in, clip]{figures/linear-interpolation.pdf} 
    \caption{The left panel shows linear interpolation of the cumulative distribution function near $q=0$ with $100$ equal sized bins applied to $10,000$ data points sampled from an exponential distribution. The right panel shows the same interpolation with variable size bins as given by a strongly ordered $t$-digest with $\delta=100$. The numbers above the data points represent the number of points in each bin. }
    \label{fig:linear-interpolation}
 \end{figure}
 \begin{figure}[p] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=3in]{quantile-figures/interpolation.pdf} 
+   \includegraphics[width=3in]{figures/interpolation.pdf} 
    \caption{Interpolation of the empirical cumulative distribution function between centroids of clusters with more than one sample is done by assuming half of the points for each centroid are to the left of the centroid and half are to the right. }
    \label{fig:interpolation}
 \end{figure}
 
 \begin{figure}[p] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=3in]{quantile-figures/singleton.pdf} 
+   \includegraphics[width=3in]{figures/singleton.pdf} 
    \caption{Clusters with a single sample are handled specially. Adjacent to a normal cluster, as is the case between $x_1$ and $x_2$, interpolation is done assuming $w_1/2$ samples occur between $x_1$ and $x_2$, and the single sample at $x_2$. That single sample causes the cumulative distribution to step to the mid-point of the individual sample at $x_2$. Between singleton clusters $x_2$ and $x_3$, the cumulative distribution is given a constant value until it steps again at $x_3$.}
    \label{fig:singletons}
 \end{figure}
 \begin{figure}[p] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=3in]{quantile-figures/endpoint.pdf} 
+   \includegraphics[width=3in]{figures/endpoint.pdf} 
    \caption{For the last clusters, if the cluster weight is greater than $2$, we can use the fact that a singleton must occur at $x_{\mathrm {min}}$ or $x_{\mathrm {max}}$ to improve interpolation accuracy. The first cluster is handled by reversing these steps.}
    \label{fig:endpoint}
 \end{figure}
 \begin{figure}[p] %  figure placement: here, top, bottom, or page
-   \includegraphics[width=5.5in]{relative-error.pdf} 
+   \includegraphics[width=5.5in]{figures/relative-error.pdf} 
    \caption{The left panel shows absolute error in parts per million of estimations of quantile with $\delta = 100$ for scale functions $k_1$, $k_2$ and $k_3$. Errors are computed by taking $10^6$ samples from a uniform distribution and comparing estimates from a $t$-digest against exact quantiles computed from the original samples. This was repeated 50 times to get a sense of variability. The left panel shows absolute error in parts per million and the right panel shows relative error.}
    \label{fig:by-scale}
 \end{figure}
 
 \begin{figure}[p] %  figure placement: here, top, bottom, or page
-   \includegraphics[width=4.5in]{cluster-spread.pdf} 
+   \includegraphics[width=4.5in]{figures/cluster-spread.pdf} 
    \caption{The first few clusters in a typical $t$-digest show that while the digest is not strictly ordered, only adjacent clusters overlap. This plot shows roughly the first 20 clusters of the digest with even-numbered clusters below and odd-numbered ones above. Note how odd clusters overlap with adjacent even clusters, but never with adjacent odd clusters. This corresponds to weak ordering with $\Delta=1$  }
    \label{fig:cluster-spread}
 \end{figure}
@@ -157,7 +159,7 @@ Figure \ref{fig:qd-comparison} is produced by the {\tt quality/comparison.r} scr
 
 \begin{figure}[p] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=4in]{error-vs-compression.pdf} 
+   \includegraphics[width=4in]{figures/error-vs-compression.pdf} 
    \caption{The scaling of quantile estimation for various values of compression factor $\delta$ and $q$. 
    The general pattern is that absolute error scales like $1/\delta^2$ for small values of $\delta$ and like $1/\sqrt{\delta}$ for values larger than some cutoff. The cutoff is higher for larger values of $q$ (roughly 500 for $q=0.01$ but only 100 for $q=10^{-5}$). The grey dashed lines provide a reference for $1/\sqrt{\delta}$ scaling, the dotted grey lines show $1/\delta^2$.   At $q=10^{-5}$ error goes to zero for values $\delta > 200$ and cannot be shown on a log scale. The same happens for $q=10^{-6}$ except error is zero for all values of $\delta$. The data shown here are for $k_2$, but the results for $k_3$ are nearly indistinguishable.}
    \label{fig:accuracy-scaling}
@@ -167,13 +169,13 @@ Figure \ref{fig:qd-comparison} is produced by the {\tt quality/comparison.r} scr
 
 \begin{figure}[p] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=5.5in]{merge.pdf} 
+   \includegraphics[width=5.5in]{figures/merge.pdf} 
    \caption{Accuracy of a $t$-digest accumulated directly is nearly the same as when the digest is computed by combining digests from 5, 20 or 100 equal sized paritions of the data.  All panels were computed by 20 repetitions of aggregating 1,000,000 values. }
    \label{fig:merge}
 \end{figure}
 \begin{figure}[p] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=4.5in]{qd-sizes.pdf} 
+   \includegraphics[width=4.5in]{figures/qd-sizes.pdf} 
    \caption{The left panel shows the size of a serialized Q-digest and $t$-digest versus compression parameter $\delta$ for 100,000 uniformly distributed samples. Trials were repeated 20 times. The left panel shows how compression parameters $\delta_q$ and $\delta_t$ are chosen to control digest size to approximately 1k byte. The right panel shows absolute error for various values of $q$.  With this vertical scale, $t$-digest errors are only barely distinguishable from zero near the median.  }
    \label{fig:qd-comparison}
 \end{figure}

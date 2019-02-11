@@ -115,7 +115,7 @@ k_1(q) = \frac \delta {2\pi}  { {\sin^{-1} (2q-1)} }
 As with any scale function, $k_1$ is non-decreasing. It has minimum value  $k(0)=-\delta/4$ and maximum value  $k(1)=\delta/4$.  Figure \ref{fig:k-q-plot} shows the relationship between $k$ and $q$ for $\delta=10$. 
 \begin{figure}[htbp] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=2.5in]{k-q-plot.pdf} 
+   \includegraphics[width=2.5in]{figures/k-q-plot.pdf} 
    \caption{The scale function translates the quantile $q$ to the scale factor $k$ in order to give variable size steps in $q$. Limiting cluster sizes allows better accuracy near $q=0$ or $q=1$. }
    \label{fig:k-q-plot}
 \end{figure}
@@ -145,7 +145,7 @@ The only really necessary characteristic of a scale function up to now is that b
 Figure \ref{fig:linear-interpolation} shows how  estimating $q$ near tails is improved for a strongly ordered, fully merged $t$-digest constructed with a scale function that keeps clusters small near extreme values of $q$. 
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[height=2.in, clip]{linear-interpolation.pdf} 
+   \includegraphics[height=2.in, clip]{figures/linear-interpolation.pdf} 
    \caption{The left panel shows linear interpolation of the cumulative distribution function near $q=0$ with $100$ equal sized bins applied to $10,000$ data points sampled from an exponential distribution. The right panel shows the same interpolation with variable size bins as given by a strongly ordered $t$-digest with $\delta=100$. The numbers above the data points represent the number of points in each bin. }
    \label{fig:linear-interpolation}
 \end{figure}
@@ -287,7 +287,7 @@ This more rigorous regulation of cluster size means that errors in interpolation
 \subsection{Interpolation of the cumulative distribution function}
 The information in a fully-merged $t$-digest is not sufficient, in general, to precisely determine the empirical quantile $q$ of any particular value $x$ because information is lost as samples are clustered together. The only exception to this is in the case of clusters containing only a single sample where the centroid is the same as the single sample.
 
-The approach taken in current implementations of the t-digest is to make some simplifying assumptions about the distribution of samples in the original data. These are:
+The approach taken in current implementations of the $t$-digest is to make some simplifying assumptions about the distribution of samples in the original data. These are:
 \begin{enumerate}
 \item The samples for a cluster are evenly split into samples that are to the left of the centroid and those to the right if there is more than one sample. 
 \item The samples between two clusters are uniformly distributed between them. 
@@ -299,7 +299,7 @@ Based on these assumptions, we have four important cases. These are a) interpola
 Between two clusters where both have more than one sample, the empirical cumulative distribution function is approximated using a linear approximation between two consecutive centroids that allocates half the weight of each centroid to the interval between them. This is equivalent to saying that the the mid-point of the cluster is at the centroid. This is illustrated in Figure \ref{fig:interpolation}. 
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=3in]{quantile-figures/interpolation.pdf} 
+   \includegraphics[width=3in]{figures/interpolation.pdf} 
    \caption{Interpolation of the empirical cumulative distribution function between centroids of clusters with more than one sample is done by assuming half of the points for each centroid are to the left of the centroid and half are to the right. }
    \label{fig:interpolation}
 \end{figure}
@@ -307,7 +307,7 @@ Between two clusters where both have more than one sample, the empirical cumulat
 When clusters have a single sample, however, this interpolation can be improved by noting that this single sample is located exactly at the centroid for that cluster. We can use that to improve our interpolation as illustrated in Figure \ref{fig:singletons}. 
 \begin{figure}[tb] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=3in]{quantile-figures/singleton.pdf} 
+   \includegraphics[width=3in]{figures/singleton.pdf} 
    \caption{Clusters with a single sample are handled specially. Adjacent to a normal cluster, as is the case between $x_1$ and $x_2$, interpolation is done assuming $w_1/2$ samples occur between $x_1$ and $x_2$, and the single sample at $x_2$. That single sample causes the cumulative distribution to step to the mid-point of the individual sample at $x_2$. Between singleton clusters $x_2$ and $x_3$, the cumulative distribution is given a constant value until it steps again at $x_3$.}
    \label{fig:singletons}
 \end{figure}
@@ -317,7 +317,7 @@ The final case to be considered is that of the first or last cluster in the dige
 When such a terminal cluster has only one sample, then we know that $x_{\mathrm {max}}$ is due exactly to that single sample. Where the cluster has two samples, we know that those two samples were at $x_{\mathrm {max}}$ and $x_n-(x_{\mathrm {max}}-x)$ and thus they can be treated as two singletons. Where there are more than two samples, however, it is advantageous to treat the cluster as having half the samples before the centroid and half after. For the half of the samples that come after, one of those samples must be at $x_{\mathrm {max}}$ and thus it can be treated as a singleton with the remainder being interpolated. All of this discussion is reversed, of course, first for last and left for right when treating the first cluster. This is shown in Figure \ref{fig:endpoint} for the last cluster in a digest.
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=3in]{quantile-figures/endpoint.pdf} 
+   \includegraphics[width=3in]{figures/endpoint.pdf} 
    \caption{For the last clusters, if the cluster weight is greater than $2$, we can use the fact that a singleton must occur at $x_{\mathrm {min}}$ or $x_{\mathrm {max}}$ to improve interpolation accuracy. The first cluster is handled by reversing these steps.}
    \label{fig:endpoint}
 \end{figure}
@@ -327,7 +327,7 @@ For scale functions $k_2$ and $k_3$ the first and last clusters will always be s
 \section{Empirical Assessments}
 Figure \ref{fig:by-scale} examines the accuracy of quantile estimation with a $t$-digest.  As intended, absolute error in quantile estimation is small and decreases near $q=0$ and $q=1$ (left panel) for scale functions $k_1$, $k_2$ and $k_3$. Though it does not show well in this figure because of the vertical scale, in the mid-range where $q \in [0.1, 0.9]$, $k_1$ provides somewhat better absolute error than $k_2$ and $k_3$. 
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
-   \includegraphics[width=5.5in]{relative-error.pdf} 
+   \includegraphics[width=5.5in]{figures/relative-error.pdf} 
    \caption{The left panel shows absolute error in parts per million of estimations of quantile with $\delta = 100$ for scale functions $k_1$, $k_2$ and $k_3$. Errors are computed by taking $10^6$ samples from a uniform distribution and comparing estimates from a $t$-digest against exact quantiles computed from the original samples. This was repeated 50 times to get a sense of variability. The left panel shows absolute error in parts per million and the right panel shows relative error.}
    \label{fig:by-scale}
 \end{figure}
@@ -338,7 +338,7 @@ In spite of the decrease in the absolute error with all three scale functions as
 \subsection{Degree of overlap of $t$-digest clusters}
 Figure \ref{fig:cluster-spread} shows how effective the stratified merging strategy  is at producing high quality clusters. This requires about 20\% more merge operations and  each merge operation is typically less than twice as expensive. The resulting clusters are not quite strictly ordered, but overlap between clusters is limited to adjacent clusters.
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
-   \includegraphics[width=4.5in]{cluster-spread.pdf} 
+   \includegraphics[width=4.5in]{figures/cluster-spread.pdf} 
    \caption{The first few clusters in a typical $t$-digest show that while the digest is not strictly ordered, only adjacent clusters overlap. This plot shows roughly the first 20 clusters of the digest with even-numbered clusters below and odd-numbered ones above. Note how odd clusters overlap with adjacent even clusters, but never with adjacent odd clusters. This corresponds to weak ordering with $\Delta=1$  }
    \label{fig:cluster-spread}
 \end{figure}
@@ -358,7 +358,7 @@ In particular, since cluster size for a particular value of $q$ should be direct
 
 \begin{figure}[p] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=4in]{error-vs-compression.pdf} 
+   \includegraphics[width=4in]{figures/error-vs-compression.pdf} 
    \caption{The scaling of quantile estimation for various values of compression factor $\delta$ and $q$. 
    The general pattern is that absolute error scales like $1/\delta^2$ for small values of $\delta$ and like $1/\sqrt{\delta}$ for values larger than some cutoff. The cutoff is higher for larger values of $q$ (roughly 500 for $q=0.01$ but only 100 for $q=10^{-5}$). The grey dashed lines provide a reference for $1/\sqrt{\delta}$ scaling, the dotted grey lines show $1/\delta^2$.   At $q=10^{-5}$ error goes to zero for values $\delta > 200$ and cannot be shown on a log scale. The same happens for $q=10^{-6}$ except error is zero for all values of $\delta$. The data shown here are for $k_2$, but the results for $k_3$ are nearly indistinguishable.}
    \label{fig:accuracy-scaling}
@@ -377,7 +377,7 @@ Figure \ref{fig:merge} illustrates how this turns out. This figure shows accurac
 
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=5.5in]{merge.pdf} 
+   \includegraphics[width=5.5in]{figures/merge.pdf} 
    \caption{Accuracy of a $t$-digest accumulated directly is nearly the same as when the digest is computed by combining digests from 5, 20 or 100 equal sized paritions of the data.  All panels were computed by 20 repetitions of aggregating 1,000,000 values. }
    \label{fig:merge}
 \end{figure}
@@ -388,7 +388,7 @@ In terms of speed, merging $t$-digests is relatively cheap. In one experiment, 1
 In terms of error size, the 4.0 preview implementation of $t$-digest dominates the implementation of the Q-digest\cite{qdigest} from the popular stream-lib package \cite{github:stream} when digests of the same size are compared.  This is shown in Figure \ref{fig:qd-comparison}.  In the left panel, the relationship between the compression parameter $q$ and size is shown for both digests for 20 trials where 100,000 uniformly distributed samples are inserted into each kind of digest.  To force the digests to be equal in size compression parameter values of $\delta_q=20$ for Q-digest  and $\delta_t = 200$ for $t$-digest were chosen. This gives an average digest size of about $874$ bytes for Q-digest and 990 bytes for $t$-digest, as shown in the left panel. The panel on the right compares errors under these conditions and shows that the $t$-digest errors are more than an order of magnitude smaller for all values of $q$ (actually more than two orders of magnitude better). For values near $q=0$ the $t$-digest produces absolute errors 3-5 orders of magnitude smaller than the Q-digest does. When compared on distributions with high amounts of skew, the results are even more striking in favor of the $t$-digest.
 \begin{figure}[htb] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=4.5in]{qd-sizes.pdf} 
+   \includegraphics[width=4.5in]{figures/qd-sizes.pdf} 
    \caption{The left panel shows the size of a serialized Q-digest and $t$-digest versus compression parameter $\delta$ for 100,000 uniformly distributed samples. Trials were repeated 20 times. The left panel shows how compression parameters $\delta_q$ and $\delta_t$ are chosen to control digest size to approximately 1k byte. The right panel shows absolute error for various values of $q$.  With this vertical scale, $t$-digest errors are only barely distinguishable from zero near the median.  }
    \label{fig:qd-comparison}
 \end{figure}
