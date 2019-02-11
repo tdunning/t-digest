@@ -181,7 +181,7 @@ draw.details = function() {
 
 ### plot the first few clusters to show how they do or don't
 draw.overlap = function() {
-    pdf("cluster-spread.pdf", width=4, height=2, pointsize=9)
+    pdf("cluster-spread.pdf", width=4, height=2, pointsize=9, family="serif")
     par(mar=c(4.8, 4.4, 0.5, 1.1))
     library(dplyr)
     base = buckets %>% filter(digest == "MergingDigest-K_3-weight-alternating-twoLevel" & dist == "UNIFORM" & x < 2e-3 & k == 0) %>% mutate(index = centroid %% 2)
@@ -238,7 +238,7 @@ minmax = function(x) {
 }
 
 draw.relative.error.fig = function(xlim=c(0.5,7.4)) {
-    pdf(file="relative-error.pdf", width=5, height=2.3, pointsize=9)
+    pdf(file="relative-error.pdf", width=5, height=2.3, pointsize=9, family="serif")
     layout(matrix(c(1,2), nrow=1))
     par(las=2)
 #    par(cex=0.65)
@@ -251,25 +251,25 @@ draw.relative.error.fig = function(xlim=c(0.5,7.4)) {
     grey1 = rgb(0.95, 0.95, 0.95)
     grey2 = rgb(0.7,0.7,0.7)
     grey3 = rgb(0.4,0.4,0.4)
-    plot.cdf(digest="MergingDigest-K_1-weight-alternating-twoLevel", compression=100, norm=F, sortFlag="unsorted", offset=-1, cex=0.4, ylim=minmax(ticks*1e-6*1.2), xlim=xlim, xlab='q', ylab="Absolute error (ppm)", col=grey1, yaxt='n', angle=45)
+    plot.cdf(digest="MergingDigest-K_1-weight-alternating-twoLevel", compression=100, norm=F, sortFlag="unsorted", offset=-1, cex=0.4, ylim=minmax(ticks*1e-6*1.2), xlim=xlim, xlab=expression(italic(q)), ylab="Absolute error (ppm)", col=grey1, yaxt='n', angle=45)
     plot.cdf(digest="MergingDigest-K_2-weight-alternating-twoLevel", compression=100, norm=F, sortFlag="unsorted", offset=0, col=grey2, add=T, yaxt='n')
     plot.cdf(digest="MergingDigest-K_3-weight-alternating-twoLevel", compression=100, norm=F, sortFlag="unsorted", offset=1, col=grey3, add=T, yaxt='n')
 
     axis(side=2, at=ticks*1e-6, labels=ticks)
 
     legend(0.5, -120e-6, 
-           legend=c(expression(k[1]),expression(k[2]),expression(k[3])),
+           legend=c(expression(italic(k)[1]),expression(italic(k)[2]),expression(italic(k)[3])),
            fill=c(grey1, grey2, grey3),
            cex=0.8, horiz=T)
 
 
     par(mar=c(3.9, 4.0, 0.5, 0.2))
-    plot.cdf(digest="MergingDigest-K_1-weight-alternating-twoLevel", compression=100, norm=T, sortFlag="unsorted", offset=-1, cex=0.4, ylim=c(-0.3,0.3), xlim=xlim, xlab='q', ylab="Relative error", col=grey1)
+    plot.cdf(digest="MergingDigest-K_1-weight-alternating-twoLevel", compression=100, norm=T, sortFlag="unsorted", offset=-1, cex=0.4, ylim=c(-0.3,0.3), xlim=xlim, xlab=expression(italic(q)), ylab="Relative error", col=grey1)
     plot.cdf(digest="MergingDigest-K_2-weight-alternating-twoLevel", compression=100, norm=T, sortFlag="unsorted", offset=0, add=T, col=grey2)
     plot.cdf(digest="MergingDigest-K_3-weight-alternating-twoLevel", compression=100, norm=T, sortFlag="unsorted", offset=1, add=T, col=grey3)
 
     legend(3, -0.2, 
-           legend=c(expression(k[1]),expression(k[2]),expression(k[3])),
+           legend=c(expression(italic(k)[1]),expression(italic(k)[2]),expression(italic(k)[3])),
            fill=c(grey1, grey2, grey3),
            cex=0.8, horiz=T)
     dev.off()
@@ -277,7 +277,7 @@ draw.relative.error.fig = function(xlim=c(0.5,7.4)) {
 
 draw.accuracy.fig = function() {
     require(dplyr)
-    pdf(file="error-vs-compression.pdf", width=4, height=3, pointsize=9)
+    pdf(file="error-vs-compression.pdf", width=4, height=3, pointsize=9, family="serif")
     par(las=2)
 #    par(cex=0.65)
     par(cex.axis=0.9)
@@ -301,16 +301,16 @@ draw.accuracy.fig = function() {
 
 
     y = 1.3 * (plot.data %>% filter(q==0.00001,compression==100))$err
-    text(150, y, expression(q==10^-5))
+    text(150, y, expression(italic(q)==10^-5))
 
     y = 1.5 * (plot.data %>% filter(q==0.0001,compression==200))$err
-    text(200, y, expression(q==10^-4), adj=0)
+    text(200, y, expression(italic(q)==10^-4), adj=0)
 
     y = 1.9 * (plot.data %>% filter(q==0.001,compression==500))$err
-    text(400, y, expression(q==10^-3), adj=0.75)
+    text(400, y, expression(italic(q)==10^-3), adj=0.75)
 
     y = 1.5 * (plot.data %>% filter(q==0.01,compression==500))$err
-    text(500, y, expression(q==0.01), adj=0)
+    text(500, y, expression(italic(q)==0.01), adj=0)
 
     delta = c(50, 100,200,500,1030)
 

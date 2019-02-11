@@ -13,7 +13,8 @@ plotMerge = function(n, yaxt = 's') {
   our.data = data %>% filter(type == "quantile", parts == n)
   boxplot(e1*1e6 ~ q, at=(1:6)-0.23, xaxt='n', boxwex=0.2, our.data,
           ylim=c(-3000, 3000), cex=0.5, yaxt = yaxt,
-          col=rgb(0.95, 0.95, 0.95), xlab='Quantile (q)', ylab=ylab)
+          col=rgb(0.95, 0.95, 0.95), 
+          xlab=expression('Quantile '(italic(q))), ylab=ylab)
   boxplot(e3*1e6 ~ q, at=1:6, xaxt='n', boxwex=0.19, add=T, our.data,
           col=rgb(0.7, 0.7, 0.7), cex=0.5, yaxt = yaxt)
   boxplot(e2*1e6 ~ q, at=1:6+0.23, xaxt='n', boxwex=0.2, add=T, our.data,
@@ -27,7 +28,7 @@ plotMerge = function(n, yaxt = 's') {
 }
 
 #setEPS()
-pdf("merge.pdf", width=6, height=2.4, pointsize=9)
+pdf("merge.pdf", width=6, height=2.4, pointsize=9, family='serif')
 layout(matrix(c(1,2,3), 1, 3, byrow=T), widths=c(1.15,1,1))
 
 plotMerge(5, 's')

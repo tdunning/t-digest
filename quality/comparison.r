@@ -1,4 +1,4 @@
-pdf(file="qd-sizes.pdf", width=4.5, height=2, pointsize=9)
+pdf(file="qd-sizes.pdf", width=4.5, height=2, pointsize=9, family='serif')
 require(dplyr)
 
 layout(matrix(c(1,2), nrow=1))

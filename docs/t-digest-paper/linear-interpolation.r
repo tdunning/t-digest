@@ -4,7 +4,7 @@ dot.size = 0.7
 n = 10000
 set.seed(5)
 
-pdf("linear-interpolation.pdf", width=6, height=2.7, pointsize=10)
+pdf("linear-interpolation.pdf", width=6, height=2.7, pointsize=10, family='serif')
 layout(matrix(c(1,2),byrow=T, ncol=2), widths=c(1.1,1))
 u = sort(runif(n))
 x = log(1-u)
@@ -14,8 +14,8 @@ par(mar=c(2.5,3,0.5,1))
 plot(x, F, cex=dot.size, pch=21, bg=fade, col=NA, type='b', xlim=c(-9,-4.5), ylim=c(0,0.01), xaxt='n', ylab=NA, mgp=c(1,0.5,0), xlab=NA)
 
 axis(side=1, at=-10:-1, labels=NA)
-title(xlab='x', line=0.8, cex.lab=1.5)
-title(ylab='q', line=1.5, cex.lab=1.5)
+title(xlab=expression(italic(x)), line=0.8, cex.lab=1.5)
+title(ylab=expression(italic(q)), line=1.5, cex.lab=1.5)
 
 left.end = x[1] - (x[2]-x[1])
 
@@ -32,8 +32,8 @@ par(mar=c(2.5,1.5,0.5,1))
 plot(x, F, cex=dot.size, pch=21, bg=fade, col=NA, type='b', xlim=c(-9,-4.5), ylim=c(0,0.01), yaxt='n', xaxt='n')
 axis(side=1, at=-10:-1, labels=NA)
 axis(side=2, at=(0:6)/10, labels=NA)
-title(xlab='x', line=0.8, cex.lab=1.5)
-title(ylab='q', line=2, cex.lab=1.5)
+title(xlab=expression(italic(x)), line=0.8, cex.lab=1.5)
+title(ylab=expression(italic(q)), line=2, cex.lab=1.5)
 
 q.to.k = function(q) {
     (asin(2*q-1)/pi + 1/2)
