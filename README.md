@@ -2,27 +2,29 @@ t-digest
 ========
 
 A new data structure for accurate on-line accumulation of rank-based statistics such as quantiles
-and trimmed means.  The t-digest algorithm is also very parallel friendly making it useful in
-map-reduce and parallel streaming applications.
+and trimmed means.  The t-digest algorithm is also very friendly to parallel programs making it 
+useful in map-reduce and parallel streaming applications implemented using, say, Apache Spark.
 
 The t-digest construction algorithm uses a variant of 1-dimensional k-means clustering to produce a
-data structure that is related to the Q-digest.  This t-digest data structure can be used to estimate
-quantiles or compute other rank statistics.  The advantage of the t-digest over the Q-digest is that
-the t-digest can handle floating point values while the Q-digest is limited to integers.  With small
-changes, the t-digest can handle any values from any ordered set that has something akin to a mean.
+very compact data structure that allows accurate estimation of quantiles.  This t-digest data 
+structure can be used to estimate quantiles, compute other rank statistics or even to estimate
+related measures like trimmed means.  The advantage of the t-digest over previous digests for 
+this purpose is that the _t_-digest handles data with full floating point resolution.  With small
+changes, the _t_-digest can handle values from any ordered set for which we can compute something akin to a mean.
 The accuracy of quantile estimates produced by t-digests can be orders of magnitude more accurate than
-those produced by Q-digests in spite of the fact that t-digests are more compact when stored on disk.
+those produced by previous digest algorithms in spite of the fact that t-digests are much more 
+compact when stored on disk.
 
 In summary, the particularly interesting characteristics of the t-digest are that it
 
-* has smaller summaries than Q-digest
-* works on doubles as well as integers.
+* has smaller summaries when serialized
+* works on double precision floating point as well as integers.
 * provides part per million accuracy for extreme quantiles and typically <1000 ppm accuracy for middle quantiles
 * is very fast (~ 140 ns per add)
 * is very simple (~ 5000 lines of code total, <1000 for the most advanced implementation alone)
 * has a reference implementation that has > 90% test coverage
 * can be used with map-reduce very easily because digests can be merged
-* recent implementations are simple, yet still very fast, and require no dynamic allocation after initial creation
+* requires no dynamic allocation after initial creation (`MergingDigest` only)
 * has no runtime dependencies
 
 Recent News
@@ -49,10 +51,13 @@ improvements. The remaining punch list for the release is roughly:
 * consider [issue #87](https://github.com/tdunning/t-digest/issues/87)
 * review all outstanding issues (add unit tests if necessary or close if not)
 
-I am also converging the main paper for submission and will be
-preparing a more implementation-oriented paper intended for submission
-to the Journal of Statistical Software. Potential co-authors would
-could accelerate these submissions are enouraged to speak up!
+I have submitted the main paper describing t-digest to RSS Series B 
+and will be preparing a more implementation-oriented paper intended 
+for submission to the Journal of Statistical Software. Potential 
+co-authors would
+could accelerate these submissions are encouraged to speak up! In 
+the mean time, an 
+[archived pre-print of the paper is available](https://arxiv.org/abs/1902.04023). 
  
 ### Scale Functions
 
@@ -66,19 +71,20 @@ major digest forms (`MergingDigest` and `AVLTreeDigest`) to allow
 different trade-offs in terms of accuracy.
 
 These scale functions now have associated proofs that they all
-(preserve the key invariants)[docs/t-digest-paper/invariant-preservation.pdf] 
+[preserve the key invariants](https://github.com/tdunning/t-digest/blob/master/docs/proofs/invariant-preservation.pdf) 
 necessary to build an accurate digest and that they all give
-(tight bounds on the size of a digest)[docs/t-digest-paper/sizing.pdf].
-This means that we can get much better tail accuracy than before
-without losing much in terms of median accuracy. It also means that insertion into a
-`MergingDigest` is much faster than before since we have been able to
-eliminate all fancy functions like sqrt, log or sin from the critical
-path.
+[tight bounds on the size of a digest](https://github.com/tdunning/t-digest/blob/master/docs/proofs/sizing.pdf).
+Having new scale functions means that we can get much better tail 
+accuracy than before without losing much in terms of median accuracy. 
+It also means that insertion into a `MergingDigest` is faster than 
+before since we have been able to eliminate all fancy functions like 
+sqrt, log or sin from the critical path (although sqrt _is_ faster 
+than you might think).
  
 ### Better Interpolation
 
 The better accuracy achieved by the new scale functions partly comes
-from the fact that the most extreme clusters near q=0 or q=1 are
+from the fact that the most extreme clusters near _q_=0 or _q_=1 are
 limited to only a single sample. Handling these singletons well makes
 a huge difference in the accuracy of tail estimates. Handling the
 transition to non-singletons is also very important.
@@ -119,8 +125,12 @@ The major areas are
  * docs - the main paper and auxillary proofs live here
  * benchmarks - this is the code that tests the speed of the digest algos
  * quality - this is the code that generates and analyzes accuracy information
+ 
+ Within the docs sub-directory, proofs of invariant preservation and size
+ bounds are moved to `docs/proofs` and all figures in `docs/t-digest-paper`
+ are collected into a single directory to avoid cluster.
 
-FloatHistogram
+LogHistogram and FloatHistogram
 --------------
 
 This package also has an implementation of `FloatHistogram` which is
@@ -147,6 +157,9 @@ number of buckets can be decreased by about 40% while getting the same
 accuracy. This is particularly important when you are maintaining only
 modest accuracy and want small histograms.
 
+In the future, I will incorporate some of the interpolation tricks
+from the main _t_-digest into the `LogHistogram` implementation.
+
 
 Compile and Test
 ================
@@ -154,10 +167,12 @@ Compile and Test
 You have to have Java 1.8 to compile and run this code.  You will also
 need maven (3+ preferred) to compile and test this software.  In order
 to build the images that go into the theory paper, you will need R.
-In order to format the paper, you will need latex.  A pre-built pdf
-version of the paper is provided.
+In order to format the paper, you will need latex.  Pre-built pdf
+versions of all figures and papers are provided so you won't need latex
+if you don't need to make changes to these documents.
 
-On Ubuntu, you can get the necessary pre-requisites with the following:
+On Ubuntu, you can get the necessary pre-requisites for compiling the 
+code with the following:
 
     sudo apt-get install  openjdk-8-jdk git maven
 
@@ -165,8 +180,8 @@ Once you have these installed, use this to build and test the software:
 
     mvn test
 
-Most of the very slow tests are in the `quality` module so if you run
-tests in `core` module, you can save considerable time.
+Most of the very slow tests are in the `quality` module so if you just run
+the tests in `core` module, you can save considerable time.
 
 Testing Accuracy and Comparing to Q-digest
 ================
@@ -181,16 +196,16 @@ samples.  To get this enhanced view, run the tests in the `quality` module
 The data from these tests are stored in a variety of data files in the
 `quality` directory.  Some of these files are quite large.
 
-You can find detailed instructions on producing all of the figures
-used in the main paper in `docs/t-digest-paper/figure-doc.pdf`.
+I have prepared [detailed instructions on producing all of the figures](https://github.com/tdunning/t-digest/blob/master/docs/t-digest-paper/figure-doc.pdf)
+used in the main paper.
 
 Most of these scripts will complete almost instantaneously; one or two
 will take a few tens of seconds.
 
 The output of these scripts are a collection of PDF files that can be
 viewed with any suitable viewer such as Preview on a Mac.  Many of
-these images are used as figures in the main t-digest paper. See
-`docs/t-digest-paper/histo.pdf`.
+these images are used as figures in the 
+[main t-digest paper](https://github.com/tdunning/t-digest/blob/master/docs/t-digest-paper/histo.pdf). 
 
 Implementations in Other Languages
 =================
