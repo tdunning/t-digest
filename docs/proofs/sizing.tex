@@ -48,7 +48,7 @@ Where $Z$ is a normalization value that may depend on the number of data points 
 Figure \ref{fig:k-q-plot-full} shows how a scaling function converts quantiles (the $q$ axis) into $k$ values. In this figure, values of $k$ are marked  and how unit steps in $k$ cause variable sized steps in $q$. This limit is the fundamental idea behind $t$-digests together with the idea of representing the distribution of interest by a set of centroids, each of which summarizes a localized subset of the samples. Making some subsets smaller means that the error due to summarizing the distribution is reduced near the extreme values of $q$.
 \begin{figure}[htbp] %  figure placement: here, top, bottom, or page
    \centering
-   \includegraphics[width=2.3in]{../t-digest-paper/k-q-plot.pdf} 
+   \includegraphics[width=2.3in]{../t-digest-paper/figures/k-q-plot.pdf} 
    \caption{The scaling function translates the quantile $q$ to the scaling factor $k$ in order to give variable size steps in $q$. This limits the number of samples that are included in any particular centroid, particularly near $q=0$ or $q=1$ which in turn allows more accurate estimation of the distribution near these limits. }
    \label{fig:k-q-plot-full}
 \end{figure}
