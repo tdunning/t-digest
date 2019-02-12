@@ -23,32 +23,12 @@ import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
 import org.apache.mahout.math.jet.random.Normal;
 import org.apache.mahout.math.jet.random.Uniform;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -385,10 +365,8 @@ public abstract class TDigestTest extends AbstractTest {
             data[i] = x;
         }
         long t0 = System.nanoTime();
-        int sumW = 0;
         for (double x : data) {
             dist.add(x);
-            sumW++;
         }
         System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 100000);
         System.out.printf("# %d centroids\n", dist.centroids().size());
@@ -836,68 +814,35 @@ public abstract class TDigestTest extends AbstractTest {
     }
 
     @Test
-    public void testScaling() throws FileNotFoundException, InterruptedException {
-        final Random gen0 = getRandom();
+    public void testScaling() throws FileNotFoundException {
+        final Random gen = getRandom();
 
         try (PrintWriter out = new PrintWriter(new FileOutputStream(String.format("error-scaling-%s.tsv", digestName)))) {
             out.printf("pass\tcompression\tq\terror\tsize\n");
 
             Collection<Callable<String>> tasks = Lists.newArrayList();
-            int n = Math.max(3, repeats() * repeats());
-            for (int k = 0; k < n; k++) {
-                final int currentK = k;
-                tasks.add(new Callable<String>() {
-                    final Random gen = new Random(gen0.nextLong());
+            for (int k = 0; k < 10; k++) {
+                List<Double> data = Lists.newArrayList();
+                for (int i = 0; i < 100000; i++) {
+                    data.add(gen.nextDouble());
+                }
+                Collections.sort(data);
 
-                    @Override
-                    public String call() {
-                        System.out.printf("Start %d\n", currentK);
-                        StringWriter s = new StringWriter();
-                        PrintWriter out = new PrintWriter(s);
-
-                        List<Double> data = Lists.newArrayList();
-                        for (int i = 0; i < 100000; i++) {
-                            data.add(gen.nextDouble());
-                        }
-                        Collections.sort(data);
-
-                        for (double compression : new double[]{10, 20, 50, 100, 200, 500, 1000}) {
-                            TDigest dist = factory(compression).create();
-                            for (Double x : data) {
-                                dist.add(x);
-                            }
-                            dist.compress();
-
-                            for (double q : new double[]{0.001, 0.01, 0.1, 0.5}) {
-                                double estimate = dist.quantile(q);
-                                double actual = data.get((int) (q * data.size()));
-                                out.printf("%d\t%.0f\t%.3f\t%.9f\t%d\n", currentK, compression, q, estimate - actual, dist.byteSize());
-                                out.flush();
-                            }
-                        }
-                        out.close();
-                        System.out.printf("Finish %d\n", currentK);
-
-                        return s.toString();
+                for (double compression : new double[]{10, 20, 50, 100, 200, 500, 1000}) {
+                    TDigest dist = factory(compression).create();
+                    for (Double x : data) {
+                        dist.add(x);
                     }
-                });
-            }
+                    dist.compress();
 
-            ExecutorService exec = Executors.newFixedThreadPool(16);
-            for (Future<String> result : exec.invokeAll(tasks)) {
-                try {
-                    out.write(result.get());
-                } catch (Throwable e) {
-                    e.printStackTrace();
+                    for (double q : new double[]{0.001, 0.01, 0.1, 0.5}) {
+                        double estimate = dist.quantile(q);
+                        double actual = data.get((int) (q * data.size()));
+                        out.printf("%d\t%.0f\t%.3f\t%.9f\t%d\n", k, compression, q, estimate - actual, dist.byteSize());
+                        out.flush();
+                    }
                 }
             }
-            exec.shutdown();
-            if (exec.awaitTermination(5, TimeUnit.SECONDS)) {
-                return;
-            }
-
-            exec.shutdownNow();
-            assertTrue("Dangling executor thread", exec.awaitTermination(5, TimeUnit.SECONDS));
         }
     }
 
