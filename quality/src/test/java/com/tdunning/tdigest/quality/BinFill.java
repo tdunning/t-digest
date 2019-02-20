@@ -110,8 +110,8 @@ public class BinFill {
                                 out.printf("%d,%s,%s,%s,%.7f,%.7f,%.7f,%.7f,%.7f,%.7f,%.7f,%d,%.1f,%.1f\n",
                                         i, distribution, factory, f, (q0 + q1) / 2, c.mean(),
                                         k0, k1, k1 - k0, q0, q1, c.count(),
-                                        f.max(q0, dist.compression(), dist.size()),
-                                        f.max(q1, dist.compression(), dist.size())
+                                        dist.size() * f.max(q0, dist.compression(), dist.size()),
+                                        dist.size() * f.max(q1, dist.compression(), dist.size())
                                 );
                                 q0 = q1;
                                 k0 = k1;

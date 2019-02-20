@@ -118,7 +118,7 @@ public class AVLTreeDigest extends AbstractTDigest {
                 assert minDistance == Math.abs(summary.mean(neighbor) - x);
                 double q0 = (double) summary.headSum(neighbor) / count;
                 double q1 = q0 + (double) summary.count(neighbor) / count;
-                double k = Math.min(scale.max(q0, compression, count), scale.max(q1, compression, count));
+                double k = count * Math.min(scale.max(q0, compression, count), scale.max(q1, compression, count));
 
                 // this slightly clever selection method improves accuracy with lots of repeated points
                 // what it does is sample uniformly from all clusters that have room
@@ -165,7 +165,7 @@ public class AVLTreeDigest extends AbstractTDigest {
         }
 
         double n0 = 0;
-        double k0 = scale.max(n0 / count, compression, count);
+        double k0 = count * scale.max(n0 / count, compression, count);
         int node = summary.first();
         int w0 = summary.count(node);
         double n1 = n0 + summary.count(node);
@@ -176,7 +176,7 @@ public class AVLTreeDigest extends AbstractTDigest {
             int after = summary.next(node);
             while (after != IntAVLTree.NIL) {
                 w1 = summary.count(after);
-                k1 = scale.max((n1 + w1) / count, compression, count);
+                k1 = count * scale.max((n1 + w1) / count, compression, count);
                 if (w0 + w1 > Math.min(k0, k1)) {
                     break;
                 } else {
@@ -198,7 +198,7 @@ public class AVLTreeDigest extends AbstractTDigest {
             node = after;
             if (node != IntAVLTree.NIL) {
                 n0 = n1;
-                k0 = scale.max(n0 / count, compression, count);
+                k0 = count * scale.max(n0 / count, compression, count);
                 w0 = w1;
                 n1 = n0 + w0;
             }

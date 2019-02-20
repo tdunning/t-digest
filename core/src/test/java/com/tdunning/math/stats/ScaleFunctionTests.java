@@ -70,7 +70,7 @@ public class ScaleFunctionTests {
                             if (cnt == 1) {
                                 singles++;
                             }
-                            double size = max(k.max(i / (n - 1), compression, n), k.max((i + cnt) / (n - 1), compression, n));
+                            double size = n * max(k.max(i / (n - 1), compression, n), k.max((i + cnt) / (n - 1), compression, n));
 
                             // check that we didn't cross the midline (which makes the size limit very conservative)
                             double left = i - (n - 1) / 2;

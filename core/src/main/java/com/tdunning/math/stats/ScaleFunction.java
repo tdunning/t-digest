@@ -18,16 +18,13 @@
 package com.tdunning.math.stats;
 
 /**
- * Encodes the various scale functions for t-digests. These limits trade
- * accuracy near the tails against accuracy near the median in different ways.
- * For instance, K_0 has uniform cluster sizes and results in constant accuracy
- * (in terms of q) while K_3 has cluster sizes proportional to min(q,1-q) which
- * results in very much smaller error near the tails and modestly increased
- * error near the median.
+ * Encodes the various scale functions for t-digests. These limits trade accuracy near the tails against accuracy near
+ * the median in different ways. For instance, K_0 has uniform cluster sizes and results in constant accuracy (in terms
+ * of q) while K_3 has cluster sizes proportional to min(q,1-q) which results in very much smaller error near the tails
+ * and modestly increased error near the median.
  * <p>
- * The base forms (K_0, K_1, K_2 and K_3) all result in t-digests limited to
- * a number of clusters equal to the compression factor. The K_2_NO_NORM and
- * K_3_NO_NORM versions result in the cluster count increasing roughly with
+ * The base forms (K_0, K_1, K_2 and K_3) all result in t-digests limited to a number of clusters equal to the
+ * compression factor. The K_2_NO_NORM and K_3_NO_NORM versions result in the cluster count increasing roughly with
  * log(n).
  */
 public enum ScaleFunction {
@@ -41,21 +38,39 @@ public enum ScaleFunction {
         }
 
         @Override
+        public double k(double q, double normalizer) {
+            return normalizer * q;
+        }
+
+        @Override
         public double q(double k, double compression, double n) {
             return 2 * k / compression;
         }
 
         @Override
+        public double q(double k, double normalizer) {
+            return k / normalizer;
+        }
+
+        @Override
         public double max(double q, double compression, double n) {
-            return 2 * n / compression;
+            return 2 / compression;
+        }
+
+        @Override
+        public double max(double q, double normalizer) {
+            return 1 / normalizer;
+        }
+
+        @Override
+        public double normalizer(double compression, double n) {
+            return compression / 2;
         }
     },
 
     /**
-     * Generates cluster sizes proportional to sqrt(q*(1-q)). This gives
-     * constant relative accuracy if accuracy is proportional to squared
-     * cluster size. It is expected that K_2 and K_3 will give better
-     * practical results.
+     * Generates cluster sizes proportional to sqrt(q*(1-q)). This gives constant relative accuracy if accuracy is
+     * proportional to squared cluster size. It is expected that K_2 and K_3 will give better practical results.
      */
     K_1 {
         @Override
@@ -64,8 +79,19 @@ public enum ScaleFunction {
         }
 
         @Override
+        public double k(double q, double normalizer) {
+            return normalizer * Math.asin(2 * q - 1);
+        }
+
+
+        @Override
         public double q(double k, double compression, double n) {
             return (Math.sin(k * (2 * Math.PI / compression)) + 1) / 2;
+        }
+
+        @Override
+        public double q(double k, double normalizer) {
+            return (Math.sin(k / normalizer) + 1) / 2;
         }
 
         @Override
@@ -75,15 +101,30 @@ public enum ScaleFunction {
             } else if (q >= 1) {
                 return 0;
             } else {
-                return 2 * n * Math.sin(Math.PI / compression) * Math.sqrt(q * (1 - q));
+                return 2 * Math.sin(Math.PI / compression) * Math.sqrt(q * (1 - q));
             }
+        }
+
+        @Override
+        public double max(double q, double normalizer) {
+            if (q <= 0) {
+                return 0;
+            } else if (q >= 1) {
+                return 0;
+            } else {
+                return 2 * Math.sin(0.5 / normalizer) * Math.sqrt(q * (1 - q));
+            }
+        }
+
+        @Override
+        public double normalizer(double compression, double n) {
+            return compression / (2 * Math.PI);
         }
     },
 
     /**
-     * Generates cluster sizes proportional to sqrt(q*(1-q)) but avoids
-     * computation of asin in the critical path by using an approximate
-     * version.
+     * Generates cluster sizes proportional to sqrt(q*(1-q)) but avoids computation of asin in the critical path by
+     * using an approximate version.
      */
     K_1_FAST {
         @Override
@@ -92,8 +133,18 @@ public enum ScaleFunction {
         }
 
         @Override
+        public double k(double q, double normalizer) {
+            return normalizer * fastAsin(2 * q - 1);
+        }
+
+        @Override
         public double q(double k, double compression, double n) {
             return (Math.sin(k * (2 * Math.PI / compression)) + 1) / 2;
+        }
+
+        @Override
+        public double q(double k, double normalizer) {
+            return (Math.sin(k / normalizer) + 1) / 2;
         }
 
         @Override
@@ -103,16 +154,30 @@ public enum ScaleFunction {
             } else if (q >= 1) {
                 return 0;
             } else {
-                return 2 * n * Math.sin(Math.PI / compression) * Math.sqrt(q * (1 - q));
+                return 2 * Math.sin(Math.PI / compression) * Math.sqrt(q * (1 - q));
             }
+        }
+
+        @Override
+        public double max(double q, double normalizer) {
+            if (q <= 0) {
+                return 0;
+            } else if (q >= 1) {
+                return 0;
+            } else {
+                return 2 * Math.sin(0.5 / normalizer) * Math.sqrt(q * (1 - q));
+            }
+        }
+
+        @Override
+        public double normalizer(double compression, double n) {
+            return compression / (2 * Math.PI);
         }
     },
 
     /**
-     * Generates cluster sizes proportional to q*(1-q). This makes tail
-     * error bounds tighter than for K_1. The use of a normalizing function
-     * results in a strictly bounded number of clusters no matter how many
-     * samples.
+     * Generates cluster sizes proportional to q*(1-q). This makes tail error bounds tighter than for K_1. The use of a
+     * normalizing function results in a strictly bounded number of clusters no matter how many samples.
      */
     K_2 {
         @Override
@@ -136,14 +201,43 @@ public enum ScaleFunction {
         }
 
         @Override
+        public double k(double q, double normalizer) {
+            if (q < 1e-15) {
+                // this will return something more extreme than q = 1/n
+                return 2 * k(1e-15, normalizer);
+            } else if (q > 1 - 1e-15) {
+                // this will return something more extreme than q = (n-1)/n
+                return 2 * k(1 - 1e-15, normalizer);
+            } else {
+                return Math.log(q / (1 - q)) * normalizer;
+            }
+        }
+
+        @Override
         public double q(double k, double compression, double n) {
             double w = Math.exp(k * Z(compression, n) / compression);
             return w / (1 + w);
         }
 
         @Override
+        public double q(double k, double normalizer) {
+            double w = Math.exp(k / normalizer);
+            return w / (1 + w);
+        }
+
+        @Override
         public double max(double q, double compression, double n) {
-            return n * Z(compression, n) * q * (1 - q) / compression;
+            return Z(compression, n) * q * (1 - q) / compression;
+        }
+
+        @Override
+        public double max(double q, double normalizer) {
+            return q * (1 - q) / normalizer;
+        }
+
+        @Override
+        public double normalizer(double compression, double n) {
+            return compression / Z(compression, n);
         }
 
         private double Z(double compression, double n) {
@@ -152,10 +246,8 @@ public enum ScaleFunction {
     },
 
     /**
-     * Generates cluster sizes proportional to min(q, 1-q). This makes tail
-     * error bounds tighter than for K_1 or K_2. The use of a normalizing function
-     * results in a strictly bounded number of clusters no matter how many
-     * samples.
+     * Generates cluster sizes proportional to min(q, 1-q). This makes tail error bounds tighter than for K_1 or K_2.
+     * The use of a normalizing function results in a strictly bounded number of clusters no matter how many samples.
      */
     K_3 {
         @Override
@@ -174,6 +266,21 @@ public enum ScaleFunction {
         }
 
         @Override
+        public double k(double q, double normalizer) {
+            if (q < 1e-15) {
+                return 10 * k(1e-15, normalizer);
+            } else if (q > 1 - 1e-15) {
+                return 10 * k(1 - 1e-15, normalizer);
+            } else {
+                if (q <= 0.5) {
+                    return Math.log(2 * q) / normalizer;
+                } else {
+                    return -k(1 - q, normalizer);
+                }
+            }
+        }
+
+        @Override
         public double q(double k, double compression, double n) {
             if (k <= 0) {
                 return Math.exp(k * Z(compression, n) / compression) / 2;
@@ -183,8 +290,27 @@ public enum ScaleFunction {
         }
 
         @Override
+        public double q(double k, double normalizer) {
+            if (k <= 0) {
+                return Math.exp(k / normalizer) / 2;
+            } else {
+                return 1 - q(-k, normalizer);
+            }
+        }
+
+        @Override
         public double max(double q, double compression, double n) {
-            return n * Z(compression, n) * Math.min(q, 1 - q) / compression;
+            return Z(compression, n) * Math.min(q, 1 - q) / compression;
+        }
+
+        @Override
+        public double max(double q, double normalizer) {
+            return Math.min(q, 1 - q) / normalizer;
+        }
+
+        @Override
+        public double normalizer(double compression, double n) {
+            return compression / Z(compression, n);
         }
 
         private double Z(double compression, double n) {
@@ -193,12 +319,10 @@ public enum ScaleFunction {
     },
 
     /**
-     * Generates cluster sizes proportional to q*(1-q). This makes the
-     * tail error bounds tighter. This version does not use a normalizer
-     * function and thus the number of clusters increases roughly proportional
-     * to log(n). That is good for accuracy, but bad for size and bad for
-     * the statically allocated MergingDigest, but can be useful for tree-based
-     * implementations.
+     * Generates cluster sizes proportional to q*(1-q). This makes the tail error bounds tighter. This version does not
+     * use a normalizer function and thus the number of clusters increases roughly proportional to log(n). That is good
+     * for accuracy, but bad for size and bad for the statically allocated MergingDigest, but can be useful for
+     * tree-based implementations.
      */
     K_2_NO_NORM {
         @Override
@@ -213,24 +337,49 @@ public enum ScaleFunction {
         }
 
         @Override
+        public double k(double q, double normalizer) {
+            if (q <= 1e-15) {
+                return 2 * k(1e-15, normalizer);
+            } else if (q >= 1 - 1e-15) {
+                return 2 * k(1 - 1e-15, normalizer);
+            } else {
+                return normalizer * Math.log(q / (1 - q));
+            }
+        }
+
+        @Override
         public double q(double k, double compression, double n) {
             double w = Math.exp(k / compression);
             return w / (1 + w);
         }
 
         @Override
+        public double q(double k, double normalizer) {
+            double w = Math.exp(k / normalizer);
+            return w / (1 + w);
+        }
+
+        @Override
         public double max(double q, double compression, double n) {
-            return n * q * (1 - q) / compression;
+            return q * (1 - q) / compression;
+        }
+
+        @Override
+        public double max(double q, double normalizer) {
+            return q * (1 - q) / normalizer;
+        }
+
+        @Override
+        public double normalizer(double compression, double n) {
+            return compression;
         }
     },
 
     /**
-     * Generates cluster sizes proportional to min(q, 1-q). This makes the
-     * tail error bounds tighter. This version does not use a normalizer
-     * function and thus the number of clusters increases roughly proportional
-     * to log(n). That is good for accuracy, but bad for size and bad for
-     * the statically allocated MergingDigest, but can be useful for tree-based
-     * implementations.
+     * Generates cluster sizes proportional to min(q, 1-q). This makes the tail error bounds tighter. This version does
+     * not use a normalizer function and thus the number of clusters increases roughly proportional to log(n). That is
+     * good for accuracy, but bad for size and bad for the statically allocated MergingDigest, but can be useful for
+     * tree-based implementations.
      */
     K_3_NO_NORM {
         @Override
@@ -249,6 +398,21 @@ public enum ScaleFunction {
         }
 
         @Override
+        public double k(double q, double normalizer) {
+            if (q <= 1e-15) {
+                return 10 * k(1e-15, normalizer);
+            } else if (q > 1 - 1e-15) {
+                return 10 * k(1 - 1e-15, normalizer);
+            } else {
+                if (q <= 0.5) {
+                    return normalizer * Math.log(2 * q);
+                } else {
+                    return -k(1 - q, normalizer);
+                }
+            }
+        }
+
+        @Override
         public double q(double k, double compression, double n) {
             if (k <= 0) {
                 return Math.exp(k / compression) / 2;
@@ -258,14 +422,33 @@ public enum ScaleFunction {
         }
 
         @Override
+        public double q(double k, double normalizer) {
+            if (k <= 0) {
+                return Math.exp(k / normalizer) / 2;
+            } else {
+                return 1 - q(-k, normalizer);
+            }
+        }
+
+        @Override
         public double max(double q, double compression, double n) {
-            return n * Math.min(q, 1 - q) / compression;
+            return Math.min(q, 1 - q) / compression;
+        }
+
+        @Override
+        public double max(double q, double normalizer) {
+            return Math.min(q, 1 - q) / normalizer;
+        }
+
+        @Override
+        public double normalizer(double compression, double n) {
+            return compression;
         }
     };                    // max weight is min(q,1-q), should improve tail accuracy even more
 
     /**
-     * Converts a quantile to the k-scale. The total number of points is also provided
-     * so that a normalizing function can be computed if necessary.
+     * Converts a quantile to the k-scale. The total number of points is also provided so that a normalizing function
+     * can be computed if necessary.
      *
      * @param q           The quantile
      * @param compression Also known as delta in literature on the t-digest
@@ -275,7 +458,18 @@ public enum ScaleFunction {
     abstract public double k(double q, double compression, double n);
 
     /**
-     * Computes q as a function of k. This is faster than finding k as a function of q for some scales.
+     * Converts  a quantile to the k-scale. The normalizer value depends on compression and (possibly) number of points
+     * in the digest. #normalizer(double, double)
+     *
+     * @param q          The quantile
+     * @param normalizer The normalizer value which depends on compression and (possibly) number of points in the
+     *                   digest.
+     * @return The corresponding value of k
+     */
+    abstract public double k(double q, double normalizer);
+
+    /**
+     * Computes q as a function of k. This is often faster than finding k as a function of q for some scales.
      *
      * @param k           The index value to convert into q scale.
      * @param compression The compression factor (often written as &delta;)
@@ -285,26 +479,55 @@ public enum ScaleFunction {
     abstract public double q(double k, double compression, double n);
 
     /**
-     * Computes the maximum size a cluster can have at quantile q. Note that exactly
-     * where within the range spanned by a cluster that q should be isn't clear.
-     * That means that this function usually has to be taken at multiple points
-     * and the smallest value used.
+     * Computes q as a function of k. This is often faster than finding k as a function of q for some scales.
+     *
+     * @param k          The index value to convert into q scale.
+     * @param normalizer The normalizer value which depends on compression and (possibly) number of points in the
+     *                   digest.
+     * @return The value of q that corresponds to k
+     */
+    abstract public double q(double k, double normalizer);
+
+    /**
+     * Computes the maximum relative size a cluster can have at quantile q. Note that exactly where within the range
+     * spanned by a cluster that q should be isn't clear. That means that this function usually has to be taken at
+     * multiple points and the smallest value used.
+     * <p>
+     * Note that this is the relative size of a cluster. To get the max number of samples in the cluster, multiply this
+     * value times the total number of samples in the digest.
      *
      * @param q           The quantile
      * @param compression The compression factor, typically delta in the literature
      * @param n           The number of samples seen so far in the digest
-     * @return The maximum number of samples that can be in the digest
+     * @return The maximum number of samples that can be in the cluster
      */
     abstract public double max(double q, double compression, double n);
 
     /**
-     * Approximates asin to within about 1e-6. This approximation
-     * works by breaking the range from 0 to 1 into 5 regions for all
-     * but the region nearest 1, rational polynomial models get us a
-     * very good approximation of asin and by interpolating as we move
-     * from region to region, we can guarantee continuity and we
-     * happen to get monotonicity as well.  for the values near 1, we
-     * just use Math.asin as our region "approximation".
+     * Computes the maximum relative size a cluster can have at quantile q. Note that exactly where within the range
+     * spanned by a cluster that q should be isn't clear. That means that this function usually has to be taken at
+     * multiple points and the smallest value used.
+     * <p>
+     * Note that this is the relative size of a cluster. To get the max number of samples in the cluster, multiply this
+     * value times the total number of samples in the digest.
+     *
+     * @param q          The quantile
+     * @param normalizer The normalizer value which depends on compression and (possibly) number of points in the
+     *                   digest.
+     * @return The maximum number of samples that can be in the cluster
+     */
+    abstract public double max(double q, double normalizer);
+
+    /**
+     * Computes the normalizer given compression and number of points.
+     */
+    abstract public double normalizer(double compression, double n);
+
+    /**
+     * Approximates asin to within about 1e-6. This approximation works by breaking the range from 0 to 1 into 5 regions
+     * for all but the region nearest 1, rational polynomial models get us a very good approximation of asin and by
+     * interpolating as we move from region to region, we can guarantee continuity and we happen to get monotonicity as
+     * well.  for the values near 1, we just use Math.asin as our region "approximation".
      *
      * @param x sin(theta)
      * @return theta
