@@ -20,6 +20,6 @@ package com.tdunning.math.stats;
 public class BigCountTreeDigest extends BigCount {
     @Override
     public TDigest createDigest() {
-        return new AVLTreeDigest(20);
+        return new AVLTreeDigest(100);
     }
 }
