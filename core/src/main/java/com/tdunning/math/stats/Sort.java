@@ -63,8 +63,8 @@ public class Sort {
         for (int i = start; i < start + n; i++) {
             order[i] = i;
         }
-        quickSort(order, values, start, start + n, 8);
-        insertionSort(order, values, start, start + n, 8);
+        quickSort(order, values, start, start + n, 64);
+        insertionSort(order, values, start, start + n, 64);
     }
 
     /**

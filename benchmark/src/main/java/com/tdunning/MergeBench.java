@@ -22,6 +22,7 @@ import com.tdunning.math.stats.ScaleFunction;
 
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.profile.StackProfiler;
 import org.openjdk.jmh.results.format.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
@@ -48,10 +49,12 @@ public class MergeBench {
     private Random gen = new Random();
     private double[] data;
 
-    @Param({"20", "50", "100", "200", "500"})
+    //    @Param({"20", "50", "100", "200", "500"})
+    @Param({"50", "100"})
     public int compression;
 
-    @Param({"1", "2", "5", "10"})
+    //    @Param({"1", "2", "5", "10"})
+    @Param({"2", "5", "10"})
     public int factor;
 
     @Param({"K_1", "K_2", "K_3"})
@@ -98,6 +101,7 @@ public class MergeBench {
                 .measurementIterations(5)
                 .forks(1)
                 .resultFormat(ResultFormatType.CSV)
+                .addProfiler(StackProfiler.class)
                 .build();
 
         new Runner(opt).run();

@@ -152,6 +152,7 @@ public class TDigestBench {
                 .resultFormat(ResultFormatType.CSV)
                 .result("overall-results.csv")
                 .addProfiler(GCProfiler.class)
+                .addProfiler(StackProfiler.class)
                 .build();
 
         new Runner(opt).run();
