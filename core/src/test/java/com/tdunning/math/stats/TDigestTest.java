@@ -102,6 +102,64 @@ public abstract class TDigestTest extends AbstractTest {
     }
 
     @Test
+    public void offsetUniform() {
+        System.out.printf("delta, q, x1, x2, q1, q2, error_x, error_q\n");
+        for (double compression : new double[]{20, 50, 100, 200}) {
+            TDigest digest = factory(compression).create();
+            digest.setScaleFunction(ScaleFunction.K_0);
+            Random rand = new Random();
+            AbstractContinousDistribution gen = new Uniform(50, 51, rand);
+            double[] data = new double[1_000_000];
+            for (int i = 0; i < 1_000_000; i++) {
+                data[i] = gen.nextDouble();
+                digest.add(data[i]);
+            }
+            Arrays.sort(data);
+            for (double q : new double[]{0.5, 0.9, 0.99, 0.999, 0.9999, 0.99999, 0.999999}) {
+                double x1 = Dist.quantile(q, data);
+                double x2 = digest.quantile(q);
+                double q1 = Dist.cdf(x1, data);
+                double q2 = digest.cdf(x1);
+                System.out.printf("%.0f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n",
+                        compression, q, x1, x2, q1, q2, Math.abs(x1 - x2) / (1 - q), Math.abs(q1 - q2) / (1 - q)
+                );
+            }
+        }
+    }
+
+    @Test
+    public void bigJump() {
+        TDigest digest = factory(100).create();
+        for (int i = 1; i < 20; i++) {
+            digest.add(i);
+        }
+        digest.add(1_000_000);
+
+        assertEquals(18, digest.quantile(0.89999999), 0);
+        assertEquals(19, digest.quantile(0.9), 0);
+        assertEquals(19, digest.quantile(0.949999999), 0);
+        assertEquals(1_000_000, digest.quantile(0.95), 0);
+
+        assertEquals(0.925, digest.cdf(19), 1e-11);
+        assertEquals(0.95, digest.cdf(19.0000001), 1e-11);
+        assertEquals(0.9, digest.cdf(19 - 0.0000001), 1e-11);
+
+        digest = factory(80).create();
+        digest.setScaleFunction(ScaleFunction.K_0);
+
+        for (int j = 0; j < 100; j++) {
+            for (int i = 1; i < 20; i++) {
+                digest.add(i);
+            }
+            digest.add(1_000_000);
+        }
+        assertEquals(18, digest.quantile(0.89999999), 0);
+        assertEquals(19, digest.quantile(0.9), 0);
+        assertEquals(19, digest.quantile(0.949999999), 0);
+        assertEquals(1_000_000, digest.quantile(0.95), 0);
+    }
+
+    @Test
     public void testSmallCountQuantile() {
         List<Double> data = Lists.newArrayList(15.0, 20.0, 32.0, 60.0);
         TDigest td = factory(200).create();
@@ -189,9 +247,8 @@ public abstract class TDigestTest extends AbstractTest {
     }
 
     /**
-     * Tests cases where min or max is not the same as the extreme centroid
-     * which has weight>1. In these cases min and max give us a little information
-     * we wouldn't otherwise have.
+     * Tests cases where min or max is not the same as the extreme centroid which has weight>1. In these cases min and
+     * max give us a little information we wouldn't otherwise have.
      */
     @Test
     public void singletonAtEnd() {
@@ -345,9 +402,9 @@ public abstract class TDigestTest extends AbstractTest {
     }
 
     /**
-     * Builds estimates of the CDF of a bunch of data points and checks that the centroids are accurately
-     * positioned.  Accuracy is assessed in terms of the estimated CDF which is much more stringent than
-     * checking position of quantiles with a single value for desired accuracy.
+     * Builds estimates of the CDF of a bunch of data points and checks that the centroids are accurately positioned.
+     * Accuracy is assessed in terms of the estimated CDF which is much more stringent than checking position of
+     * quantiles with a single value for desired accuracy.
      *
      * @param gen           Random number generator that generates desired values.
      * @param tag           Label for the output lines
@@ -671,8 +728,8 @@ public abstract class TDigestTest extends AbstractTest {
     }
 
     /**
-     * Does basic sanity testing for a particular small example that used to fail.
-     * See https://github.com/addthis/stream-lib/issues/138
+     * Does basic sanity testing for a particular small example that used to fail. See
+     * https://github.com/addthis/stream-lib/issues/138
      */
     @Test
     public void testThreePointExample() {
