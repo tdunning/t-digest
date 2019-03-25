@@ -23,11 +23,13 @@ plot.cdf = function(sortFlag="sorted", compression=100, dist="UNIFORM", digest="
     }
     n = length(table(cdf$q[i]))
     if (norm) {
-        boxplot(error ~ q, cdf[i,], add=add, col=col, boxwex=1/(bars+1), at=1:n + offset/bars, xaxt='n', ...)
+        boxplot(error ~ q, cdf[i,], add=add, col=col, boxwex=1/(bars+1),
+                lwd=0.5, at=1:n + offset/bars, xaxt='n', ...)
     } else {
-        boxplot(x.digest-x.raw ~ q, cdf[i,], add=add, col=col, boxwex=1/(bars+1), at=1:n + offset/bars, xaxt='n', ...)
+        boxplot(x.digest-x.raw ~ q, cdf[i,], add=add, col=col, boxwex=1/(bars+1),
+                lwd=0.5, at=1:n + offset/bars, xaxt='n', ...)
     }
-    axis(side=1, at=1:n, labels=levels(factor(cdf$q[i])))
+#    axis(side=1, at=1:n, labels=levels(factor(cdf$q[i])))
     title(watermark, line=-1-offset)
 }
 
@@ -181,21 +183,23 @@ draw.details = function() {
 
 ### plot the first few clusters to show how they do or don't
 draw.overlap = function() {
-    pdf("cluster-spread.pdf", width=4, height=2, pointsize=9, family="serif")
-    par(mar=c(4.8, 4.4, 0.5, 1.1))
+    pdf("cluster-spread.pdf", width=3, height=1.15, pointsize=9, family="serif")
+    par(mar=c(3., 2.8, 0.5, 0.6))
     library(dplyr)
-    base = buckets %>% filter(digest == "MergingDigest-K_3-weight-alternating-twoLevel" & dist == "UNIFORM" & x < 2e-3 & k == 0) %>% mutate(index = centroid %% 2)
+    base = buckets %>% filter(digest == "MergingDigest-K_3-kSize-alternating-twoLevel" & dist == "UNIFORM" & x < 2e-3 & k == 0) %>% mutate(index = centroid %% 2)
     z = base %>% summarise(minx=min(x), maxx=max(x))
     minx = z$minx
     maxx = z$maxx
+    par(mgp=c(1.6,0.5,0))
     plot(x=c(),y=c(),xlim=c(log10(minx/2),log10(2*maxx)),
-         ylim=c(-0.8,1.8), yaxt='n', ylab=NA,
+         ylim=c(-1.3, 2.3), yaxt='n', ylab=NA,
          xaxt='n', xlab=expression(italic(q)),
-         cex.lab=1.5)
+         cex.lab=1.2)
     axis(side=1, las=1, at=c(-3,-4,-5,-6,-7), 
-         labels=expression(10^-3,10^-4,10^-5,10^-6,10^-7), cex.lab=1.5)
-    axis(side=2, las=2, at=c(0,1), labels=c("Even", "Odd"))
-    base %>% group_by(centroid) %>% summarize(xx=show.cluster(x,index, centroid))
+         labels=expression(10^-3,10^-4,10^-5,10^-6,10^-7), 
+         cex=0.8, cex.lab=1.5, tcl=-0.3)
+    axis(side=2, las=2, at=c(0,1), labels=c("Even", "Odd"), tcl=-0.3, cex=0.8)
+    base %>% group_by(centroid) %>% filter(centroid < 17) %>% summarize(xx=show.cluster(x,index, centroid))
     dev.off()
 }
 
@@ -214,8 +218,8 @@ show.cluster = function(x,index, centroid){
 ##        text(mean(x), shade/8 + 1.7*y0-0.43, centroid[1])
 ##        line.y = shade/8 + 1.35*y0-0.25
         points(x, rep(y0,m), cex=0.6, col=NA, bg=rgb(0,0,0,alpha=0.3), pch=21)
-        text(mean(x), 1.85*y0-0.43, centroid[1])
-        line.y = 1.4*y0-0.2
+        text(mean(x), 2.8*y0-0.88, centroid[1], cex=0.8)
+        line.y = 1.8*y0-0.4
         arrows(x0=min(x), x1=max(x), y0=line.y, y1=line.y, angle=90, length=0.02, code=3)
         mean(index)
     } else {
@@ -223,7 +227,8 @@ show.cluster = function(x,index, centroid){
 ##        points(x, rep(y0+shade/8-1/16,m), cex=0.6, col=NA, bg=rgb(0,0,0,alpha=0.3), pch=21)
 ##        text(x[1], shade/8 + 1.55*y0-0.35, centroid[1])
         points(x, rep(y0,m), cex=0.6, col=NA, bg=rgb(0,0,0,alpha=0.3), pch=21)
-        text(x[1], 1.55*y0-0.3, centroid[1])
+        print(y0)
+        text(x[1], 2.8*y0-0.88, centroid[1], cex=0.8)
     }
     length(x)
 }
@@ -270,6 +275,41 @@ draw.relative.error.fig = function(xlim=c(0.5,7.4)) {
 
     legend(3, -0.2, 
            legend=c(expression(italic(k)[1]),expression(italic(k)[2]),expression(italic(k)[3])),
+           fill=c(grey1, grey2, grey3),
+           cex=0.8, horiz=T)
+    dev.off()
+}
+
+draw.relative.error.fig.single.panel = function(xlim=c(0.5,7.4)) {
+    pdf(file="relative-error-one-panel.pdf", width=3, height=2.3, pointsize=9, family="serif")
+    par(las=2)
+    par(cex.axis=0.9)
+    par(cex.lab=1.3)
+    par(mar=c(3.9, 4.0, 0.5, 0.2))
+    par(mgp=c(2.4, 0.5, 0))
+    par(tcl=-0.3)
+    ticks = seq(-150, 150, by=50)
+    grey1 = rgb(0.95, 0.95, 0.95)
+    grey2 = rgb(0.7,0.7,0.7)
+    grey3 = rgb(0.4,0.4,0.4)
+
+    plot.cdf(digest="MergingDigest-K_1-weight-alternating-twoLevel", 
+             compression=100, norm=T, sortFlag="unsorted", offset=-1, 
+             ylim=c(-0.3,0.3), xlim=xlim, xlab=expression(italic(q)), 
+             ylab="Relative error", col=grey1, xaxt='n')
+    plot.cdf(digest="MergingDigest-K_2-weight-alternating-twoLevel", 
+             compression=100, norm=T, sortFlag="unsorted", offset=0, add=T,
+             col=grey2)
+    plot.cdf(digest="MergingDigest-K_3-weight-alternating-twoLevel", 
+             compression=100, norm=T, sortFlag="unsorted", offset=1, add=T,
+             col=grey3)
+
+    axis(side=1, at=1:7,
+         labels=c(expression(10^-6), expression(10^-5), expression(10^-4), expression(10^-3), 0.01, 0.1, 0.5), las=1)
+    legend(4, -0.2, 
+           legend=c(expression(italic(k)[1]),
+                    expression(italic(k)[2]),
+                    expression(italic(k)[3])),
            fill=c(grey1, grey2, grey3),
            cex=0.8, horiz=T)
     dev.off()
@@ -351,6 +391,91 @@ draw.accuracy.fig = function() {
     k1 = delta[1] * y
     k2 = sqrt(delta[1]) * y
     polygon(c(delta,rev(delta)), c(k1/delta, rev(k2/sqrt(delta))), col=rgb(0,0,0,alpha=0.2), density=-1, border=NA)
+    }
+    dev.off()
+}
+
+draw.accuracy.fig.small = function() {
+    require(dplyr)
+    pdf(file="error-vs-compression-small.pdf", width=3, height=2.25, pointsize=9, family="serif")
+    par(las=1)
+#    par(cex=0.65)
+    par(cex.axis=0.9)
+    par(cex.lab=1.3)
+    par(mar=c(3.5, 3.2, 0.2, 0.2))
+    par(mgp=c(2.0, 0.5, 0))
+    par(tcl=-0.3)
+
+    plot.data = cdf %>% filter(digest=="MergingDigest-K_2-weight-alternating-twoLevel",  dist=="UNIFORM")   %>% group_by(compression, q)   %>% summarise(err=mean(abs(x.digest-x.raw)), x.digest=mean(x.digest), x.raw=mean(x.raw), clusters=mean(clusters))     %>% select(q, compression, x.digest, x.raw, err, clusters)    
+
+    ymax = max((plot.data %>% filter(q==0.01))$err)
+    ymin = max((plot.data %>% filter(q==0.00001))$err)
+
+    plot(err ~ compression, plot.data %>% filter(q==0.01), type='b', 
+         xlim=c(40,1050), ylim=c(ymin/2,1.2*ymax), log='xy', 
+         xlab=NA, ylab=NA,
+         yaxt='n')
+    title(ylab=c("Absolute error (ppm)"), mgp=c(1.8, 0.5, 0))
+    title(xlab=expression(delta), mgp=c(2.1, 0.5, 0))
+    axis(side=1)
+    axis(side=2, at=c(1e-6, 3e-6, 1e-5, 3e-5, 1e-4, 3e-4),
+         labels=c(1, 3, 10, 30, 100, 300))
+    lines(err ~ compression, plot.data %>% filter(q==0.001), type='b', ylim=c(0,100e5), col='red')
+    lines(err ~ compression, plot.data %>% filter(q==0.0001), type='b', col='green')
+    lines(err ~ compression, plot.data %>% filter(q==0.00001), type='b', col='blue')
+
+
+    y = 1.3 * (plot.data %>% filter(q==0.00001,compression==100))$err
+    text(150, y, expression(italic(q)==10^-5), cex=0.8)
+
+    y = 1.3 * (plot.data %>% filter(q==0.0001,compression==200))$err
+    text(240, y, expression(italic(q)==10^-4), adj=0, cex=0.8)
+
+    y = 1.9 * (plot.data %>% filter(q==0.001,compression==500))$err
+    text(500, y, expression(italic(q)==10^-3), adj=0.5, cex=0.8)
+
+    y = 1.5 * (plot.data %>% filter(q==0.01,compression==500))$err
+    text(500, y, expression(italic(q)==0.01), adj=0, cex=0.8)
+
+    delta = c(50, 100,200,500,1030)
+
+    # show sqrt(delta) scaling lines
+    y = ymin
+    x = seq(20, 1500, by=100)
+    while (y < 10 * ymax) {
+        k = sqrt(x[1]) * y
+        lines(x, k / sqrt(x), col='grey', lty=2)
+        y = y * 2
+    }
+    # show delta^2 scaling lines
+    y = ymin
+    x = seq(20, 1500, by=100)
+    while (y < 400 * ymax) {
+        k = (x[1])^2 * y
+        lines(x, k / (x)^2, col='lightgrey', lty=3)
+        y = y * 2
+    }
+
+    if (FALSE) {
+        y = (plot.data %>% filter(q==0.01,compression==100))$err
+        k1 = delta[1] * y
+        k2 = sqrt(delta[1]) * y
+        polygon(c(delta,rev(delta)), c(k1/(delta), rev(k2/sqrt(delta))), col=rgb(0,0,0,alpha=0.2), density=-1, border=NA)
+
+        y = (plot.data %>% filter(q==0.001,compression==100))$err
+        k1 = delta[1] * y
+        k2 = sqrt(delta[1]) * y
+        polygon(c(delta,rev(delta)), c(k1/(delta), rev(k2/sqrt(delta))), col=rgb(0,0,0,alpha=0.2), density=-1, border=NA)
+
+        y = (plot.data %>% filter(q==0.0001,compression==100))$err
+        k1 = delta[1] * y
+        k2 = sqrt(delta[1]) * y
+        polygon(c(delta,rev(delta)), c(k1/delta, rev(k2/sqrt(delta))), col=rgb(0,0,0,alpha=0.2), density=-1, border=NA)
+
+        y = (plot.data %>% filter(q==0.00001,compression==100))$err
+        k1 = delta[1] * y
+        k2 = sqrt(delta[1]) * y
+        polygon(c(delta,rev(delta)), c(k1/delta, rev(k2/sqrt(delta))), col=rgb(0,0,0,alpha=0.2), density=-1, border=NA)
     }
     dev.off()
 }
