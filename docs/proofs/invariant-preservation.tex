@@ -3,6 +3,7 @@
 \usepackage{setspace}
 \onehalfspacing
 \usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
+\usepackage{natbib}
 \geometry{letterpaper}                   % ... or a4paper or a5paper or ... 
 %\geometry{landscape}                % Activate for for rotated page geometry
 %\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
@@ -28,11 +29,11 @@
 \date{}                                           % Activate to display a given date or no date
 \begin{document}
 \begin{abstract}
-A $t$-digest is a compact data structure that allows estimates of quantiles which increased accuracy near $q = 0$ or $q=1$. This is done by clustering samples from $\mathbb R$ subject to a constraint that the number of points associated with any particular centroid is constrained so that the so-called $k$-size of the centroid is always $\le 1$. The $k$-size is defined using a scale function that maps quantile $q$ to index $k$. Since the centroids are real numbers, they can be ordered and thus the quantile range of a centroid can be mapped into an interval in $k$ whose size the $k$-size of that centroid. The accuracy of quantile estimates made using a $t$-digest  depends on the invariance of this constraint even as new data is added or $t$-digests are merged. This paper provides proofs of this invariance for four practically important scale functions.
+A $t$-digest is a compact data structure that allows estimates of quantiles which increased accuracy near $q = 0$ or $q=1$. This is done by clustering samples from $\mathbb R$ subject to a constraint that the number of points associated with any particular centroid is constrained so that the so-called $k$-size of the centroid is always $\le 1$. The $k$-size is defined using a scale function that maps quantile $q$ to index $k$. Since the centroids are real numbers, they can be ordered and thus the quantile range of a centroid can be mapped into an interval in $k$ whose size is the $k$-size of that centroid. The accuracy of quantile estimates made using a $t$-digest  depends on the invariance of this constraint even as new data is added or $t$-digests are merged. This paper provides proofs of this invariance for four practically important scale functions.
 \end{abstract}
 \maketitle
 \section{Introduction}
-The key property of the $t$-digest is that centroids either have unit weight or have $k$-size less than or equal to 1. Adding data to a $t$-digest or merging $t$-digests must preserve this constraint. The $k$-size is defined using a scale function, and there are  four scale functions that are important for practical use 
+The key property of the $t$-digest   \citep{t-digest-arxiv} is that centroids either have unit weight or have $k$-size less than or equal to 1. Adding data to a $t$-digest or merging $t$-digests must preserve this constraint. The $k$-size is defined using a scale function, and there are  four scale functions that are important for practical use 
 \[
 \begin{aligned}
 k_0(q) &= \frac \delta 2 q \\
@@ -53,7 +54,7 @@ k(q_2) - k(q_1) \le 1
 The addition of new data to a $t$-digest proceeds by the addition of one or more new centroids followed by the merging of consecutive centroids that have combined $k$-size subject to the size constraint. The merging cannot cause a violation of the constraint, but it is conceivable that the addition of new centroids could indirectly cause a violation due to the shifting of $q_1$ and $q_2$.
 
 In fact, however, no such violation occurs, at least not for the scale functions above. This paper contains proofs of the preservation of this constraint as new data is added to the $t$-digest for each of these four scale functions.
-\section{Proof}
+\section{Proofs}
 In all cases, we take $n$ as the total number of sample so far, $q_1 = n_1 / n$,  and $q_2 = n_2/n$. The centroids to the left of the one we are considering therefore have a total weight of $n_1$ and our centroid has a weight of $n_2-n_1$. For each of the scale functions, we need to consider the addition of $\Delta n$ samples either to the right or left of our centroid. For some functions, addition to the right and left are logically the same due to symmetry and thus only one alternative need be considered.
 \subsection{For $k_0$}
 The function $k_0$ is completely symmetric  so we need only consider the case of data added to the right of the centroid in question. Subsequent to this addition, the $k$-size of our centroid will become
@@ -137,7 +138,7 @@ The $t$-digest size constraint is thus preserved for $k_3$ in all cases and sub-
 $\square$
 
 %\subsection{}
-\bibliographystyle{alpha}
+\bibliographystyle{chicago}
 \bibliography{refs}{}
 
 \end{document}  

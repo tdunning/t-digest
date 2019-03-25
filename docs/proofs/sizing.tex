@@ -2,6 +2,7 @@
 \usepackage{enumitem}
 \usepackage{setspace}
 \onehalfspacing
+\usepackage{natbib}
 \usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
 \geometry{letterpaper}                   % ... or a4paper or a5paper or ... 
 %\geometry{landscape}                % Activate for for rotated page geometry
@@ -29,9 +30,12 @@
 \date{}                                           % Activate to display a given date or no date
 
 \begin{document}
+\begin{abstract}
+A $t$-digest is a compact data structure that allows estimates of quantiles which increased accuracy near $q = 0$ or $q=1$. This is done by clustering samples from $\mathbb R$ subject to a constraint that the number of points associated with any particular centroid is constrained so that the so-called $k$-size of the centroid is always $\le 1$. The $k$-size is defined using a scale function that maps quantile $q$ to index $k$. This paper provides bounds on the sizes of $t$-digests created using any of four known scale functions.
+\end{abstract}
 \maketitle
 \section{Introduction}
-We examine four cases for $k$ scale function in order to produce estimates of the number of centroids and the maximum size of these centroids. The functions include
+We examine four cases for the $t$-digest \citep{t-digest-arxiv} scale function in order to produce estimates of the number of centroids and the maximum size of these centroids. The functions include
 \[
 \begin{aligned}
 k_0(q) &= \frac \delta 2 q \\
@@ -256,5 +260,8 @@ As before, $q$ is not known precisely in practice so we use $q_{\text {worst}}$ 
 \[
 w_{\max}\le \frac {nZ(n)} \delta \min (q_{\text{worst}}, (1-q_{\text{worst}})) 
 \]
+\bibliographystyle{chicago}
+\bibliography{refs}{}
+
 
 \end{document}  
