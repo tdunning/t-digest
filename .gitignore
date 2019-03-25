@@ -1,3 +1,5 @@
+.RData
+.Rapp.history
 .DS_Store
 *.class
 target/
