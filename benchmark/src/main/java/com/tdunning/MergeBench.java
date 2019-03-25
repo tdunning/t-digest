@@ -57,7 +57,8 @@ public class MergeBench {
     @Param({"2", "5", "10"})
     public int factor;
 
-    @Param({"K_1", "K_2", "K_3"})
+    //    @Param({"K_1", "K_2", "K_3"})
+    @Param({"K_2"})
     public String scaleFunction;
 
     private MergingDigest td;
