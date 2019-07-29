@@ -54,7 +54,7 @@ improvements. The remaining punch list for the release is roughly:
 I have submitted the main paper describing t-digest to RSS Series B 
 and will be preparing a more implementation-oriented paper intended 
 for submission to the Journal of Statistical Software. Potential 
-co-authors would
+co-authors who
 could accelerate these submissions are encouraged to speak up! In 
 the mean time, an 
 [archived pre-print of the paper is available](https://arxiv.org/abs/1902.04023). 
