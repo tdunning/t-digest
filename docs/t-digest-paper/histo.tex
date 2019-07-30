@@ -101,14 +101,14 @@ Suppose that all of the samples $X=x_1 \ldots x_n$ are presented in ascending or
 
 If we form a trivial digest where each cluster has a single point, this digest will be a strongly ordered $t$-digest, but will likely not be fully merged.
 
-We can group consecutive samples greedily from left to right into sub-sequences of consecutive samples, $X = \lbrace \pi_1 | \pi_2 | \ldots | \pi_m \rbrace$ where $\pi_i = \lbrace x_{\mathtt {left}(i)} \ldots x_{\mathtt{right}(i)} \rbrace$ such that each $\pi_i$ has as many samples as possible subject to the size bound. The result is a $t$-digest and is also be a strongly ordered and fully merged.
+We can group consecutive samples greedily from left to right into sub-sequences of consecutive samples, $X = \lbrace \pi_1 | \pi_2 | \ldots | \pi_m \rbrace$ where $\pi_i = \lbrace x_{\mathtt {left}(i)} \ldots x_{\mathtt{right}(i)} \rbrace$ such that each $\pi_i$ has as many samples as possible subject to the size bound. The result is a $t$-digest that is also strongly ordered and fully merged.
 
 One key idea of the $t$-digest is that the size of each cluster is chosen so that it is small enough to get accurate quantile estimates by interpolation, but large enough so that we don't wind up with too many clusters. Importantly, we force clusters near both ends to be small while allowing sub-sequences in middle to be larger in order to get fairly constant relative accuracy. The other key idea is that there are practical algorithms that allow us to build $t$-digests incrementally, and although the result may not quite be strongly ordered, it will be close enough to be very useful.
 
 \subsection{The size bound for clusters}
 The size bound for $t$-digests is imposed using a scale function that forces clusters near the beginning or end of the digest to be small, possibly containing only a single sample. The scale function is chosen to provide an appropriate trade-off between very accurate quantile estimate in the tails of a distribution, reasonable accuracy near the median while keeping the number of clusters as small as possible.
 
-To limit cluster size in this way, we define the scale function as a non-decreasing function from quantile $q$ to a notional index $k$ with compression parameter $\delta$. A one commonly used  scale function for the $t$-digest is 
+To limit cluster size in this way, we define the scale function as a non-decreasing function from quantile $q$ to a notional index $k$ with compression parameter $\delta$. One commonly used  scale function for the $t$-digest is 
 \begin{equation}
 k_1(q) = \frac \delta {2\pi}  { {\sin^{-1} (2q-1)} }    
 \end{equation}
@@ -131,7 +131,7 @@ where
 q_{\mathrm {left}} &= {\mathcal W}_{\mathrm{left}}(\mathcal C)/n \\
 q_{\mathrm {right}} &= q_{\mathrm {left}} + {| \mathcal C | / n} 
 \end{align*}
-In a fully merged $t$-digest adjacent clusters, cannot be merged because the result would be too big 
+In a fully merged $t$-digest, adjacent clusters cannot be merged because the result would be too big 
 \begin{equation}
 \label{eq:fully-merged}
 |\mathcal C_i \cup \mathcal C_{i+1} |_k = |\mathcal C_i|_k + |\mathcal C_{i+1}|_k > 1
