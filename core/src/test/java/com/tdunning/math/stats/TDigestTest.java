@@ -153,10 +153,10 @@ public abstract class TDigestTest extends AbstractTest {
             }
             digest.add(1_000_000);
         }
-        assertEquals(18, digest.quantile(0.89999999), 0);
-        assertEquals(19, digest.quantile(0.9), 0);
-        assertEquals(19, digest.quantile(0.949999999), 0);
-        assertEquals(1_000_000, digest.quantile(0.95), 0);
+        assertEquals(18, digest.quantile(0.885), 0);
+        assertEquals(19, digest.quantile(0.915), 0);
+        assertEquals(19, digest.quantile(0.935), 0);
+        assertEquals(1_000_000, digest.quantile(0.965), 0);
     }
 
     @Test
