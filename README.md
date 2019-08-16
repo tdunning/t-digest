@@ -238,7 +238,7 @@ The current version is 3.2.
       <dependency>
           <groupId>com.tdunning</groupId>
           <artifactId>t-digest</artifactId>
-          <version>3.1</version>
+          <version>3.2</version>
       </dependency>
  ```     
       
