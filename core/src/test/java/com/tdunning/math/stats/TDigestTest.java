@@ -128,6 +128,82 @@ public abstract class TDigestTest extends AbstractTest {
     }
 
     @Test
+    public void writeUniformResultsWithCompression() {
+
+        List<ScaleFunction> scaleFcns = Arrays.asList(ScaleFunction.K_0, ScaleFunction.K_1,
+                ScaleFunction.K_2, ScaleFunction.K_3, ScaleFunction.K_1_GLUED,
+                ScaleFunction.K_2_GLUED, ScaleFunction.K_3_GLUED, ScaleFunction.K_QUADRATIC);
+
+        int trialSize = 1_000_000;
+
+        Map<ScaleFunction, List<Integer>> centroidCounts= new HashMap<>();
+
+        for (ScaleFunction scaleFcn : scaleFcns) {
+            centroidCounts.put(scaleFcn, new ArrayList<Integer>());
+            try {
+                Map<Double, List<String>> records = new HashMap<>();
+                double[] quants = new double[]{0.00001, 0.0001, 0.001, 0.01, 0.1,
+                        0.5, 0.9, 0.99, 0.999, 0.9999, 0.99999};
+                for (double q : quants) {
+                    records.put(q, new ArrayList<String>());
+                }
+                for (int j = 0; j < 100; j++) {
+                    for (double compression : new double[]{100}) {
+                        TDigest digest = factory(compression).create();
+                        digest.setScaleFunction(scaleFcn);
+                        Random rand = new Random();
+                        AbstractContinousDistribution gen = new Uniform(50, 51, rand);
+                        double[] data = new double[trialSize];
+                        for (int i = 0; i < trialSize; i++) {
+                            data[i] = gen.nextDouble();
+                            digest.add(data[i]);
+                        }
+                        Arrays.sort(data);
+                        digest.compress();
+                        for (double q : quants) {
+                            double x1 = Dist.quantile(q, data);
+                            double q1 = Dist.cdf(x1, data);
+                            double q2 = digest.cdf(x1);
+                            records.get(q).add(String.valueOf(Math.abs(q1 - q2)) + "," +
+                                    String.valueOf(Math.abs(q1 - q2) / Math.min(q, 1 - q)) + "\n");
+                        }
+                        centroidCounts.get(scaleFcn).add(digest.centroids().size());
+                    }
+                }
+
+                String fcnName;
+
+                if (scaleFcn.toString().endsWith("GLUED") || scaleFcn.toString().endsWith("QUADRATIC")) {
+                    fcnName = scaleFcn.toString() ;
+                } else {
+                    fcnName = scaleFcn.toString() +  "_USUAL";
+                }
+
+                for (double q : quants) {
+                    FileWriter csvWriter = new FileWriter("../docs/asymmetric/data/tree/" + fcnName + "_" + String.valueOf(q) + ".csv");
+                    csvWriter.append("error_q,norm_error_q\n");
+                    for (String obs : records.get(q)) {
+                        csvWriter.append(obs);
+                    }
+                    csvWriter.flush();
+                    csvWriter.close();
+                }
+
+                FileWriter csvWriter = new FileWriter("../docs/asymmetric/data/tree/" + fcnName + "_centroid_counts.csv");
+                csvWriter.append("centroid_count\n");
+                for (Integer ct : centroidCounts.get(scaleFcn)) {
+                    csvWriter.append(ct.toString()).append("\n");
+                }
+                csvWriter.flush();
+                csvWriter.close();
+
+                } catch (IOException e) {
+                    return;
+                }
+            }
+        }
+
+    @Test
     public void bigJump() {
         TDigest digest = factory(100).create();
         for (int i = 1; i < 20; i++) {

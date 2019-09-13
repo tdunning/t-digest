@@ -123,6 +123,87 @@ public enum ScaleFunction {
     },
 
     /**
+     * Generates cluster sizes proportional to sqrt(1-q) for q >= 1/2, and uniform cluster sizes for q < 1/2 by gluing
+     * the graph of the K_1 function to its tangent line at q=1/2. Changing the split point is possible.
+     */
+    K_1_GLUED {
+
+        double splitPoint = 0.5;
+
+        @Override
+        public double k(double q, double compression, double n) {
+            if (q <= splitPoint) {
+                return (compression / (2 * Math.PI)) * (Math.asin(2 * splitPoint - 1) +
+                        (q - splitPoint) / (Math.sqrt(splitPoint * (1 - splitPoint))));
+            } else {
+                return compression * Math.asin(2 * q - 1) / (2 * Math.PI);
+            }
+        }
+
+        @Override
+        public double k(double q, double normalizer) {
+            if (q <= splitPoint) {
+                return normalizer * (Math.asin(2 * splitPoint - 1)  +
+                        (q - splitPoint) / (Math.sqrt(splitPoint * (1 - splitPoint))));
+            } else {
+                return normalizer * Math.asin(2 * q - 1);
+            }
+        }
+
+
+        @Override
+        public double q(double k, double compression, double n) {
+            if (k <= compression * Math.asin(2 * splitPoint - 1) / Math.PI / 2) {
+                double ww = k * Math.PI * 2 / compression - Math.asin(2 * splitPoint - 1);
+                return ww * Math.sqrt(splitPoint * (1 - splitPoint)) + splitPoint;
+            } else {
+                return (Math.sin(k * 2 * Math.PI / compression) + 1) / 2;
+            }
+        }
+
+        @Override
+        public double q(double k, double normalizer) {
+            if (k <= normalizer * Math.asin(2 * splitPoint - 1) ) {
+                double ww = k / normalizer - Math.asin(2 * splitPoint - 1);
+                return ww * Math.sqrt(splitPoint * (1 - splitPoint)) + splitPoint;
+            } else {
+            return (Math.sin(k / normalizer) + 1) / 2;
+            }
+        }
+
+        @Override
+        public double max(double q, double compression, double n) {
+            if (q <= 0) {
+                return 0;
+            } else if (q >= 1) {
+                return 0;
+            } else if (q <= splitPoint) {
+                return Math.sqrt(splitPoint * (1 - splitPoint)) * 2 * Math.PI / compression;
+            } else {
+                return 2 * Math.sin(Math.PI / compression) * Math.sqrt(q * (1 - q));
+            }
+        }
+
+        @Override
+        public double max(double q, double normalizer) {
+            if (q <= 0) {
+                return 0;
+            } else if (q >= 1) {
+                return 0;
+            } else if (q <= splitPoint) {
+                return  Math.sqrt(splitPoint * (1 - splitPoint)) / normalizer;
+            } else {
+                return 2 * Math.sin(0.5 / normalizer) * Math.sqrt(q * (1 - q));
+            }
+        }
+
+        @Override
+        public double normalizer(double compression, double n) {
+            return compression / (2 * Math.PI);
+        }
+    },
+
+    /**
      * Generates cluster sizes proportional to sqrt(q*(1-q)) but avoids computation of asin in the critical path by
      * using an approximate version.
      */
@@ -246,6 +327,100 @@ public enum ScaleFunction {
     },
 
     /**
+     * Generates cluster sizes proportional to 1-q for q >= 1/2, and uniform cluster sizes for q < 1/2 by gluing
+     * the graph of the K_2 function to its tangent line at q=1/2. Changing the split point is possible.
+     */
+    K_2_GLUED {
+
+        double splitPoint = 0.5;  // should be between 1e-15 and 1 - 1e-15
+
+        @Override
+        public double k(double q, double compression, double n) {
+            if (n <= 1) {
+                if (q <= 0) {
+                    return -10;
+                } else if (q >= 1) {
+                    return 10;
+                } else {
+                    return 0;
+                }
+            }
+            if (q <= splitPoint) {
+                return (((q - splitPoint) / splitPoint / (1 - splitPoint)) +
+                        Math.log(splitPoint / (1 - splitPoint))) * compression / Z(compression, n);
+            } else if (q == 1) {
+                return 2 * k((n - 1) / n, compression, n);
+            } else {
+                return compression * Math.log(q / (1 - q)) / Z(compression, n);
+            }
+        }
+
+        @Override
+        public double k(double q, double normalizer) {
+            if (q <= splitPoint) {
+                return (((q - splitPoint) / splitPoint / (1 - splitPoint)) +
+                        Math.log(splitPoint / (1 - splitPoint))) * normalizer; // fixed parens
+            } else if (q > 1 - 1e-15) {
+                // this will return something more extreme than q = (n-1)/n
+                return 2 * k(1 - 1e-15, normalizer);
+            } else {
+                return Math.log(q / (1 - q)) * normalizer;
+            }
+        }
+
+        @Override
+        public double q(double k, double compression, double n) { //fixedher too
+            if (k <= compression * Math.log(splitPoint / (1 - splitPoint)) / Z(compression, n)) {
+                return splitPoint * (1 - splitPoint) * (k * Z(compression, n) / compression -
+                        Math.log(splitPoint / (1 - splitPoint))) + splitPoint;
+            } else {
+                double w = Math.exp(k * Z(compression, n) / compression);
+                return w / (1 + w);
+            }
+        }
+
+        @Override
+        public double q(double k, double normalizer) {
+            if (k <= Math.log(splitPoint / (1 - splitPoint)) * normalizer) { ///fixed whole thing
+                return splitPoint * (1 - splitPoint) * (k / normalizer -
+                        Math.log(splitPoint / (1 - splitPoint))) + splitPoint;
+            }
+            else {
+                double w = Math.exp(k / normalizer);
+                return w / (1 + w);
+            }
+        }
+
+        @Override
+        public double max(double q, double compression, double n) {
+            if (q <= splitPoint) {
+                return Z(compression, n) * splitPoint * (1 - splitPoint) / compression;
+            }
+            else {
+                return Z(compression, n) * q * (1 - q) / compression;
+            }
+        }
+
+        @Override
+        public double max(double q, double normalizer) {
+            if (q <= splitPoint) {
+                return splitPoint * (1 - splitPoint) / normalizer; // changed to division.
+            } else {
+                return q * (1 - q) / normalizer;
+            }
+        }
+
+        @Override
+        public double normalizer(double compression, double n) {
+            return compression / Z(compression, n);
+        }
+
+        private double Z(double compression, double n) {
+            return 4 * Math.log(n / compression) + 24;
+        }
+    },
+
+    /**
      * Generates cluster sizes proportional to min(q, 1-q). This makes tail error bounds tighter than for K_1 or K_2.
      * The use of a normalizing function results in a strictly bounded number of clusters no matter how many samples.
      */
@@ -316,6 +491,121 @@ public enum ScaleFunction {
         private double Z(double compression, double n) {
             return 4 * Math.log(n / compression) + 21;
         }
+    },
+
+    /**
+     * Generates cluster sizes proportional to 1-q for q >= 1/2, and uniform cluster sizes for q < 1/2 by gluing
+     * the graph of the K_3 function to its tangent line at q=1/2.
+     */
+    K_3_GLUED {
+        @Override
+        public double k(double q, double compression, double n) {
+            if (q <= 0.5) {
+                return compression * (2 * q - 1) / Z(compression, n);
+            } else if (q > 1 - 0.9 / n) {
+                return 10 * k((n - 1) / n, compression, n);
+            } else {
+                return - compression * Math.log(2 * (1 - q)) / Z(compression, n);
+            }
+        }
+
+        @Override
+        public double k(double q, double normalizer) {
+            if (q <= 0.5) {
+                return normalizer * (2 * q - 1);
+            } else if (q > 1 - 1e-15) {
+                return 10 * k(1 - 1e-15, normalizer);
+            } else {
+                return - normalizer * Math.log(2 * (1 - q));
+            }
+        }
+
+        @Override
+        public double q(double k, double compression, double n) {
+            if (k <= 0) {
+                return ((k * Z(compression, n) / compression) + 1) / 2;
+            } else {
+                return 1 - (Math.exp(-k * Z(compression, n) / compression) / 2);
+            }
+        }
+
+        @Override
+        public double q(double k, double normalizer) {
+            if (k <= 0) {
+                return ((k / normalizer) + 1 ) / 2;
+            } else {
+                return 1 - (Math.exp(-k / normalizer) / 2);
+            }
+        }
+
+        @Override
+        public double max(double q, double compression, double n) {
+            if (q <= 0.5) {
+                return Z(compression, n) / 2d / compression;
+            } else {
+                return Z(compression, n) * (1-q) / compression;
+            }
+        }
+
+        @Override
+        public double max(double q, double normalizer) {
+            if (q <= 0.5) {
+                return 1d / 2 / normalizer;
+            } else {
+                return (1-q) / normalizer;
+            }
+        }
+
+        @Override
+        public double normalizer(double compression, double n) {
+            return compression / Z(compression, n);
+        }
+
+        private double Z(double compression, double n) {
+            return 4 * Math.log(n / compression) + 21;
+        }
+    },
+
+
+    /**
+     * Generates cluster sizes proportional to 1/(1+q).
+     */
+    K_QUADRATIC {
+        @Override
+        public double k(double q, double compression, double n) {
+            return compression * (q * q + 2 * q) / 6;
+        }
+
+        @Override
+        public double k(double q, double normalizer) {
+            return normalizer * (q * q + 2 * q) / 3;
+        }
+
+        @Override
+        public double q(double k, double compression, double n) {
+             return Math.sqrt(compression * (compression + 6 * k)) / compression - 1;
+        }
+
+        @Override
+        public double q(double k, double normalizer) {
+            return Math.sqrt(normalizer * (normalizer + 3 * k)) / normalizer - 1;
+        }
+
+        @Override
+        public double max(double q, double compression, double n) {
+            return 3 / compression / (1 + q);
+        }
+
+        @Override
+        public double max(double q, double normalizer) {
+            return 3 / 2 / normalizer / (1 + q);
+        }
+
+        @Override
+        public double normalizer(double compression, double n) {
+            return compression / 2;
+        }
+
     },
 
     /**
