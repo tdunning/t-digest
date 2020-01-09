@@ -66,7 +66,7 @@ Publication work is now centered around comparisons with the KLL digest
 (spoiler, the t-digest is much smaller and possibly 2 orders of
 magnitude more accurate than KLL). I would still like to see potential 
 co-authors who could accelerate these submissions are encouraged to 
-speak up! In the mean time, an 
+speak up! In the meantime, an 
 [archived pre-print of the main paper is available](https://arxiv.org/abs/1902.04023).
 
 In research areas, there are some ideas being thrown around about how to bring
