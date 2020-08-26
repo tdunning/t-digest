@@ -307,7 +307,7 @@ public class MergingDigest extends AbstractTDigest {
         if (others.size() == 0) {
             return;
         }
-        int size = lastUsedCell;
+        int size = 0;
         for (TDigest other : others) {
             other.compress();
             size += other.centroidCount();
