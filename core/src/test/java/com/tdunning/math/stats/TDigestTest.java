@@ -153,10 +153,10 @@ public abstract class TDigestTest extends AbstractTest {
             }
             digest.add(1_000_000);
         }
-        assertEquals(18, digest.quantile(0.885), 0);
-        assertEquals(19, digest.quantile(0.915), 0);
-        assertEquals(19, digest.quantile(0.935), 0);
-        assertEquals(1_000_000, digest.quantile(0.965), 0);
+        assertEquals(18.0, digest.quantile(0.885), 0.0);
+        assertEquals(19.0, digest.quantile(0.915), 0.0);
+        assertEquals(19.0, digest.quantile(0.935), 0.0);
+        assertEquals(1_000_000.0, digest.quantile(0.965), 0.0);
     }
 
     @Test
@@ -863,7 +863,6 @@ public abstract class TDigestTest extends AbstractTest {
                 } catch (Throwable e) {
                     e.printStackTrace();
                 }
-                System.err.printf("\n\n");
             }
             executor.shutdownNow();
             assertTrue("Dangling executor thread", executor.awaitTermination(5, TimeUnit.SECONDS));

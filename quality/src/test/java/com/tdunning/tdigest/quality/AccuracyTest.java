@@ -181,6 +181,7 @@ public class AccuracyTest {
         // TODO there is a fair bit of duplicated code here
         String head = Git.getHash(true).substring(0, 10);
         String experiment = "tree-digest";
+        //noinspection ResultOfMethodCallIgnored
         new File("tests").mkdirs();
         PrintWriter quantiles = new PrintWriter(String.format("tests/accuracy-%s-%s.csv", experiment, head));
         PrintWriter sizes = new PrintWriter(String.format("tests/accuracy-sizes-%s-%s.csv", experiment, head));
@@ -239,6 +240,7 @@ public class AccuracyTest {
     public void testAccuracyVersusCompression() throws IOException, InterruptedException {
         String head = Git.getHash(true).substring(0, 10);
         String experiment = "digest";
+        //noinspection ResultOfMethodCallIgnored
         new File("tests").mkdirs();
         try (PrintWriter out = new PrintWriter(String.format("tests/accuracy-%s-%s.csv", experiment, head));
              PrintWriter cdf = new PrintWriter(String.format("tests/accuracy-cdf-%s-%s.csv", experiment, head));
@@ -278,18 +280,17 @@ public class AccuracyTest {
                                             //                                    for (Util.Factory factory : Util.Factory.values()) {
                                             TDigest digest = factory.create(compression);
                                             MergingDigest.useWeightLimit = useWeightLimit;
-                                            digest.setScaleFunction(scale);
+                                            try {
+                                                digest.setScaleFunction(scale);
+                                            } catch (IllegalArgumentException e) {
+                                                // not all scale functions work with different weight limit strategies
+                                                continue;
+                                            }
                                             for (double datum : raw) {
                                                 digest.add(datum);
                                             }
                                             digest.compress();
                                             evaluate(finalK, out, sizes, cdf, dist, "unsorted", sorted, compression, digest);
-
-//                                        digest = factory.create(compression);
-//                                        for (double datum : sorted) {
-//                                            digest.add(datum);
-//                                        }
-//                                        evaluate(finalK, out, sizes, cdf, dist, "sorted", factory, sorted, compression, digest);
                                         }
                                     }
                                 }
@@ -297,6 +298,7 @@ public class AccuracyTest {
                         }
                     } catch (Throwable e) {
                         e.printStackTrace();
+                        throw e;
                     }
                     int count = lines.incrementAndGet();
                     long t = System.nanoTime();
@@ -376,10 +378,9 @@ public class AccuracyTest {
                         for (int i = 0; i < N; i++) {
                             raw[i] = dx.nextDouble();
                         }
-                        double[] sorted = Arrays.copyOf(raw, raw.length);
-                        Arrays.sort(sorted);
+//                        double[] sorted = Arrays.copyOf(raw, raw.length);
+//                        Arrays.sort(sorted);
                         for (ScaleFunction scale : new ScaleFunction[]{ScaleFunction.K_2, ScaleFunction.K_3}) {
-//                            for (Util.Factory factory : Collections.singletonList(Util.Factory.MERGE)) {
                             MergingDigest digest = new MergingDigest(compression);
                             digest.recordAllData();
                             digest.setScaleFunction(scale);
