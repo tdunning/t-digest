@@ -17,16 +17,16 @@ class Util {
     enum Factory {
         MERGE {
             TDigest create(double compression) {
-                TDigest digest = new MergingDigest(compression, (int) (10 * compression));
-                ((MergingDigest) digest).useAlternatingSort = true;
-                ((MergingDigest) digest).useTwoLevelCompression = true;
+                MergingDigest digest = new MergingDigest(compression, (int) (10 * compression));
+                digest.useAlternatingSort = true;
+                digest.useTwoLevelCompression = true;
                 return digest;
             }
 
             TDigest create(double compression, int bufferSize) {
-                TDigest digest = new MergingDigest(compression, bufferSize);
-                ((MergingDigest) digest).useAlternatingSort = true;
-                ((MergingDigest) digest).useTwoLevelCompression = true;
+                MergingDigest digest = new MergingDigest(compression, bufferSize);
+                digest.useAlternatingSort = true;
+                digest.useTwoLevelCompression = true;
                 return digest;
             }
             TDigest create() {
@@ -36,16 +36,16 @@ class Util {
 
         MERGE_OLD_STYLE {
             TDigest create(double compression) {
-                TDigest digest = new MergingDigest(compression, (int) (10 * compression));
-                ((MergingDigest) digest).useAlternatingSort = false;
-                ((MergingDigest) digest).useTwoLevelCompression = false;
+                MergingDigest digest = new MergingDigest(compression, (int) (10 * compression));
+                digest.useAlternatingSort = false;
+                digest.useTwoLevelCompression = false;
                 return digest;
             }
 
             TDigest create(double compression, int bufferSize) {
-                TDigest digest = new MergingDigest(compression, bufferSize);
-                ((MergingDigest) digest).useAlternatingSort = false;
-                ((MergingDigest) digest).useTwoLevelCompression = false;
+                MergingDigest digest = new MergingDigest(compression, bufferSize);
+                digest.useAlternatingSort = false;
+                digest.useTwoLevelCompression = false;
                 return digest;
             }
             TDigest create() {
