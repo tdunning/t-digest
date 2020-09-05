@@ -216,7 +216,8 @@ The t-digest algorithm has been ported to other languages:
  - C++: [CPP TDigest](https://github.com/gpichot/cpp-tdigest), [FB's Folly Implementation (high performance)](https://github.com/facebook/folly/blob/master/folly/stats/TDigest.h)
  - Scala: need link!
  - C: [tdigestc (w/ bindings to Go, Java, Python, JS via wasm)](https://github.com/ajwerner/tdigestc)
-
+ - Clojure: [t-digest for Clojure](https://github.com/henrygarner/t-digest)
+ 
 Continuous Integration
 =================
 
