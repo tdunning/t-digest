@@ -215,6 +215,9 @@ public class MergingDigest extends AbstractTDigest {
             size = (int) Math.ceil(this.compression + sizeFudge);
         }
 
+        // yet more fudge
+        size += 20;
+
         // ensure enough space in buffer (possibly again)
         if (bufferSize <= 2 * size) {
             bufferSize = 2 * size;
@@ -239,6 +242,10 @@ public class MergingDigest extends AbstractTDigest {
         data = new ArrayList<>();
         tempData = new ArrayList<>();
         return this;
+    }
+
+    public void setUseAlternatingSort(boolean bool) {
+        useAlternatingSort = bool;
     }
 
     @Override
