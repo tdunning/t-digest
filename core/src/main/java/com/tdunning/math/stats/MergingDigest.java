@@ -308,7 +308,7 @@ public class MergingDigest extends AbstractTDigest {
         if (others.size() == 0) {
             return;
         }
-        int size = lastUsedCell;
+        int size = 0;
         for (TDigest other : others) {
             other.compress();
             size += other.centroidCount();
@@ -547,6 +547,9 @@ public class MergingDigest extends AbstractTDigest {
 
     @Override
     public double cdf(double x) {
+        if (Double.isNaN(x) || Double.isInfinite(x)) {
+            throw new IllegalArgumentException(String.format("Invalid value: %f", x));
+        }
         mergeNewValues();
 
         if (lastUsedCell == 0) {
