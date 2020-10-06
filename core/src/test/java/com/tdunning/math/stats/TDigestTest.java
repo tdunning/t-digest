@@ -18,8 +18,10 @@
 package com.tdunning.math.stats;
 
 import com.google.common.collect.Lists;
+
 import org.apache.mahout.common.RandomUtils;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
+import org.apache.mahout.math.jet.random.Exponential;
 import org.apache.mahout.math.jet.random.Gamma;
 import org.apache.mahout.math.jet.random.Normal;
 import org.apache.mahout.math.jet.random.Uniform;
@@ -30,7 +32,6 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-
 
 /**
  * Base test case for TDigests, just extend this class and implement the abstract methods.
@@ -43,6 +44,8 @@ public abstract class TDigestTest extends AbstractTest {
     private static PrintWriter deviationDump = null;
 
     private static String digestName;
+
+    protected enum Distribution {UNIFORM, EXPONENTIAL};
 
     @BeforeClass
     public static void freezeSeed() {
@@ -129,6 +132,23 @@ public abstract class TDigestTest extends AbstractTest {
 
     @Test
     public void writeUniformResultsWithCompression() {
+        try {
+            writeResultsWithCompression(Distribution.UNIFORM);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void writeExponentialResultsWithCompression() {
+        try {
+            writeResultsWithCompression(Distribution.EXPONENTIAL);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void writeResultsWithCompression(Distribution distribution) throws Exception {
 
         List<ScaleFunction> scaleFcns = Arrays.asList(ScaleFunction.K_0, ScaleFunction.K_1,
                 ScaleFunction.K_2, ScaleFunction.K_3, ScaleFunction.K_1_GLUED,
@@ -138,8 +158,12 @@ public abstract class TDigestTest extends AbstractTest {
 
         Map<ScaleFunction, List<Integer>> centroidCounts= new HashMap<>();
 
+        Map<ScaleFunction, List<List<Integer>>> centroidSequences= new HashMap<>();
+
         for (ScaleFunction scaleFcn : scaleFcns) {
             centroidCounts.put(scaleFcn, new ArrayList<Integer>());
+            centroidSequences.put(scaleFcn, new ArrayList<List<Integer>>());
+
             try {
                 Map<Double, List<String>> records = new HashMap<>();
                 double[] quants = new double[]{0.00001, 0.0001, 0.001, 0.01, 0.1,
@@ -152,7 +176,12 @@ public abstract class TDigestTest extends AbstractTest {
                         TDigest digest = factory(compression).create();
                         digest.setScaleFunction(scaleFcn);
                         Random rand = new Random();
-                        AbstractContinousDistribution gen = new Uniform(50, 51, rand);
+                        AbstractContinousDistribution gen;
+                        if (distribution.equals(Distribution.UNIFORM)) {
+                            gen = new Uniform(50, 51, rand);
+                        } else if (distribution.equals(Distribution.EXPONENTIAL)) {
+                            gen = new Exponential(5, rand);
+                        } else throw new Exception("distribution not specified");
                         double[] data = new double[trialSize];
                         for (int i = 0; i < trialSize; i++) {
                             data[i] = gen.nextDouble();
@@ -168,6 +197,12 @@ public abstract class TDigestTest extends AbstractTest {
                                     String.valueOf(Math.abs(q1 - q2) / Math.min(q, 1 - q)) + "\n");
                         }
                         centroidCounts.get(scaleFcn).add(digest.centroids().size());
+
+                        List<Integer> seq = new ArrayList<>();
+                        for (Centroid c : digest.centroids()) {
+                            seq.add(c.count());
+                        }
+                        centroidSequences.get(scaleFcn).add(seq);
                     }
                 }
 
@@ -180,7 +215,7 @@ public abstract class TDigestTest extends AbstractTest {
                 }
 
                 for (double q : quants) {
-                    FileWriter csvWriter = new FileWriter("../docs/asymmetric/data/tree/" + fcnName + "_" + String.valueOf(q) + ".csv");
+                    FileWriter csvWriter = new FileWriter("../docs/asymmetric/data/tree/" + distribution.name() + "/" + fcnName + "_" + String.valueOf(q) + ".csv");
                     csvWriter.append("error_q,norm_error_q\n");
                     for (String obs : records.get(q)) {
                         csvWriter.append(obs);
@@ -189,13 +224,24 @@ public abstract class TDigestTest extends AbstractTest {
                     csvWriter.close();
                 }
 
-                FileWriter csvWriter = new FileWriter("../docs/asymmetric/data/tree/" + fcnName + "_centroid_counts.csv");
+                FileWriter csvWriter = new FileWriter("../docs/asymmetric/data/tree/" + distribution.name() + "/" + fcnName + "_centroid_counts.csv");
                 csvWriter.append("centroid_count\n");
                 for (Integer ct : centroidCounts.get(scaleFcn)) {
                     csvWriter.append(ct.toString()).append("\n");
                 }
                 csvWriter.flush();
                 csvWriter.close();
+
+
+                FileWriter csvWriter2 = new FileWriter("../docs/asymmetric/data/tree/" + distribution.name() + "/" + fcnName + "_centroid_sizes.csv");
+                for (List<Integer> ct : centroidSequences.get(scaleFcn)) {
+                    for (Integer c : ct) {
+                        csvWriter2.append(c.toString()).append(",");
+                    }
+                    csvWriter2.append("\n");
+                }
+                csvWriter2.flush();
+                csvWriter2.close();
 
                 } catch (IOException e) {
                     return;

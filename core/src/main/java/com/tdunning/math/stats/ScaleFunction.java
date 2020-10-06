@@ -123,7 +123,7 @@ public enum ScaleFunction {
     },
 
     /**
-     * Generates cluster sizes proportional to sqrt(1-q) for q >= 1/2, and uniform cluster sizes for q < 1/2 by gluing
+     * Generates cluster sizes proportional to sqrt(1-q) for q geq 1/2, and uniform cluster sizes for q lt 1/2 by gluing
      * the graph of the K_1 function to its tangent line at q=1/2. Changing the split point is possible.
      */
     K_1_GLUED {
@@ -327,7 +327,7 @@ public enum ScaleFunction {
     },
 
     /**
-     * Generates cluster sizes proportional to 1-q for q >= 1/2, and uniform cluster sizes for q < 1/2 by gluing
+     * Generates cluster sizes proportional to 1-q for q geq 1/2, and uniform cluster sizes for q lt 1/2 by gluing
      * the graph of the K_2 function to its tangent line at q=1/2. Changing the split point is possible.
      */
     K_2_GLUED {
@@ -494,7 +494,7 @@ public enum ScaleFunction {
     },
 
     /**
-     * Generates cluster sizes proportional to 1-q for q >= 1/2, and uniform cluster sizes for q < 1/2 by gluing
+     * Generates cluster sizes proportional to 1-q for q geq 1/2, and uniform cluster sizes for q lt 1/2 by gluing
      * the graph of the K_3 function to its tangent line at q=1/2.
      */
     K_3_GLUED {

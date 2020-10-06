@@ -17,19 +17,26 @@
 
 package com.tdunning.math.stats;
 
-import com.carrotsearch.randomizedtesting.annotations.Seed;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
 import org.apache.commons.math3.util.Pair;
 import org.apache.mahout.common.RandomUtils;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
+import org.apache.mahout.math.jet.random.Exponential;
 import org.apache.mahout.math.jet.random.Uniform;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.*;
+import com.carrotsearch.randomizedtesting.annotations.Seed;
 
 //to freeze the tests with a particular seed, put the seed on the next line
 //@Seed("84527677CF03B566:A6FF596BDDB2D59D")
@@ -59,10 +66,25 @@ public class MergingDigestTest extends TDigestTest {
         return MergingDigest.fromBytes(bytes);
     }
 
-
+    @Test
+    public void writeUniformAsymmetricScaleFunctionResults() {
+        try {
+            writeAsymmetricScaleFunctionResults(Distribution.UNIFORM);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     @Test
-    public void writeAsymmetricScaleFunctionResults() {
+    public void writeExponentialAsymmetricScaleFunctionResults() {
+        try {
+            writeAsymmetricScaleFunctionResults(Distribution.EXPONENTIAL);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void writeAsymmetricScaleFunctionResults(Distribution distribution) throws Exception {
 
         List<ScaleFunction> scaleFcns = Arrays.asList(ScaleFunction.K_0, ScaleFunction.K_1,
                 ScaleFunction.K_2, ScaleFunction.K_3, ScaleFunction.K_1_GLUED,
@@ -79,12 +101,12 @@ public class MergingDigestTest extends TDigestTest {
                 digestParams.put(fcn.toString() + "_USUAL", new Pair<>(fcn, false));
             }
         }
-        writeSeveralDigestUniformResults(digestParams, numTrials, "../docs/asymmetric/data/merging/");
-
+        writeSeveralDigestUniformResults(digestParams, numTrials, distribution,
+            "../docs/asymmetric/data/merging/" + distribution.name() + "/");
     }
 
-    public void writeSeveralDigestUniformResults(Map<String, Pair<ScaleFunction, Boolean>> digestParams, int numTrials,
-                                                 String writeLocation) {
+    private void writeSeveralDigestUniformResults(Map<String, Pair<ScaleFunction, Boolean>> digestParams,
+        int numTrials, Distribution distribution, String writeLocation) throws Exception {
 
         int trialSize = 1_000_000;
         double compression = 100;
@@ -93,8 +115,12 @@ public class MergingDigestTest extends TDigestTest {
 
         Map<String, List<Integer>> centroidCounts= new HashMap<>();
 
+        Map<String, List<List<Integer>>> centroidSequences= new HashMap<>();
+
+
         for (Map.Entry<String, Pair<ScaleFunction, Boolean>> entry : digestParams.entrySet()) {
             centroidCounts.put(entry.getKey(), new ArrayList<Integer>());
+            centroidSequences.put(entry.getKey(), new ArrayList<List<Integer>>());
             try {
                 Map<Double, List<String>> records = new HashMap<>();
                 for (double q : quants) {
@@ -105,7 +131,12 @@ public class MergingDigestTest extends TDigestTest {
                         digest.setScaleFunction(entry.getValue().getFirst());
                         digest.setUseAlternatingSort(entry.getValue().getSecond());
                         Random rand = new Random();
-                        AbstractContinousDistribution gen = new Uniform(50, 51, rand);
+                        AbstractContinousDistribution gen;
+                        if (distribution.equals(Distribution.UNIFORM)) {
+                            gen = new Uniform(50, 51, rand);
+                        } else if (distribution.equals(Distribution.EXPONENTIAL)) {
+                            gen = new Exponential(5, rand);
+                        } else throw new Exception("distribution not specified");
                         double[] data = new double[trialSize];
                         for (int i = 0; i < trialSize; i++) {
                             data[i] = gen.nextDouble();
@@ -121,6 +152,12 @@ public class MergingDigestTest extends TDigestTest {
                                     String.valueOf(Math.abs(q1 - q2) / Math.min(q, 1 - q)) + "\n");
                         }
                         centroidCounts.get(entry.getKey()).add(digest.centroids().size());
+
+                        List<Integer> seq = new ArrayList<>();
+                        for (Centroid c : digest.centroids()) {
+                            seq.add(c.count());
+                        }
+                        centroidSequences.get(entry.getKey()).add(seq);
                 }
                 for (double q : quants) {
                     FileWriter csvWriter = new FileWriter(writeLocation + entry.getKey() + "_" + String.valueOf(q) + ".csv");
@@ -139,6 +176,17 @@ public class MergingDigestTest extends TDigestTest {
                 }
                 csvWriter.flush();
                 csvWriter.close();
+
+
+                FileWriter csvWriter2 = new FileWriter(writeLocation + entry.getKey()  + "_centroid_sizes.csv");
+                for (List<Integer> ct : centroidSequences.get(entry.getKey())) {
+                    for (Integer c : ct) {
+                        csvWriter2.append(c.toString()).append(",");
+                    }
+                    csvWriter2.append("\n");
+                }
+                csvWriter2.flush();
+                csvWriter2.close();
 
             } catch (IOException e) {
                 System.out.println(e.toString());
