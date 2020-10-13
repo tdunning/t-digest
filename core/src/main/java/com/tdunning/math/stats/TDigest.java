@@ -228,10 +228,10 @@ public abstract class TDigest implements Serializable {
     }
 
     /**
-     * Over-ride the min and max values for testing purposes
+     * Over-ride the min and max values for testing purposes and alternative digest creation
      */
     @SuppressWarnings("SameParameterValue")
-    void setMinMax(double min, double max) {
+    public void setMinMax(double min, double max) {
         this.min = min;
         this.max = max;
     }
