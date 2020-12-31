@@ -217,6 +217,7 @@ The t-digest algorithm has been ported to other languages:
  - Scala: need link!
  - C: [tdigestc (w/ bindings to Go, Java, Python, JS via wasm)](https://github.com/ajwerner/tdigestc)
  - Clojure: [t-digest for Clojure](https://github.com/henrygarner/t-digest)
+ - C#: [t-digest-csharp (.NET Core)](https://github.com/Cyral/t-digest-csharp)
  
 Continuous Integration
 =================
