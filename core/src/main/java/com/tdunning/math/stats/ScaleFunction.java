@@ -273,7 +273,7 @@ public enum ScaleFunction {
                 return 10 * k(1 - 1e-15, normalizer);
             } else {
                 if (q <= 0.5) {
-                    return Math.log(2 * q) / normalizer;
+                    return Math.log(2 * q) * normalizer;
                 } else {
                     return -k(1 - q, normalizer);
                 }
