@@ -4,7 +4,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.tdunning.math.stats.*;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.*;
@@ -13,9 +12,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 /**
  * Produce measurements of accuracy versus compression factor for fixed data size
@@ -320,7 +317,7 @@ public class AccuracyTest {
                 });
             }
             pool.invokeAll(tasks);
-            assertTrue("Tasks aborted in test", !abort.get());
+            assertFalse("Tasks aborted in test", abort.get());
         }
     }
 
