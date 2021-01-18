@@ -10,9 +10,11 @@ import org.junit.Test;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
@@ -135,8 +137,8 @@ public class AccuracyTest {
                                 double e2Relative = Math.abs(e2) / q;
                                 double e3 = dist3.quantile(q) - z;
                                 out.printf("quantile,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n", parts, q, z - q, e1, e2, e2Relative, e3);
-                                Assert.assertTrue(String.format("Relative error: parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f, e3=%.4f", parts, q, e1, e2, e2Relative, e3), e2Relative < 0.4);
-                                Assert.assertTrue(String.format("Absolute error: parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f, e3=%.4f", parts, q, e1, e2, e2Relative, e3), Math.abs(e2) < 0.015);
+                                assertTrue(String.format("Relative error: parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f, e3=%.4f", parts, q, e1, e2, e2Relative, e3), e2Relative < 0.4);
+                                assertTrue(String.format("Absolute error: parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f, e3=%.4f", parts, q, e1, e2, e2Relative, e3), Math.abs(e2) < 0.015);
                             }
 
                             for (double x : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5}) {
@@ -146,8 +148,8 @@ public class AccuracyTest {
                                 double e3 = dist3.cdf(z) - z;
 
                                 out.printf("cdf,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n", parts, x, z - x, e1, e2, Math.abs(e2) / x, e3);
-                                Assert.assertTrue(String.format("Absolute cdf: parts=%d, x=%.4f, e1=%.5f, e2=%.5f", parts, x, e1, e2), Math.abs(e2) < 0.015);
-                                Assert.assertTrue(String.format("Relative cdf: parts=%d, x=%.4f, e1=%.5f, e2=%.5f, rel=%.3f", parts, x, e1, e2, Math.abs(e2) / x), Math.abs(e2) / x < 0.4);
+                                assertTrue(String.format("Absolute cdf: parts=%d, x=%.4f, e1=%.5f, e2=%.5f", parts, x, e1, e2), Math.abs(e2) < 0.015);
+                                assertTrue(String.format("Relative cdf: parts=%d, x=%.4f, e1=%.5f, e2=%.5f, rel=%.3f", parts, x, e1, e2, Math.abs(e2) / x), Math.abs(e2) / x < 0.4);
                             }
                             out.flush();
                         }
@@ -249,6 +251,7 @@ public class AccuracyTest {
             cdf.printf("digest, dist, sort, x.digest, x.raw, error, compression, q, k, clusters\n");
             sizes.printf("digest, dist, sort, q.0, q.1, dk, mean, compression, count, k, clusters\n");
 
+            AtomicBoolean abort = new AtomicBoolean(false);
             ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 4);
             Collection<Callable<Integer>> tasks = new ArrayList<>();
             AtomicInteger lines = new AtomicInteger();
@@ -256,49 +259,58 @@ public class AccuracyTest {
             for (int k = 0; k < 50; k++) {
                 int finalK = k;
                 tasks.add(() -> {
-                    try {
 //                            for (Util.Distribution dist : Collections.singleton(Util.Distribution.UNIFORM)) {
-                        for (Util.Distribution dist : Util.Distribution.values()) {
-                            AbstractContinousDistribution dx = dist.create(gen);
-                            int size = (int) (N + new Random().nextGaussian() * 1000);
-                            double[] raw = new double[size];
-                            for (int i = 0; i < size; i++) {
-                                raw[i] = dx.nextDouble();
-                            }
-                            double[] sorted = Arrays.copyOf(raw, raw.length);
-                            Arrays.sort(sorted);
+                    for (Util.Distribution dist : Util.Distribution.values()) {
+                        AbstractContinousDistribution dx = dist.create(gen);
+                        int size = (int) (N + new Random().nextGaussian() * 1000);
+                        double[] raw = new double[size];
+                        for (int i = 0; i < size; i++) {
+                            raw[i] = dx.nextDouble();
+                        }
+                        double[] sorted = Arrays.copyOf(raw, raw.length);
+                        Arrays.sort(sorted);
 
-                            for (boolean useWeightLimit : new boolean[]{true, false}) {
-                                for (ScaleFunction scale : ScaleFunction.values()) {
-                                    if (scale.toString().contains("_NO_NORM") || scale.toString().equals("K_0")
-                                            || scale.toString().contains("FAST") || scale.toString().contains("kSize")) {
-                                        continue;
-                                    }
-                                    for (double compression : new double[]{50, 100, 200, 500, 1000}) {
-                                        //                            for (double compression : new double[]{100, 200, 500}) {
-                                        for (Util.Factory factory : Collections.singleton(Util.Factory.MERGE)) {
-                                            //                                    for (Util.Factory factory : Util.Factory.values()) {
-                                            TDigest digest = factory.create(compression);
-                                            MergingDigest.useWeightLimit = useWeightLimit;
-                                            try {
-                                                digest.setScaleFunction(scale);
-                                            } catch (IllegalArgumentException e) {
-                                                // not all scale functions work with different weight limit strategies
-                                                continue;
-                                            }
+                        for (boolean useWeightLimit : new boolean[]{true, false}) {
+                            for (ScaleFunction scale : ScaleFunction.values()) {
+                                if (abort.get()) {
+                                    // some alternative failed don't even try to continue
+                                    return 0;
+                                }
+                                if (scale.toString().contains("_NO_NORM") || scale.toString().equals("K_0")
+                                        || scale.toString().contains("FAST") || scale.toString().contains("kSize")) {
+                                    continue;
+                                }
+                                for (double compression : new double[]{50, 100, 200, 500, 1000}) {
+                                    //                            for (double compression : new double[]{100, 200, 500}) {
+                                    for (Util.Factory factory : Collections.singleton(Util.Factory.MERGE)) {
+                                        //                                    for (Util.Factory factory : Util.Factory.values()) {
+                                        TDigest digest = factory.create(compression);
+                                        MergingDigest.useWeightLimit = useWeightLimit;
+                                        try {
+                                            digest.setScaleFunction(scale);
+                                        } catch (IllegalArgumentException e) {
+                                            // not all scale functions work with different weight limit strategies
+                                            continue;
+                                        }
+                                        if (digest.toString().contains("K_3")) {
+                                            continue;
+                                        }
+                                        try {
                                             for (double datum : raw) {
                                                 digest.add(datum);
                                             }
                                             digest.compress();
                                             evaluate(finalK, out, sizes, cdf, dist, "unsorted", sorted, compression, digest);
+                                        } catch (Throwable e) {
+                                            System.err.printf("Aborting test with %s, %b, %.0f\n", digest, useWeightLimit, compression);
+                                            e.printStackTrace();
+                                            abort.set(true);
+                                            throw e;
                                         }
                                     }
                                 }
                             }
                         }
-                    } catch (Throwable e) {
-                        e.printStackTrace();
-                        throw e;
                     }
                     int count = lines.incrementAndGet();
                     long t = System.nanoTime();
@@ -308,6 +320,7 @@ public class AccuracyTest {
                 });
             }
             pool.invokeAll(tasks);
+            assertTrue("Tasks aborted in test", !abort.get());
         }
     }
 
