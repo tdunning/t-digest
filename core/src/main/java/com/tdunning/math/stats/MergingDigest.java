@@ -841,9 +841,6 @@ public class MergingDigest extends AbstractTDigest {
 
     @Override
     public void setScaleFunction(ScaleFunction scaleFunction) {
-        if (scaleFunction == ScaleFunction.K_3 && !useWeightLimit) {
-            throw new IllegalArgumentException("Must use weight limiting strategy with K_3 scale function");
-        }
         super.setScaleFunction(scaleFunction);
     }
 
