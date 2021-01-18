@@ -169,6 +169,41 @@ public class ScaleFunctionTests {
         }
     }
 
+    @Test
+    public void testNonDecreasing() {
+        for (ScaleFunction scale : ScaleFunction.values()) {
+            for (double compression : new double[]{20, 50, 100, 200, 500, 1000}) {
+                for (int n : new int[]{10, 100, 1000, 10000, 100_000, 1_000_000, 10_000_000}) {
+                    double norm = scale.normalizer(compression, n);
+                    double last = Double.NEGATIVE_INFINITY;
+                    for (double q = -1; q < 2; q += 0.01) {
+                        double k1 = scale.k(q, norm);
+                        double k2 = scale.k(q, compression, n);
+                        String remark = String.format("Different ways to compute scale function %s should agree, " +
+                                        "compression=%.0f, n=%d, q=%.2f",
+                                scale, compression, n, q);
+                        assertEquals(remark, k1, k2, 1e-10);
+                        assertTrue(String.format("Scale %s function should not decrease", scale),
+                                k1 >= last);
+                        last = k1;
+                    }
+                    last = Double.NEGATIVE_INFINITY;
+                    for (double k = scale.q(0, norm) - 2; k < scale.q(1, norm) + 2; k += 0.01) {
+                        double q1 = scale.q(k, norm);
+                        double q2 = scale.q(k, compression, n);
+                        String remark = String.format("Different ways to compute inverse scale function %s should agree, " +
+                                        "compression=%.0f, n=%d, q=%.2f",
+                                scale, compression, n, k);
+                        assertEquals(remark, q1, q2, 1e-10);
+                        assertTrue(String.format("Inverse scale %s function should not decrease", scale),
+                                q1 >= last);
+                        last = q1;
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * Validates the fast asin approximation
      */

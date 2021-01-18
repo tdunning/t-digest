@@ -74,24 +74,49 @@ public enum ScaleFunction {
      */
     K_1 {
         @Override
-        public double k(double q, double compression, double n) {
-            return compression * Math.asin(2 * q - 1) / (2 * Math.PI);
+        public double k(final double q, final double compression, double n) {
+            Function f = new Function() {
+                @Override
+                double apply(double q) {
+                    return compression * Math.asin(2 * q - 1) / (2 * Math.PI);
+                }
+            };
+            return ScaleFunction.limitCall(f, q, 1e-15, 1 - 1e-15);
         }
 
         @Override
-        public double k(double q, double normalizer) {
-            return normalizer * Math.asin(2 * q - 1);
+        public double k(final double q, final double normalizer) {
+            Function f = new Function() {
+                @Override
+                double apply(double q) {
+                    return normalizer * Math.asin(2 * q - 1);
+                }
+            };
+            return ScaleFunction.limitCall(f, q, 1e-15, 1 - 1e-15);
         }
 
 
         @Override
-        public double q(double k, double compression, double n) {
-            return (Math.sin(k * (2 * Math.PI / compression)) + 1) / 2;
+        public double q(double k, final double compression, double n) {
+            Function f = new Function() {
+                @Override
+                double apply(double k) {
+                    return (Math.sin(k * (2 * Math.PI / compression)) + 1) / 2;
+                }
+            };
+            return ScaleFunction.limitCall(f, k, -compression / 4, compression / 4);
         }
 
         @Override
-        public double q(double k, double normalizer) {
-            return (Math.sin(k / normalizer) + 1) / 2;
+        public double q(double k, final double normalizer) {
+            Function f = new Function() {
+                @Override
+                double apply(double x) {
+                    return (Math.sin(x) + 1) / 2;
+                }
+            };
+            double x = k / normalizer;
+            return ScaleFunction.limitCall(f, x, -Math.PI / 2, Math.PI / 2);
         }
 
         @Override
@@ -128,13 +153,25 @@ public enum ScaleFunction {
      */
     K_1_FAST {
         @Override
-        public double k(double q, double compression, double n) {
-            return compression * fastAsin(2 * q - 1) / (2 * Math.PI);
+        public double k(double q, final double compression, double n) {
+            Function f = new Function() {
+                @Override
+                double apply(double q) {
+                    return compression * fastAsin(2 * q - 1) / (2 * Math.PI);
+                }
+            };
+            return ScaleFunction.limitCall(f, q, 0, 1);
         }
 
         @Override
-        public double k(double q, double normalizer) {
-            return normalizer * fastAsin(2 * q - 1);
+        public double k(double q, final double normalizer) {
+            Function f = new Function() {
+                @Override
+                double apply(double q) {
+                    return normalizer * fastAsin(2 * q - 1);
+                }
+            };
+            return ScaleFunction.limitCall(f, q, 0, 1);
         }
 
         @Override
@@ -181,7 +218,7 @@ public enum ScaleFunction {
      */
     K_2 {
         @Override
-        public double k(double q, double compression, double n) {
+        public double k(double q, final double compression, final double n) {
             if (n <= 1) {
                 if (q <= 0) {
                     return -10;
@@ -191,26 +228,24 @@ public enum ScaleFunction {
                     return 0;
                 }
             }
-            if (q == 0) {
-                return 2 * k(1 / n, compression, n);
-            } else if (q == 1) {
-                return 2 * k((n - 1) / n, compression, n);
-            } else {
-                return compression * Math.log(q / (1 - q)) / Z(compression, n);
-            }
+            Function f = new Function() {
+                @Override
+                double apply(double q) {
+                    return compression * Math.log(q / (1 - q)) / Z(compression, n);
+                }
+            };
+            return ScaleFunction.limitCall(f, q, 1e-15, 1 - 1e-15);
         }
 
         @Override
-        public double k(double q, double normalizer) {
-            if (q < 1e-15) {
-                // this will return something more extreme than q = 1/n
-                return 2 * k(1e-15, normalizer);
-            } else if (q > 1 - 1e-15) {
-                // this will return something more extreme than q = (n-1)/n
-                return 2 * k(1 - 1e-15, normalizer);
-            } else {
-                return Math.log(q / (1 - q)) * normalizer;
-            }
+        public double k(double q, final double normalizer) {
+            Function f = new Function() {
+                @Override
+                double apply(double q) {
+                    return Math.log(q / (1 - q)) * normalizer;
+                }
+            };
+            return ScaleFunction.limitCall(f, q, 1e-15, 1 - 1e-15);
         }
 
         @Override
@@ -251,33 +286,33 @@ public enum ScaleFunction {
      */
     K_3 {
         @Override
-        public double k(double q, double compression, double n) {
-            if (q < 0.9 / n) {
-                return 10 * k(1 / n, compression, n);
-            } else if (q > 1 - 0.9 / n) {
-                return 10 * k((n - 1) / n, compression, n);
-            } else {
-                if (q <= 0.5) {
-                    return compression * Math.log(2 * q) / Z(compression, n);
-                } else {
-                    return -k(1 - q, compression, n);
+        public double k(double q, final double compression, final double n) {
+            Function f = new Function() {
+                @Override
+                double apply(double q) {
+                    if (q <= 0.5) {
+                        return compression * Math.log(2 * q) / Z(compression, n);
+                    } else {
+                        return -k(1 - q, compression, n);
+                    }
                 }
-            }
+            };
+            return ScaleFunction.limitCall(f, q, 1e-15, 1 - 1e-15);
         }
 
         @Override
-        public double k(double q, double normalizer) {
-            if (q < 1e-15) {
-                return 10 * k(1e-15, normalizer);
-            } else if (q > 1 - 1e-15) {
-                return 10 * k(1 - 1e-15, normalizer);
-            } else {
-                if (q <= 0.5) {
-                    return Math.log(2 * q) * normalizer;
-                } else {
-                    return -k(1 - q, normalizer);
+        public double k(double q, final double normalizer) {
+            Function f = new Function() {
+                @Override
+                double apply(double q) {
+                    if (q <= 0.5) {
+                        return Math.log(2 * q) * normalizer;
+                    } else {
+                        return -k(1 - q, normalizer);
+                    }
                 }
-            }
+            };
+            return ScaleFunction.limitCall(f, q, 1e-15, 1 - 1e-15);
         }
 
         @Override
@@ -326,25 +361,25 @@ public enum ScaleFunction {
      */
     K_2_NO_NORM {
         @Override
-        public double k(double q, double compression, double n) {
-            if (q == 0) {
-                return 2 * k(1 / n, compression, n);
-            } else if (q == 1) {
-                return 2 * k((n - 1) / n, compression, n);
-            } else {
-                return compression * Math.log(q / (1 - q));
-            }
+        public double k(double q, final double compression, double n) {
+            Function f = new Function() {
+                @Override
+                double apply(double q) {
+                    return compression * Math.log(q / (1 - q));
+                }
+            };
+            return ScaleFunction.limitCall(f, q, 1e-15, 1 - 1e-15);
         }
 
         @Override
-        public double k(double q, double normalizer) {
-            if (q <= 1e-15) {
-                return 2 * k(1e-15, normalizer);
-            } else if (q >= 1 - 1e-15) {
-                return 2 * k(1 - 1e-15, normalizer);
-            } else {
-                return normalizer * Math.log(q / (1 - q));
-            }
+        public double k(double q, final double normalizer) {
+            Function f = new Function() {
+                @Override
+                double apply(double q) {
+                    return normalizer * Math.log(q / (1 - q));
+                }
+            };
+            return ScaleFunction.limitCall(f, q, 1e-15, 1 - 1e-15);
         }
 
         @Override
@@ -383,33 +418,34 @@ public enum ScaleFunction {
      */
     K_3_NO_NORM {
         @Override
-        public double k(double q, double compression, double n) {
-            if (q < 0.9 / n) {
-                return 10 * k(1 / n, compression, n);
-            } else if (q > 1 - 0.9 / n) {
-                return 10 * k((n - 1) / n, compression, n);
-            } else {
-                if (q <= 0.5) {
-                    return compression * Math.log(2 * q);
-                } else {
-                    return -k(1 - q, compression, n);
+        public double k(double q, final double compression, final double n) {
+            Function f = new Function() {
+                @Override
+                double apply(double q) {
+                    if (q <= 0.5) {
+                        return compression * Math.log(2 * q);
+                    } else {
+                        return -k(1 - q, compression, n);
+                    }
                 }
-            }
+            };
+            return limitCall(f, q, 1e-15, 1 - 1e-15);
         }
 
         @Override
-        public double k(double q, double normalizer) {
-            if (q <= 1e-15) {
-                return 10 * k(1e-15, normalizer);
-            } else if (q > 1 - 1e-15) {
-                return 10 * k(1 - 1e-15, normalizer);
-            } else {
-                if (q <= 0.5) {
-                    return normalizer * Math.log(2 * q);
-                } else {
-                    return -k(1 - q, normalizer);
+        public double k(double q, final double normalizer) {
+            // poor man's lambda, sigh
+            Function f = new Function() {
+                @Override
+                double apply(double q) {
+                    if (q <= 0.5) {
+                        return normalizer * Math.log(2 * q);
+                    } else {
+                        return -k(1 - q, normalizer);
+                    }
                 }
-            }
+            };
+            return limitCall(f, q, 1e-15, 1 - 1e-15);
         }
 
         @Override
@@ -594,6 +630,20 @@ public enum ScaleFunction {
                 }
                 return r;
             }
+        }
+    }
+
+    static abstract class Function {
+        abstract double apply(double x);
+    }
+
+    static double limitCall(Function f, double x, double low, double high) {
+        if (x < low) {
+            return f.apply(low);
+        } else if (x > high) {
+            return f.apply(high);
+        } else {
+            return f.apply(x);
         }
     }
 
