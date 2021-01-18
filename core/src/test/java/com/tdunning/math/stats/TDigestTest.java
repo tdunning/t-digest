@@ -174,6 +174,28 @@ public abstract class TDigestTest extends AbstractTest {
     }
 
     /**
+     * Check against the example given in
+     * https://github.com/tdunning/t-digest/issues/143
+     *
+     * Don't think that there is a problem here, but keeping the test just in case.
+     */
+    @Test
+    public void testExplicitSkewedData() {
+        double[] data = new double[]{
+                245, 246, 247.249, 240, 243, 248, 250, 241, 244, 245, 245, 247, 243, 242, 241,
+                50100, 51246, 52247, 52249, 51240, 53243, 59248, 59250, 57241, 56244, 55245,
+                56245, 575247, 58243, 51242, 54241
+        };
+
+        TDigest digest = factory(50).create();
+        for (double x :data) {
+            digest.add(x);
+        }
+
+        assertEquals(Dist.quantile(0.5, data), digest.quantile(0.5), 0);
+    }
+
+    /**
      * Brute force test that cdf and quantile give reference behavior in digest made up of all singletons.
      */
     @Test
