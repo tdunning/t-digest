@@ -26,11 +26,30 @@ public abstract class BigCount extends AbstractTest {
     }
 
     private static void addData(TDigest digest) {
-        digest.add(10, 300000000);
-        digest.add(200, 300000000);
-        digest.add(3000, 300000000);
-        digest.add(4000, 300000000);
-        digest.add(5000, 300000000);
-        digest.add(47883554, 200);
+        double n = 300_000_000 * 5 + 200;
+
+        addFakeCentroids(digest, n, 300_000_000, 10);
+        addFakeCentroids(digest, n, 300_000_000, 200);
+        addFakeCentroids(digest, n, 300_000_000, 3000);
+        addFakeCentroids(digest, n, 300_000_000, 4000);
+        addFakeCentroids(digest, n, 300_000_000, 5000);
+        addFakeCentroids(digest, n, 200, 47883554);
+
+        assertEquals(n, digest.size(), 0);
+    }
+
+    private static void addFakeCentroids(TDigest digest, double n, int points, int x) {
+        long base = digest.size();
+        double q0 = base / n;
+        long added = 0;
+        while (added < points) {
+            double k0 = digest.scale.k(q0, digest.compression(), n);
+            double q1 = digest.scale.q(k0 + 1, digest.compression(), n);
+            q1 = Math.min(q1, (base + points) / n);
+            int m = (int) Math.min(points - added, Math.max(1, Math.rint((q1 - q0) * n)));
+            added += m;
+            digest.add(x, m);
+            q0 = q1;
+        }
     }
 }

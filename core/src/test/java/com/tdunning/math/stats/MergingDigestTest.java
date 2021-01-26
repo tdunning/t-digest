@@ -29,7 +29,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 
 //to freeze the tests with a particular seed, put the seed on the next line
 //@Seed("84527677CF03B566:A6FF596BDDB2D59D")
@@ -109,4 +111,60 @@ public class MergingDigestTest extends TDigestTest {
         }
     }
 
+
+    /**
+     * Verifies interpolation between a singleton and a larger centroid.
+     */
+    @Test
+    public void singleMultiRange() {
+        TDigest digest = factory(50).create();
+        digest.setScaleFunction(ScaleFunction.K_0);
+        for (int i = 0; i < 100; i++) {
+            digest.add(1);
+            digest.add(2);
+            digest.add(3);
+        }
+        // this check is, of course true, but it also forces merging before we change scale
+        assertTrue(digest.centroidCount() < 300);
+        digest.add(0);
+        // we now have a digest with a singleton first, then a heavier centroid next
+        Iterator<Centroid> ix = digest.centroids().iterator();
+        Centroid first = ix.next();
+        Centroid second = ix.next();
+        assertEquals(1, first.count());
+        assertEquals(0, first.mean(), 0);
+//        assertTrue(second.count() > 1);
+        assertEquals(1.0, second.mean(), 0);
+
+        assertEquals(0.5 / digest.size(), digest.cdf(0), 0);
+        assertEquals(1.0 / digest.size(), digest.cdf(1e-10), 1e-10);
+        assertEquals(1.0 / digest.size(), digest.cdf(0.25), 1e-10);
+    }
+
+    /**
+     * Make sure that the first and last centroids have unit weight
+     */
+    @Test
+    public void testSingletonsAtEnds() {
+        TDigest d = new MergingDigest(50);
+        d.recordAllData();
+        Random gen = new Random(1);
+        double[] data = new double[100];
+        for (int i = 0; i < data.length; i++) {
+            data[i] = Math.floor(gen.nextGaussian() * 3);
+        }
+        for (int i = 0; i < 100; i++) {
+            for (double x : data) {
+                d.add(x);
+            }
+        }
+        int last = 0;
+        for (Centroid centroid : d.centroids()) {
+            if (last == 0) {
+                assertEquals(1, centroid.count());
+            }
+            last = centroid.count();
+        }
+        assertEquals(1, last);
+    }
 }

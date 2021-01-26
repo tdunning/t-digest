@@ -66,13 +66,13 @@ public class SortTest {
 
     @Test
     public void testEmpty() {
-        Sort.sort(new int[]{}, new double[]{});
+        Sort.sort(new int[]{}, new double[]{}, null, 0);
     }
 
     @Test
     public void testOne() {
         int[] order = new int[1];
-        Sort.sort(order, new double[]{1});
+        Sort.sort(order, new double[]{1}, new double[]{1}, 1);
         assertEquals(0, order[0]);
     }
 
@@ -81,7 +81,7 @@ public class SortTest {
         int[] order = new int[6];
         double[] values = new double[6];
 
-        Sort.sort(order, values);
+        Sort.sort(order, values, null, values.length);
         checkOrder(order, values);
     }
 
@@ -94,8 +94,129 @@ public class SortTest {
             values[i] = Math.rint(10 * ((double) i / n)) / 10.0;
         }
 
-        Sort.sort(order, values);
+        Sort.sort(order, values, null, values.length);
         checkOrder(order, values);
+    }
+
+    @Test
+    public void testRepeatedSortByWeight() {
+        // this needs to be long enough to force coverage of both quicksort and insertion sort
+        // (i.e. >64)
+        int n = 125;
+        int[] order = new int[n];
+        double[] values = new double[n];
+        double[] weights = new double[n];
+        double totalWeight = 0;
+
+        // generate evenly distributed values and weights
+        for (int i = 0; i < n; i++) {
+            int k = ((i + 5) * 37) % n;
+            values[i] = Math.floor(k / 25.0);
+            weights[i] = (k % 25) + 1;
+            totalWeight += weights[i];
+        }
+
+        // verify: test weights should be evenly distributed
+        double[] tmp = new double[5];
+        for (int i = 0; i < n; i++) {
+            tmp[(int) values[i]] += weights[i];
+        }
+        for (double v : tmp) {
+            assertEquals(totalWeight / tmp.length, v, 0);
+        }
+
+        // now sort ...
+        Sort.sort(order, values, weights, n);
+
+        // and verify our somewhat unusual ordering of the result
+        // within the first two quintiles, value is constant, weights increase within each quintile
+        int delta = order.length / 5;
+        double sum = checkSubOrder(0.0, order, values, weights, 0, delta, 1);
+        assertEquals(totalWeight * 0.2, sum, 0);
+        sum = checkSubOrder(sum, order, values, weights, delta, 2 * delta, 1);
+        assertEquals(totalWeight * 0.4, sum, 0);
+
+        // in the middle quintile, weights go up and then down after the median
+        sum = checkMidOrder(totalWeight / 2, sum, order, values, weights, 2 * delta, 3 * delta);
+        assertEquals(totalWeight * 0.6, sum, 0);
+
+        // in the last two quintiles, weights decrease
+        sum = checkSubOrder(sum, order, values, weights, 3 * delta, 4 * delta, -1);
+        assertEquals(totalWeight * 0.8, sum, 0);
+        sum = checkSubOrder(sum, order, values, weights, 4 * delta, 5 * delta, -1);
+        assertEquals(totalWeight, sum, 0);
+    }
+
+    @Test
+    public void testStableSort() {
+        // this needs to be long enough to force coverage of both quicksort and insertion sort
+        // (i.e. >64)
+        int n = 70;
+        int z = 10;
+        int[] order = new int[n];
+        double[] values = new double[n];
+        double[] weights = new double[n];
+        double totalWeight = 0;
+
+        // generate evenly distributed values and weights
+        for (int i = 0; i < n; i++) {
+            int k = ((i + 5) * 37) % n;
+            values[i] = Math.floor(k / (double) z);
+            weights[i] = (k % z) + 1;
+            totalWeight += weights[i];
+        }
+
+        // verify: test weights should be evenly distributed
+        double[] tmp = new double[n/z];
+        for (int i = 0; i < n; i++) {
+            tmp[(int) values[i]] += weights[i];
+        }
+        for (double v : tmp) {
+            assertEquals(totalWeight / tmp.length, v, 0);
+        }
+
+        // now sort ...
+        Sort.stableSort(order, values, n);
+
+        // and verify stability of the ordering
+        // values must be in order and they must appear in their original ordering
+        double last = -1;
+        for (int j : order) {
+            double m = values[j] * n + j;
+            assertTrue(m > last);
+            last = m;
+        }
+    }
+
+    private double checkMidOrder(double medianWeight, double sofar, int[] order, double[] values, double[] weights, int start, int end) {
+        double value = values[order[start]];
+        double last = 0;
+        assertTrue(sofar < medianWeight);
+        for (int i = start; i < end; i++) {
+            assertEquals(value, values[order[i]], 0);
+            double w = weights[order[i]];
+            assertTrue(w > 0);
+            if (sofar > medianWeight) {
+                w = 2 * medianWeight - w;
+            }
+            assertTrue(w >= last);
+            sofar += weights[order[i]];
+        }
+        assertTrue(sofar > medianWeight);
+        return sofar;
+    }
+
+    private double checkSubOrder(double sofar, int[] order, double[] values, double[] weights, int start, int end, int ordering) {
+        double lastWeight = weights[order[start]] * ordering;
+        double value = values[order[start]];
+        for (int i = start; i < end; i++) {
+            assertEquals(value, values[order[i]], 0);
+            double newOrderedWeight = weights[order[i]] * ordering;
+            assertTrue(newOrderedWeight >= lastWeight);
+            lastWeight = newOrderedWeight;
+            sofar += weights[order[i]];
+        }
+        return sofar;
     }
 
     @Test
@@ -108,19 +229,19 @@ public class SortTest {
             values[i] = 1;
         }
 
-        Sort.sort(order, values);
+        Sort.sort(order, values, null, values.length);
         checkOrder(order, values);
 
         values[0] = 0.8;
         values[1] = 0.3;
 
-        Sort.sort(order, values);
+        Sort.sort(order, values, null, values.length);
         checkOrder(order, values);
 
         values[5] = 1.5;
         values[4] = 1.2;
 
-        Sort.sort(order, values);
+        Sort.sort(order, values, null, values.length);
         checkOrder(order, values);
     }
 
@@ -131,7 +252,7 @@ public class SortTest {
         for (int i = 0; i < 20; i++) {
             values[i] = (i * 13) % 20;
         }
-        Sort.sort(order, values);
+        Sort.sort(order, values, null, values.length);
         checkOrder(order, values);
     }
 
@@ -156,7 +277,7 @@ public class SortTest {
         values[24] = 25;
         values[26] = 25;
 
-        Sort.sort(order, values);
+        Sort.sort(order, values, null, values.length);
         checkOrder(order, values);
     }
 
@@ -197,7 +318,7 @@ public class SortTest {
                 values[i] = rand.nextDouble();
             }
 
-            Sort.sort(order, values);
+            Sort.sort(order, values, null, values.length);
             checkOrder(order, values);
         }
     }

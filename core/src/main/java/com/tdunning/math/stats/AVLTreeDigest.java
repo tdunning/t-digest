@@ -22,8 +22,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 
 public class AVLTreeDigest extends AbstractTDigest {
+    final Random gen = new Random();
     private final double compression;
     private AVLGroupTree summary;
 

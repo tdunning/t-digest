@@ -19,12 +19,9 @@ package com.tdunning.math.stats;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 
 public abstract class AbstractTDigest extends TDigest {
-    final Random gen = new Random();
     boolean recordAllData = false;
 
     /**
@@ -44,8 +41,9 @@ public abstract class AbstractTDigest extends TDigest {
      * Compute the weighted average between <code>x1</code> with a weight of
      * <code>w1</code> and <code>x2</code> with a weight of <code>w2</code>.
      * This expects <code>x1</code> to be less than or equal to <code>x2</code>
-     * and is guaranteed to return a number between <code>x1</code> and
-     * <code>x2</code>.
+     * and is guaranteed to return a number in <code>[x1, x2]</code>. An
+     * explicit check is required since this isn't guaranteed with floating-point
+     * numbers.
      */
     private static double weightedAverageSorted(double x1, double w1, double x2, double w2) {
         assert x1 <= x2;
@@ -133,13 +131,7 @@ public abstract class AbstractTDigest extends TDigest {
 
     @Override
     public void add(TDigest other) {
-        List<Centroid> tmp = new ArrayList<>();
         for (Centroid centroid : other.centroids()) {
-            tmp.add(centroid);
-        }
-
-        Collections.shuffle(tmp, gen);
-        for (Centroid centroid : tmp) {
             add(centroid.mean(), centroid.count(), centroid);
         }
     }

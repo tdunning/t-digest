@@ -17,6 +17,7 @@
 
 package com.tdunning.math.stats;
 
+import java.util.Arrays;
 import java.util.Random;
 
 /**
@@ -24,65 +25,140 @@ import java.util.Random;
  */
 public class Sort {
     private static final Random prng = new Random(); // for choosing pivots during quicksort
-    /**
-     * Quick sort using an index array.  On return,
-     * values[order[i]] is in order as i goes 0..values.length
-     *
-     * @param order  Indexes into values
-     * @param values The values to sort.
-     */
-    @SuppressWarnings("WeakerAccess")
-    public static void sort(int[] order, double[] values) {
-        sort(order, values, 0, values.length);
-    }
 
     /**
-     * Quick sort using an index array.  On return,
-     * values[order[i]] is in order as i goes 0..n
+     * Single-key stabilized quick sort on using an index array
      *
-     * @param order  Indexes into values
-     * @param values The values to sort.
-     * @param n      The number of values to sort
+     * @param order   Indexes into values
+     * @param values  The values to sort.
+     * @param n       The number of values to sort
      */
     @SuppressWarnings("WeakerAccess")
-    public static void sort(int[] order, double[] values, int n) {
-        sort(order, values, 0, n);
-    }
-
-    /**
-     * Quick sort using an index array.  On return,
-     * values[order[i]] is in order as i goes start..n
-     *
-     * @param order  Indexes into values
-     * @param values The values to sort.
-     * @param start  The first element to sort
-     * @param n      The number of values to sort
-     */
-    @SuppressWarnings("WeakerAccess")
-    public static void sort(int[] order, double[] values, int start, int n) {
-        for (int i = start; i < start + n; i++) {
+    public static void stableSort(int[] order, double[] values, int n) {
+        for (int i = 0; i < n; i++) {
             order[i] = i;
         }
-        quickSort(order, values, start, start + n, 64);
-        insertionSort(order, values, start, start + n, 64);
+        stableQuickSort(order, values, 0, n, 64);
+        stableInsertionSort(order, values, 0, n, 64);
     }
 
     /**
-     * Standard quick sort except that sorting is done on an index array rather than the values themselves
+     * Two-key quick sort on (values, weights) using an index array
      *
-     * @param order  The pre-allocated index array
-     * @param values The values to sort
-     * @param start  The beginning of the values to sort
-     * @param end    The value after the last value to sort
-     * @param limit  The minimum size to recurse down to.
+     * @param order   Indexes into values
+     * @param values  The values to sort.
+     * @param weights The secondary sort key
+     * @param n       The number of values to sort
+     * @return true if the values were already sorted
      */
-    private static void quickSort(int[] order, double[] values, int start, int end, int limit) {
+    @SuppressWarnings("WeakerAccess")
+    public static boolean sort(int[] order, double[] values, double[] weights, int n) {
+        if (weights == null) {
+            weights = Arrays.copyOf(values, values.length);
+        }
+        boolean r = sort(order, values, weights, 0, n);
+        // now adjust all runs with equal value so that bigger weights are nearer
+        // the median
+        double medianWeight = 0;
+        for (int i = 0; i < n; i++) {
+            medianWeight += weights[i];
+        }
+        medianWeight = medianWeight / 2;
+        int i = 0;
+        double soFar = 0;
+        double nextGroup = 0;
+        while (i < n) {
+            int j = i;
+            while (j < n && values[order[j]] == values[order[i]]) {
+                double w = weights[order[j]];
+                nextGroup += w;
+                j++;
+            }
+            if (j > i + 1) {
+                if (soFar >= medianWeight) {
+                    // entire group is in last half, reverse the order
+                    reverse(order, i, j - i);
+                } else if (nextGroup > medianWeight) {
+                    // group straddles the median, but not necessarily evenly
+                    // most elements are probably unit weight if there are many
+                    double[] scratch = new double[j - i];
+
+                    double netAfter = nextGroup + soFar - 2 * medianWeight;
+                    // heuristically adjust weights to roughly balance around median
+                    double max = weights[order[j - 1]];
+                    for (int k = j - i - 1; k >= 0; k--) {
+                        double weight = weights[order[i + k]];
+                        if (netAfter < 0) {
+                            // sort in normal order
+                            scratch[k] = weight;
+                            netAfter += weight;
+                        } else {
+                            // sort reversed, but after normal items
+                            scratch[k] = 2 * max + 1 - weight;
+                            netAfter -= weight;
+                        }
+                    }
+                    // sort these balanced weights
+                    int[] sub = new int[j - i];
+                    sort(sub, scratch, scratch, 0, j - i);
+                    int[] tmp = Arrays.copyOfRange(order, i, j);
+                    for (int k = 0; k < j - i; k++) {
+                        order[i + k] = tmp[sub[k]];
+                    }
+                }
+            }
+            soFar = nextGroup;
+            i = j;
+        }
+        return r;
+    }
+
+    /**
+     * Two-key quick sort on (values, weights) using an index array
+     *
+     * @param order   Indexes into values
+     * @param values  The values to sort
+     * @param weights The weights that define the secondary ordering
+     * @param start   The first element to sort
+     * @param n       The number of values to sort
+     * @return True if the values were in order without sorting
+     */
+    @SuppressWarnings("WeakerAccess")
+    private static boolean sort(int[] order, double[] values, double[] weights, int start, int n) {
+        boolean inOrder = true;
+        for (int i = start; i < start + n; i++) {
+            if (inOrder && i < start + n - 1) {
+                inOrder = values[i] < values[i + 1] || (values[i] == values[i + 1] && weights[i] <= weights[i + 1]);
+            }
+            order[i] = i;
+        }
+        if (inOrder) {
+            return true;
+        }
+        quickSort(order, values, weights, start, start + n, 64);
+        insertionSort(order, values, weights, start, start + n, 64);
+        return false;
+    }
+
+    /**
+     * Standard two-key quick sort on (values, weights) except that sorting is done on an index array
+     * rather than the values themselves
+     *
+     * @param order   The pre-allocated index array
+     * @param values  The values to sort
+     * @param weights The weights (secondary key)
+     * @param start   The beginning of the values to sort
+     * @param end     The value after the last value to sort
+     * @param limit   The minimum size to recurse down to.
+     */
+    private static void quickSort(int[] order, double[] values, double[] weights, int start, int end, int limit) {
         // the while loop implements tail-recursion to avoid excessive stack calls on nasty cases
         while (end - start > limit) {
 
             // pivot by a random element
             int pivotIndex = start + prng.nextInt(end - start);
             double pivotValue = values[order[pivotIndex]];
+            double pivotWeight = weights[order[pivotIndex]];
 
             // move pivot to beginning of array
             swap(order, start, pivotIndex);
@@ -93,31 +169,32 @@ public class Sort {
             int high = end;        // high points to first value > pivotValue
             int i = low;           // i scans the array
             while (i < high) {
-                // invariant:  values[order[k]] == pivotValue for k in [0..low)
-                // invariant:  values[order[k]] < pivotValue for k in [low..i)
-                // invariant:  values[order[k]] > pivotValue for k in [high..end)
+                // invariant:  (values,weights)[order[k]] == (pivotValue, pivotWeight) for k in [0..low)
+                // invariant:  (values,weights)[order[k]] < (pivotValue, pivotWeight) for k in [low..i)
+                // invariant:  (values,weights)[order[k]] > (pivotValue, pivotWeight) for k in [high..end)
                 // in-loop:  i < high
                 // in-loop:  low < high
                 // in-loop:  i >= low
                 double vi = values[order[i]];
-                if (vi == pivotValue) {
+                double wi = weights[order[i]];
+                if (vi == pivotValue && wi == pivotWeight) {
                     if (low != i) {
                         swap(order, low, i);
                     } else {
                         i++;
                     }
                     low++;
-                } else if (vi > pivotValue) {
+                } else if (vi > pivotValue || (vi == pivotValue && wi > pivotWeight)) {
                     high--;
                     swap(order, i, high);
                 } else {
-                    // vi < pivotValue
+                    // vi < pivotValue || (vi == pivotValue && wi < pivotWeight)
                     i++;
                 }
             }
-            // invariant:  values[order[k]] == pivotValue for k in [0..low)
-            // invariant:  values[order[k]] < pivotValue for k in [low..i)
-            // invariant:  values[order[k]] > pivotValue for k in [high..end)
+            // invariant:  (values,weights)[order[k]] == (pivotValue, pivotWeight) for k in [0..low)
+            // invariant:  (values,weights)[order[k]] < (pivotValue, pivotWeight) for k in [low..i)
+            // invariant:  (values,weights)[order[k]] > (pivotValue, pivotWeight) for k in [high..end)
             // assert i == high || low == high therefore, we are done with partition
 
             // at this point, i==high, from [start,low) are == pivot, [low,high) are < and [high,end) are >
@@ -141,14 +218,113 @@ public class Sort {
 //            checkPartition(order, values, pivotValue, start, low, high, end);
 
             // now recurse, but arrange it so we handle the longer limit by tail recursion
+            // we have to sort the pivot values because they may have different weights
+            // we can't do that, however until we know how much weight is in the left and right
             if (low - start < end - high) {
-                quickSort(order, values, start, low, limit);
+                // left side is smaller
+                quickSort(order, values, weights, start, low, limit);
 
                 // this is really a way to do
                 //    quickSort(order, values, high, end, limit);
                 start = high;
             } else {
-                quickSort(order, values, high, end, limit);
+                quickSort(order, values, weights, high, end, limit);
+                // this is really a way to do
+                //    quickSort(order, values, start, low, limit);
+                end = low;
+            }
+        }
+    }
+
+    /**
+     * Stablized quick sort on an index array. This is a normal quick sort that uses the
+     * original index as a secondary key. Since we are really just sorting an index array
+     * we can do this nearly for free.
+     *
+     * @param order  The pre-allocated index array
+     * @param values The values to sort
+     * @param start  The beginning of the values to sort
+     * @param end    The value after the last value to sort
+     * @param limit  The minimum size to recurse down to.
+     */
+    private static void stableQuickSort(int[] order, double[] values, int start, int end, int limit) {
+        // the while loop implements tail-recursion to avoid excessive stack calls on nasty cases
+        while (end - start > limit) {
+
+            // pivot by a random element
+            int pivotIndex = start + prng.nextInt(end - start);
+            double pivotValue = values[order[pivotIndex]];
+            int pv = order[pivotIndex];
+
+            // move pivot to beginning of array
+            swap(order, start, pivotIndex);
+
+            // we use a three way partition because many duplicate values is an important case
+
+            int low = start + 1;   // low points to first value not known to be equal to pivotValue
+            int high = end;        // high points to first value > pivotValue
+            int i = low;           // i scans the array
+            while (i < high) {
+                // invariant:  (values[order[k]],order[k]) == (pivotValue, pv) for k in [0..low)
+                // invariant:  (values[order[k]],order[k]) < (pivotValue, pv) for k in [low..i)
+                // invariant:  (values[order[k]],order[k]) > (pivotValue, pv) for k in [high..end)
+                // in-loop:  i < high
+                // in-loop:  low < high
+                // in-loop:  i >= low
+                double vi = values[order[i]];
+                int pi = order[i];
+                if (vi == pivotValue && pi == pv) {
+                    if (low != i) {
+                        swap(order, low, i);
+                    } else {
+                        i++;
+                    }
+                    low++;
+                } else if (vi > pivotValue || (vi == pivotValue && pi > pv)) {
+                    high--;
+                    swap(order, i, high);
+                } else {
+                    // vi < pivotValue || (vi == pivotValue && pi < pv)
+                    i++;
+                }
+            }
+            // invariant:  (values[order[k]],order[k]) == (pivotValue, pv) for k in [0..low)
+            // invariant:  (values[order[k]],order[k]) < (pivotValue, pv) for k in [low..i)
+            // invariant:  (values[order[k]],order[k]) > (pivotValue, pv) for k in [high..end)
+            // assert i == high || low == high therefore, we are done with partition
+
+            // at this point, i==high, from [start,low) are == pivot, [low,high) are < and [high,end) are >
+            // we have to move the values equal to the pivot into the middle.  To do this, we swap pivot
+            // values into the top end of the [low,high) range stopping when we run out of destinations
+            // or when we run out of values to copy
+            int from = start;
+            int to = high - 1;
+            for (i = 0; from < low && to >= low; i++) {
+                swap(order, from++, to--);
+            }
+            if (from == low) {
+                // ran out of things to copy.  This means that the the last destination is the boundary
+                low = to + 1;
+            } else {
+                // ran out of places to copy to.  This means that there are uncopied pivots and the
+                // boundary is at the beginning of those
+                low = from;
+            }
+
+//            checkPartition(order, values, pivotValue, start, low, high, end);
+
+            // now recurse, but arrange it so we handle the longer limit by tail recursion
+            // we have to sort the pivot values because they may have different weights
+            // we can't do that, however until we know how much weight is in the left and right
+            if (low - start < end - high) {
+                // left side is smaller
+                stableQuickSort(order, values, start, low, limit);
+
+                // this is really a way to do
+                //    quickSort(order, values, high, end, limit);
+                start = high;
+            } else {
+                stableQuickSort(order, values, high, end, limit);
                 // this is really a way to do
                 //    quickSort(order, values, start, low, limit);
                 end = low;
@@ -380,7 +556,8 @@ public class Sort {
      * @param end        Values from high to end are above the pivot.
      */
     @SuppressWarnings("UnusedDeclaration")
-    public static void checkPartition(int[] order, double[] values, double pivotValue, int start, int low, int high, int end) {
+    public static void checkPartition(int[] order, double[] values, double pivotValue, int start, int low,
+                                      int high, int end) {
         if (order.length != values.length) {
             throw new IllegalArgumentException("Arguments must be same size");
         }
@@ -411,23 +588,64 @@ public class Sort {
     }
 
     /**
-     * Limited range insertion sort.  We assume that no element has to move more than limit steps
-     * because quick sort has done its thing.
+     * Limited range insertion sort with primary and secondary key.  We assume that no
+     * element has to move more than limit steps because quick sort has done its thing.
      *
-     * @param order  The permutation index
-     * @param values The values we are sorting
-     * @param start  Where to start the sort
-     * @param n      How many elements to sort
-     * @param limit  The largest amount of disorder
+     * If weights (the secondary key) is null, then only the primary key is used.
+     *
+     * This sort is inherently stable.
+     *
+     * @param order   The permutation index
+     * @param values  The values we are sorting
+     * @param weights The secondary key for sorting
+     * @param start   Where to start the sort
+     * @param n       How many elements to sort
+     * @param limit   The largest amount of disorder
      */
     @SuppressWarnings("SameParameterValue")
-    private static void insertionSort(int[] order, double[] values, int start, int n, int limit) {
+    private static void insertionSort(int[] order, double[] values, double[] weights, int start, int n, int limit) {
         for (int i = start + 1; i < n; i++) {
             int t = order[i];
             double v = values[order[i]];
+            double w = weights == null ? 0 : weights[order[i]];
             int m = Math.max(i - limit, start);
+            // values in [start, i) are ordered
+            // scan backwards to find where to stick t
             for (int j = i; j >= m; j--) {
-                if (j == 0 || values[order[j - 1]] <= v) {
+                if (j == 0 || values[order[j - 1]] < v ||
+                        (values[order[j - 1]] == v && (weights == null || weights[order[j - 1]] <= w))) {
+                    if (j < i) {
+                        System.arraycopy(order, j, order, j + 1, i - j);
+                        order[j] = t;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * Limited range insertion sort with primary key stabilized by the use of the
+     * original position to break ties.  We assume that no element has to move more
+     * than limit steps because quick sort has done its thing.
+     *
+     * @param order   The permutation index
+     * @param values  The values we are sorting
+     * @param start   Where to start the sort
+     * @param n       How many elements to sort
+     * @param limit   The largest amount of disorder
+     */
+    @SuppressWarnings("SameParameterValue")
+    private static void stableInsertionSort(int[] order, double[] values, int start, int n, int limit) {
+        for (int i = start + 1; i < n; i++) {
+            int t = order[i];
+            double v = values[order[i]];
+            int vi = order[i];
+            int m = Math.max(i - limit, start);
+            // values in [start, i) are ordered
+            // scan backwards to find where to stick t
+            for (int j = i; j >= m; j--) {
+                if (j == 0 || values[order[j - 1]] < v || (values[order[j - 1]] == v && ( order[j - 1] <= vi))) {
                     if (j < i) {
                         System.arraycopy(order, j, order, j + 1, i - j);
                         order[j] = t;

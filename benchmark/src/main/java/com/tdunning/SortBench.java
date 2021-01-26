@@ -60,6 +60,6 @@ public class SortBench {
         for (int i = 0; i < size; i++) {
             order[i] = i;
         }
-        Sort.sort(order, values);
+        Sort.sort(order, values, null, values.length);
     }
 }

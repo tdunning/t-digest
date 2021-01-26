@@ -196,6 +196,40 @@ public abstract class TDigestTest extends AbstractTest {
     }
 
     /**
+     * See https://github.com/tdunning/t-digest/issues/114
+     * <p>
+     * The problem in that issue seems to have been due to adding samples with non-unit weight.
+     * This resulted in a violation of the t-digest invariant.
+     * <p>
+     * The question in the issue about the origin of the shuffle still applies.
+     */
+    @Test
+    public void testQuantile() {
+        double compression = 100;
+        double[] samples = new double[]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 4.0, 5.0, 6.0, 7.0};
+        System.out.printf("actual,hist1,hist2\n");
+        for (int i = 1; i < 10000; i++) {
+            TDigest hist1 = new MergingDigest(compression);
+            List<Double> data = new ArrayList<>();
+
+            for (int j = 0; j < 100; j++) {
+                for (double x : samples) {
+                    data.add(x);
+                    hist1.add(x);
+                }
+            }
+            TDigest hist2 = new MergingDigest(compression);
+            hist1.compress();
+            hist2.add(hist1);
+            Collections.sort(data);
+            hist2.compress();
+            double x1 = hist1.quantile(0.5);
+            double h2 = hist2.quantile(0.5);
+            System.out.printf("%.3f,%.3f,%.3f\n", Dist.quantile(0.5, data), x1, h2);
+        }
+    }
+
+    /**
      * Brute force test that cdf and quantile give reference behavior in digest made up of all singletons.
      */
     @Test
@@ -302,15 +336,16 @@ public abstract class TDigestTest extends AbstractTest {
             digest.add(2);
             digest.add(3);
         }
-        // This sample will be added to the first cluster that already exists
-        // the effect will be to (slightly) nudge the mean of that cluster
-        // but also decrease the min. As such, near q=0, cdf and quantiles
+        // This sample would normally be added to the first cluster that already exists
+        // but there is special code in place to prevent that centroid from ever
+        // having weight of more than one
+        // As such, near q=0, cdf and quantiles
         // should reflect this single sample as a singleton
         digest.add(0);
         assertTrue(digest.centroidCount() > 0);
         Centroid first = digest.centroids().iterator().next();
-        assertTrue(first.count() > 1);
-        assertTrue(first.mean() > digest.getMin());
+        assertEquals(1, first.count());
+        assertEquals(first.mean(), digest.getMin(), 0.0);
         assertEquals(0.0, digest.getMin(), 0);
         assertEquals(0, digest.cdf(0 - 1e-9), 0);
         assertEquals(0.5 / digest.size(), digest.cdf(0), 1e-10);
@@ -320,13 +355,12 @@ public abstract class TDigestTest extends AbstractTest {
         assertEquals(0, digest.quantile(0.5 / digest.size()), 0);
         assertEquals(0, digest.quantile(1.0 / digest.size() - 1e-10), 0);
         assertEquals(0, digest.quantile(1.0 / digest.size()), 0);
-        assertEquals(2.0 / first.count() / 100, digest.quantile(1.01 / digest.size()), 5e-5);
-        assertEquals(first.mean(), digest.quantile(first.count() / 2.0 / digest.size()), 1e-5);
+        assertEquals(first.mean(), 0.0, 1e-5);
 
         digest.add(4);
         Centroid last = Lists.reverse(Lists.newArrayList(digest.centroids())).iterator().next();
-        assertTrue(last.count() > 1);
-        assertTrue(last.mean() < digest.getMax());
+        assertEquals(1.0, last.count(), 0.0);
+        assertEquals(4, last.mean(), 0);
         assertEquals(1.0, digest.cdf(digest.getMax() + 1e-9), 0);
         assertEquals(1 - 0.5 / digest.size(), digest.cdf(digest.getMax()), 0);
         assertEquals(1 - 1.0 / digest.size(), digest.cdf((digest.getMax() - 1e-9)), 1e-10);
@@ -335,40 +369,7 @@ public abstract class TDigestTest extends AbstractTest {
         assertEquals(4, digest.quantile(1 - 0.5 / digest.size()), 0);
         assertEquals(4, digest.quantile(1 - 1.0 / digest.size() + 1e-10), 0);
         assertEquals(4, digest.quantile(1 - 1.0 / digest.size()), 0);
-        double slope = 1.0 / (last.count() / 2.0 - 1) * (digest.getMax() - last.mean());
-        double x = 4 - digest.quantile(1 - 1.01 / digest.size());
-        assertEquals(slope * 0.01, x, 1e-10);
-        assertEquals(last.mean(), digest.quantile(1 - last.count() / 2.0 / digest.size()), 1e-10);
-    }
-
-    /**
-     * Verifies interpolation between a singleton and a larger centroid.
-     */
-    @Test
-    public void singleMultiRange() {
-        MergingDigest digest = new MergingDigest(10);
-        digest.setScaleFunction(ScaleFunction.K_0);
-        for (int i = 0; i < 100; i++) {
-            digest.add(1);
-            digest.add(2);
-            digest.add(3);
-        }
-        // this check is, of course true, but it also forces merging before we change scale
-        assertTrue(digest.centroidCount() < 300);
-        digest.setScaleFunction(ScaleFunction.K_2);
-        digest.add(0);
-        // we now have a digest with a singleton first, then a heavier centroid next
-        Iterator<Centroid> ix = digest.centroids().iterator();
-        Centroid first = ix.next();
-        Centroid second = ix.next();
-        assertEquals(1, first.count());
-        assertEquals(0, first.mean(), 0);
-        assertTrue(second.count() > 1);
-        assertEquals(1.0, second.mean(), 0);
-
-        assertEquals(0.5 / digest.size(), digest.cdf(0), 0);
-        assertEquals(1.0 / digest.size(), digest.cdf(1e-10), 1e-10);
-        assertEquals((1 + second.count() / 8.0) / digest.size(), digest.cdf(0.25), 1e-10);
+        assertEquals(last.mean(), 4, 0);
     }
 
     protected abstract TDigest fromBytes(ByteBuffer bytes);
@@ -516,21 +517,21 @@ public abstract class TDigestTest extends AbstractTest {
 
     @Test
     public void testMoreThan2BValues() {
-        final TDigest digest = factory().create();
-        Random gen = getRandom();
-        for (int i = 0; i < 1000; ++i) {
-            final double next = gen.nextDouble();
-            digest.add(next);
+        final TDigest digest = factory(100).create();
+        // carefully build a t-digest that is as if we added 3 uniform values from [0,1]
+        double n = 3e9;
+        double q0 = 0;
+        for (int i = 0; i < 200 && q0 < 1 - 1e-10; ++i) {
+            double k0 = digest.scale.k(q0, digest.compression(), n);
+            double q = digest.scale.q(k0 + 1, digest.compression(), n);
+            int m = (int) Math.max(1, n * (q - q0));
+            digest.add((q + q0) / 2, m);
+            q0 = q0 + m / n;
         }
-        for (int i = 0; i < 10; ++i) {
-            final double next = gen.nextDouble();
-            final int count = 1 << 28;
-            digest.add(next, count);
-        }
-        assertEquals(1000 + 10L * (1 << 28), digest.size());
+        digest.compress();
+        assertEquals(3_000_000_000L, digest.size());
         assertTrue(digest.size() > Integer.MAX_VALUE);
-        final double[] quantiles = new double[]{0, 0.1, 0.5, 0.9, 1, gen.nextDouble()};
-        Arrays.sort(quantiles);
+        final double[] quantiles = new double[]{0, 0.1, 0.5, 0.9, 1};
         double prev = Double.NEGATIVE_INFINITY;
         for (double q : quantiles) {
             final double v = digest.quantile(q);
@@ -544,7 +545,11 @@ public abstract class TDigestTest extends AbstractTest {
         final TDigest digest = factory().create();
         Random gen = getRandom();
         for (int i = 0; i < 10000; ++i) {
-            digest.add(gen.nextDouble(), 1 + gen.nextInt(10));
+            int w = 1 + gen.nextInt(10);
+            double x = gen.nextDouble();
+            for (int j = 0; j < w; j++) {
+                digest.add(x);
+            }
         }
         Centroid previous = null;
         for (Centroid centroid : digest.centroids()) {
@@ -921,25 +926,6 @@ public abstract class TDigestTest extends AbstractTest {
                     }
                 }
             }
-        }
-    }
-
-    @Test
-    public void testExtremeQuantiles() {
-        // t-digest shouldn't merge extreme nodes, but let's still test how it would
-        // answer to extreme quantiles in that case ('extreme' in the sense that the
-        // quantile is either before the first node or after the last one)
-        TDigest digest = factory().create();
-        digest.add(10, 3);
-        digest.add(20, 1);
-        digest.add(40, 5);
-        // this group tree is roughly equivalent to the following sorted array:
-        // [ ?, 10, ?, 20, ?, ?, 50, ?, ? ]
-        // and we expect it to compute approximate missing values:
-        // [ 5, 10, 15, 20, 30, 40, 50, 60, 70]
-        List<Double> values = Arrays.asList(5., 10., 15., 20., 30., 35., 40., 45., 50.);
-        for (double q : new double[]{1.5 / 9, 3.5 / 9, 6.5 / 9}) {
-            assertEquals(String.format("q=%.2f ", q), Dist.quantile(q, values), digest.quantile(q), 0.01);
         }
     }
 

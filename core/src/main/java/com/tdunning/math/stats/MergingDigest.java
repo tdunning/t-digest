@@ -376,7 +376,10 @@ public class MergingDigest extends AbstractTDigest {
                        double unmergedWeight, boolean runBackwards, double compression) {
         // when our incoming buffer fills up, we combine our existing centroids with the incoming data,
         // and then reduce the centroids by merging if possible
+        assert lastUsedCell <= 0 || weight[0] == 1;
+        assert lastUsedCell <= 0 || weight[lastUsedCell - 1] == 1;
         System.arraycopy(mean, 0, incomingMean, incomingCount, lastUsedCell);
+
         System.arraycopy(weight, 0, incomingWeight, incomingCount, lastUsedCell);
         incomingCount += lastUsedCell;
 
@@ -390,16 +393,18 @@ public class MergingDigest extends AbstractTDigest {
         if (incomingOrder == null) {
             incomingOrder = new int[incomingCount];
         }
-        Sort.sort(incomingOrder, incomingMean, incomingCount);
+        Sort.stableSort(incomingOrder, incomingMean, incomingCount);
+
+        totalWeight += unmergedWeight;
+
         // option to run backwards is to help investigate bias in errors
         if (runBackwards) {
             Sort.reverse(incomingOrder, 0, incomingCount);
         }
 
-        totalWeight += unmergedWeight;
 
+        // start by copying the least incoming value to the normal buffer
         lastUsedCell = 0;
-
         mean[lastUsedCell] = incomingMean[incomingOrder[0]];
         weight[lastUsedCell] = incomingWeight[incomingOrder[0]];
         double wSoFar = 0;
@@ -424,6 +429,10 @@ public class MergingDigest extends AbstractTDigest {
                 addThis = proposedWeight <= totalWeight * Math.min(scale.max(q0, normalizer), scale.max(q2, normalizer));
             } else {
                 addThis = projectedW <= wLimit;
+            }
+            if (i == 1 || i == incomingCount - 1) {
+                // force last centroid to never merge
+                addThis = false;
             }
 
             if (addThis) {
@@ -477,6 +486,8 @@ public class MergingDigest extends AbstractTDigest {
                 Collections.reverse(data);
             }
         }
+        assert weight[0] == 1;
+        assert weight[lastUsedCell - 1] == 1;
 
         if (totalWeight > 0) {
             min = Math.min(min, mean[0]);
