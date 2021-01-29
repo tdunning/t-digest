@@ -214,6 +214,8 @@ The t-digest algorithm has been ported to other languages:
  - Go: [github.com/spenczar/tdigest](https://github.com/spenczar/tdigest) [https://github.com/influxdata/tdigest](https://github.com/influxdata/tdigest)
  - JavaScript: [tdigest](https://github.com/welch/tdigest)
  - C++: [CPP TDigest](https://github.com/gpichot/cpp-tdigest), [FB's Folly Implementation (high performance)](https://github.com/facebook/folly/blob/master/folly/stats/TDigest.h)
+ - C++: [TDigest](https://github.com/apache/arrow/blob/master/cpp/src/arrow/util/tdigest.h
+) as part of [Apache Arrow](https://arrow.apache.org/)
  - Scala: need link!
  - C: [tdigestc (w/ bindings to Go, Java, Python, JS via wasm)](https://github.com/ajwerner/tdigestc)
  - Clojure: [t-digest for Clojure](https://github.com/henrygarner/t-digest)
