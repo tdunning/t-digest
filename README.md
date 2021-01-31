@@ -12,8 +12,8 @@ related measures like trimmed means.  The advantage of the t-digest over previou
 this purpose is that the _t_-digest handles data with full floating point resolution.  With small
 changes, the _t_-digest can handle values from any ordered set for which we can compute something akin to a mean.
 The accuracy of quantile estimates produced by t-digests can be orders of magnitude more accurate than
-those produced by previous digest algorithms in spite of the fact that t-digests are much more 
-compact when stored on disk.
+those produced by alternative digest algorithms in spite of the fact that t-digests are much more 
+compact, particularly when serialized.
 
 In summary, the particularly interesting characteristics of the t-digest are that it
 
@@ -29,16 +29,27 @@ In summary, the particularly interesting characteristics of the t-digest are tha
 
 Recent News
 -----------
+There is a [new article (open access!)](https://www.sciencedirect.com/science/article/pii/S2665963820300403) in Software Impacts on 
+the t-digest, focussed particularly on this reference implementation.
+ 
+Lots has happened in t-digest lately. Most recently, with the help of people
+posting their observations of subtle misbehavior over the last 2 years, I figured
+out that the sort in the `MergingDigest` really needed to be stable. This helps
+particularly with repeated values. Stabilizing the sort appears to have no 
+negative impact on accuracy nor significant change in speed, but testing is 
+continuing. As part of introducing this change to the sort, I made the core 
+implementation pickier about enforcing the size invariants which forced updates
+to a number of tests.
 
-Lots has happened in t-digest lately. The basic gist of all the
-changes are that the core algorithms have been made much more rigorous
-and the associated papers have been updated to match the reality of
-the most advanced implementations. The general areas of improvement
-include substantial speedups, a new framework for dealing with scale
-functions, real proofs of size bounds and invariants for all current
-scale functions, much improved interpolation algorithms, better
-accuracy testing and splitting the entire distribution into parts for
-the core algorithms, quality testing, benchmarking and documentation.
+The basic gist of other recent changes are that the core algorithms have been 
+made much more rigorous and the associated papers in the docs directory have 
+been updated to match the reality of the most advanced implementations. 
+The general areas of improvement include substantial speedups, a new 
+framework for dealing with scale functions, real proofs of size bounds 
+and invariants for all current scale functions, much improved interpolation 
+algorithms, better accuracy testing and splitting the entire distribution 
+into parts for the core algorithms, quality testing, benchmarking and 
+documentation.
 
 I am working on a 4.0 release that incorporates all of these
 improvements. The remaining punch list for the release is roughly:
@@ -57,7 +68,12 @@ for submission to the Journal of Statistical Software. Potential
 co-authors who
 could accelerate these submissions are encouraged to speak up! In 
 the mean time, an 
-[archived pre-print of the paper is available](https://arxiv.org/abs/1902.04023). 
+[archived pre-print of the main paper is available](https://arxiv.org/abs/1902.04023).
+
+In research areas, there are some ideas being thrown around about how to bring
+strict guarantees similar to the GK or KLL algorithms to the t-digest. There is
+some promise here, but nothing real yet. If you are interested in a research 
+project, this could be an interesting one. 
  
 ### Scale Functions
 
@@ -80,6 +96,12 @@ It also means that insertion into a `MergingDigest` is faster than
 before since we have been able to eliminate all fancy functions like 
 sqrt, log or sin from the critical path (although sqrt _is_ faster 
 than you might think).
+
+There are also suggestions that asymmetric scale functions would be useful.
+These would allow good single-tailed accuracy with (slightly) smaller digests. 
+A paper has been submitted on this by the developer who came up with the idea
+and feedback from users about the utility of such scale functions would be 
+welcome. 
  
 ### Better Interpolation
 
@@ -103,7 +125,7 @@ of the compression parameter (delta) while we are accumulating a
 t-digest and a lower value when we are about to store or display a
 t-digest.  This two-level merging has a small (negative) effect on
 speed, but a substantial (positive) effect on accuracy because
-clusters are ordered more strongly. This better ordering of clusters
+clusters are ordered more strictly. This better ordering of clusters
 means that the effects of the improved interpolation are much easier
 to observe.
 
@@ -190,6 +212,8 @@ The normal test suite produces a number of diagnostics that describe
 the scaling and accuracy characteristics of t-digests.  In order to
 produce nice visualizations of these properties, you need to have more
 samples.  To get this enhanced view, run the tests in the `quality` module
+by running the full test suite once or, subsequently, by running just the 
+tests in the quality sub-directory. 
 
     cd quality; mvn test
 
