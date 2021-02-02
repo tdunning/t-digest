@@ -207,7 +207,6 @@ public abstract class TDigestTest extends AbstractTest {
     public void testQuantile() {
         double compression = 100;
         double[] samples = new double[]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 4.0, 5.0, 6.0, 7.0};
-        System.out.printf("actual,hist1,hist2\n");
         for (int i = 1; i < 10000; i++) {
             TDigest hist1 = new MergingDigest(compression);
             List<Double> data = new ArrayList<>();
@@ -224,8 +223,9 @@ public abstract class TDigestTest extends AbstractTest {
             Collections.sort(data);
             hist2.compress();
             double x1 = hist1.quantile(0.5);
-            double h2 = hist2.quantile(0.5);
-            System.out.printf("%.3f,%.3f,%.3f\n", Dist.quantile(0.5, data), x1, h2);
+            double x2 = hist2.quantile(0.5);
+            assertEquals(Dist.quantile(0.5, data), x1, 0.2);
+            assertEquals(x1, x2, 0.01);
         }
     }
 
