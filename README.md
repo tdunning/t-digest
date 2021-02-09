@@ -138,7 +138,7 @@ The t-digest repository is now split into different functional
 areas. This is important because it simplifies the code used in
 production by extracting the (slow) code that generates data for
 accuracy testing, but also because it lets us avoid any dependencies
-on GPL code (notable the jmh benchmarking tools) in the released
+on GPL code (notably the jmh benchmarking tools) in the released
 artifacts.
  
 The major areas are
