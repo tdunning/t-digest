@@ -635,6 +635,43 @@ public abstract class TDigestTest extends AbstractTest {
     }
 
     @Test
+    public void testMidPointRule() {
+        TDigest dist = factory(200).create();
+        dist.add(1);
+        dist.add(2);
+
+        double scale = 0;
+        for (int i = 0; i < 1000; i++) {
+            dist.add(1);
+            dist.add(2);
+            if (i % 8 == 0) {
+                String message = String.format("i = %d", i);
+                assertEquals(message, 0, dist.cdf(1 - 1e-9), 0);
+                assertEquals(message, 0.25, dist.cdf(1), 0.01 * scale);
+                assertEquals(message, 0.5, dist.cdf(1 + 1e-9), 0.03 * scale);
+                assertEquals(message, 0.5, dist.cdf(2 - 1e-9), 0.03 * scale);
+                assertEquals(message, 0.75, dist.cdf(2), 0.01 * scale);
+                assertEquals(message, 1, dist.cdf(2 + 1e-9), 0);
+
+                assertEquals(1, dist.quantile(0), 0);
+                assertEquals(1, dist.quantile(0.1), 0);
+                assertEquals(1, dist.quantile(0.2), 0);
+                assertEquals(1, dist.quantile(0.4), 0);
+                assertEquals(2, dist.quantile(0.6), 0);
+                assertEquals(2, dist.quantile(0.7), 0);
+                assertEquals(2, dist.quantile(0.8), 0);
+                assertEquals(2, dist.quantile(0.9), 0);
+                assertEquals(2, dist.quantile(1), 0);
+            }
+            if (i >= 70) {
+                // when centroids start doubling up, accuracy is no longer perfect
+                scale = 1;
+            }
+        }
+
+    }
+
+    @Test
     public void testRepeatedValues() {
         final Random gen = getRandom();
 

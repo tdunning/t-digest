@@ -62,12 +62,11 @@ improvements. The remaining punch list for the release is roughly:
 * consider [issue #87](https://github.com/tdunning/t-digest/issues/87)
 * review all outstanding issues (add unit tests if necessary or close if not)
 
-I have submitted the main paper describing t-digest to RSS Series B 
-and will be preparing a more implementation-oriented paper intended 
-for submission to the Journal of Statistical Software. Potential 
-co-authors who
-could accelerate these submissions are encouraged to speak up! In 
-the mean time, an 
+Publication work is now centered around comparisons with the KLL digest 
+(spoiler, the t-digest is much smaller and possibly 2 orders of
+magnitude more accurate than KLL). I would still like to see potential 
+co-authors who could accelerate these submissions are encouraged to 
+speak up! In the mean time, an 
 [archived pre-print of the main paper is available](https://arxiv.org/abs/1902.04023).
 
 In research areas, there are some ideas being thrown around about how to bring
@@ -188,7 +187,7 @@ Compile and Test
 
 You have to have Java 1.8 to compile and run this code.  You will also
 need maven (3+ preferred) to compile and test this software.  In order
-to build the images that go into the theory paper, you will need R.
+to build the figures that go into the theory paper, you will need R.
 In order to format the paper, you will need latex.  Pre-built pdf
 versions of all figures and papers are provided so you won't need latex
 if you don't need to make changes to these documents.
@@ -200,7 +199,7 @@ code with the following:
 
 Once you have these installed, use this to build and test the software:
 
-    mvn test
+    cd t-digest; mvn test
 
 Most of the very slow tests are in the `quality` module so if you just run
 the tests in `core` module, you can save considerable time.
@@ -210,7 +209,7 @@ Testing Accuracy and Comparing to Q-digest
 
 The normal test suite produces a number of diagnostics that describe
 the scaling and accuracy characteristics of t-digests.  In order to
-produce nice visualizations of these properties, you need to have more
+produce nice visualizations of these properties, you need to have many more
 samples.  To get this enhanced view, run the tests in the `quality` module
 by running the full test suite once or, subsequently, by running just the 
 tests in the quality sub-directory. 
