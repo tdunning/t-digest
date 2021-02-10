@@ -18,18 +18,19 @@ The data and summarizing plots can be produced in two steps.
 ### Generate data
 
 In [TDigestTests](../../core/src/test/java/com/tdunning/math/stats/TDigestTest.java), run `writeUniformResultsWithCompression` with the `ALVTreeDigest` implementation, i.e., run
-`AVLTreeDigestTest.writeUniformResultsWithCompression`.
+`AVLTreeDigestTest.writeUniformResultsWithCompression`. Similarly for `writeExponentialResultsWithCompression`.
 
-In [MergingDigestTest](../../core/src/test/java/com/tdunning/math/stats/MergingDigestTest.java), run `writeAsymmetricScaleFunctionResults`.
-
+In [MergingDigestTest](../../core/src/test/java/com/tdunning/math/stats/MergingDigestTest.java), run
+ `writeUniformAsymmetricScaleFunctionResults` and `writeExponentialAsymmetricScaleFunctionResults`.
+ 
 These will write data files.
-
 
 ### Generate plots
 
-Now run the script [generate_plots.py](./generate_plots.py).
+Now run the script [generate_plots.py](./generate_plots.py). For convenience, one can run `make install` (from this directory), which handles the requirements and runs the script.
 
 This script expects to be present the results of running the tests as above.
 It will write plots (as PNG files).
 The figures so generated are already present in this repository, see [here](../asymmetric/plots/merging/t_digest_figs_K_0q.png)
 and [here](../asymmetric/plots/tree/t_digest_figs_K_0q.png) for example.
+
