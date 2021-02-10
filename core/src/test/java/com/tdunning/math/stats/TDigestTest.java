@@ -188,7 +188,7 @@ public abstract class TDigestTest extends AbstractTest {
         };
 
         TDigest digest = factory(50).create();
-        for (double x :data) {
+        for (double x : data) {
             digest.add(x);
         }
 

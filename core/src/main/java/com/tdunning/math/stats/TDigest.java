@@ -78,7 +78,7 @@ public abstract class TDigest implements Serializable {
      *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
      * @return the TDigest
      */
-    @SuppressWarnings({"unused", "WeakerAccess", "SameParameterValue"})
+    @SuppressWarnings({"WeakerAccess", "SameParameterValue"})
     public static TDigest createDigest(double compression) {
         return createMergingDigest(compression);
     }
@@ -118,7 +118,9 @@ public abstract class TDigest implements Serializable {
     public abstract long size();
 
     /**
-     * Returns the fraction of all points added which are &le; x.
+     * Returns the fraction of all points added which are &le; x. Points
+     * that are exactly equal get half credit (i.e. we use the mid-point
+     * rule)
      *
      * @param x The cutoff for the cdf.
      * @return The fraction of all data which is less or equal to x.
@@ -126,11 +128,11 @@ public abstract class TDigest implements Serializable {
     public abstract double cdf(double x);
 
     /**
-     * Returns an estimate of the cutoff such that a specified fraction of the data
+     * Returns an estimate of a cutoff such that a specified fraction of the data
      * added to this TDigest would be less than or equal to the cutoff.
      *
      * @param q The desired fraction
-     * @return The value x such that cdf(x) == q
+     * @return The smallest value x such that cdf(x) >= q
      */
     public abstract double quantile(double q);
 
