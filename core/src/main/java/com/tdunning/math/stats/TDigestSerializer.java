@@ -1,7 +1,9 @@
 package com.tdunning.math.stats;
 
-public interface TDigestSerializer<T extends TDigest, O extends Object> {
+import java.util.Properties;
 
+public interface TDigestSerializer<T extends TDigest, O extends Object> {
+    
     /**
      * Serializes a TDigest object
      * 
@@ -19,5 +21,12 @@ public interface TDigestSerializer<T extends TDigest, O extends Object> {
      * @throws TDigestSerializerException
      */
     public T deserialize(O object) throws TDigestSerializerException;
+    
+    /**
+     * Returns properties defined in serialization.properties file
+     * 
+     * @return
+     */
+    public Properties getProperties();
 
 }

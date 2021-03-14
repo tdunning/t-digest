@@ -5,8 +5,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.Properties;
 
-public class TDigestDefaultSerializer implements TDigestSerializer<TDigest, byte[]> {
+public class TDigestDefaultSerializer extends AbstractTDigestSerializer<TDigest, byte[]> {
+    
+    public TDigestDefaultSerializer(Properties properties) {
+        super(properties);
+    }
 
     @Override
     public byte[] serialize(TDigest tDigest) throws TDigestSerializerException {
