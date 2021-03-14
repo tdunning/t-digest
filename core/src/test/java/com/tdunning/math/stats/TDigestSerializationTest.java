@@ -53,25 +53,17 @@ public class TDigestSerializationTest {
     }
     
 
+    @SuppressWarnings("unchecked")
     private <T extends TDigest> void assertSerializesAndDeserializes(T tdigest) throws TDigestSerializerException {
-        assertNotNull(deserialize(serialize(tdigest)));
+        assertNotNull(tDigestSerializer.deserialize(tDigestSerializer.serialize(tdigest)));
 
         final Random gen = new Random();
         for (int i = 0; i < 100000; i++) {
             tdigest.add(gen.nextDouble());
         }
-        T roundTrip = deserialize(serialize(tdigest));
+        T roundTrip = (T) tDigestSerializer.deserialize(tDigestSerializer.serialize(tdigest));
 
         assertTDigestEquals(tdigest, roundTrip);
-    }
-
-    private static <T extends TDigest> byte[] serialize(T obj) throws TDigestSerializerException {
-        return (byte[]) tDigestSerializer.serialize(obj);
-    }
-
-    @SuppressWarnings("unchecked")
-	private static <T extends TDigest> T deserialize(byte[] objectData) throws TDigestSerializerException {
-        return (T) tDigestSerializer.deserialize(objectData);
     }
 
     private void assertTDigestEquals(TDigest t1, TDigest t2) {
