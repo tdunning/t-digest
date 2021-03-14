@@ -167,6 +167,7 @@ public class ScaleFunctionTests {
                 }
             }
         }
+        out.close();
     }
 
     @Test
