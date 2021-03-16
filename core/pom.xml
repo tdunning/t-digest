@@ -62,7 +62,6 @@
         </developer>
     </developers>
     <properties>
-        <java.version>1.7</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- pass -DrunSlowTests=true on the command line to override -->
         <runSlowTests>false</runSlowTests>

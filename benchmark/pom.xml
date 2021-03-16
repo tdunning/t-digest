@@ -11,10 +11,6 @@
     </parent>
     <artifactId>t-digest-benchmark</artifactId>
 
-    <properties>
-        <java.version>1.7</java.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.tdunning</groupId>
