@@ -21,8 +21,8 @@ Basic Accuracy
 
 Accuracy versus Size
 -----
-```python
-for each algorithm:
+```
+for algorithm in algorithms:
   for compression in [10,20,50,100,200,500,1000]:
     for distribution in ["gamma", "flip-gamma", "uniform"]:
       add data
@@ -31,7 +31,7 @@ for each algorithm:
 ```
 Bin Distribution
 -----
-```python
+```
 for each algorithm:
   compression = 100
   for distribution in ["gamma", "uniform"]:
@@ -40,6 +40,9 @@ for each algorithm:
         for sample in bin:
            record algorithm, compression, distribution, q_bin, x
 ```
+
+Comparison to KLL Algorithms
+==========
 
 General Considerations
 =======

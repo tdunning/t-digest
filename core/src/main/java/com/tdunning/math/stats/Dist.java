@@ -25,23 +25,31 @@ import java.util.List;
  */
 public class Dist {
     public static double cdf(final double x, double[] data) {
+        return cdf(x, data, 0.5);
+    }
+
+    public static double cdf(final double x, double[] data, double w) {
         int n1 = 0;
         int n2 = 0;
         for (Double v : data) {
             n1 += (v < x) ? 1 : 0;
             n2 += (v == x) ? 1 : 0;
         }
-        return (n1 + n2 / 2.0) / data.length;
+        return (n1 + w * n2) / data.length;
     }
 
     public static double cdf(final double x, Collection<Double> data) {
+        return cdf(x, data, 0.5);
+    }
+
+    public static double cdf(final double x, Collection<Double> data, double w) {
         int n1 = 0;
         int n2 = 0;
         for (Double v : data) {
             n1 += (v < x) ? 1 : 0;
             n2 += (v == x) ? 1 : 0;
         }
-        return (n1 + n2 / 2.0) / data.size();
+        return (n1 + w * n2) / data.size();
     }
 
     public static double quantile(final double q, double[] data) {
