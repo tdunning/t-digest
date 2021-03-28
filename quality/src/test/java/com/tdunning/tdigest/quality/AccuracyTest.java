@@ -42,7 +42,8 @@ public class AccuracyTest {
                     public String call() {
                         StringWriter s = new StringWriter();
                         PrintWriter out = new PrintWriter(s);
-                        System.out.printf("Starting %d\n", currentK);
+                        System.out.printf("+%d ", currentK);
+                        System.out.flush();
 
                         for (int parts : new int[]{2, 5, 10, 20, 50, 100}) {
                             ArrayList<Double> data = Lists.newArrayList();
@@ -150,7 +151,8 @@ public class AccuracyTest {
                             }
                             out.flush();
                         }
-                        System.out.printf("    Finishing %d\n", currentK + 1);
+                        System.out.printf("-%d ", currentK + 1);
+                        System.out.flush();
                         out.close();
                         return s.toString();
                     }
@@ -165,6 +167,7 @@ public class AccuracyTest {
             } catch (Throwable e) {
                 fail(e.getMessage());
             } finally {
+                System.out.printf("\n");
                 executor.shutdownNow();
                 executor.awaitTermination(10, TimeUnit.SECONDS);
             }

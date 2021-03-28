@@ -71,7 +71,7 @@ public class CompareKllTest {
                 count++;
                 p *= decay;
             }
-            while (count > resultCounts.length) {
+            while (count >= resultCounts.length) {
                 resultCounts = Arrays.copyOf(resultCounts, 2 * resultCounts.length);
             }
             resultCounts[(int) count]++;
