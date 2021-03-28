@@ -167,4 +167,37 @@ public class MergingDigestTest extends TDigestTest {
         }
         assertEquals(1, last);
     }
+
+    /**
+     * Verify centroid sizes.
+     */
+    @Test
+    public void testFill() {
+        MergingDigest x = new MergingDigest(300);
+        Random gen = new Random();
+        ScaleFunction scale = x.getScaleFunction();
+        double compression = x.compression();
+        for (int i = 0; i < 1000000; i++) {
+            x.add(gen.nextGaussian());
+        }
+        double q0 = 0;
+        int i = 0;
+        System.out.printf("i, q, mean, count, dk\n");
+        for (Centroid centroid : x.centroids()) {
+            double q = q0 + centroid.count() / 2.0 / x.size();
+            double q1 = q0 + (double) centroid.count() / x.size();
+            double dk = scale.k(q1, compression, x.size()) - scale.k(q0, compression, x.size());
+            if (centroid.count() > 1) {
+                assertTrue(String.format("K-size for centroid %d at %.3f is %.3f", i, centroid.mean(), dk), dk <= 1);
+            } else {
+                dk = 1;
+            }
+            System.out.printf("%d,%.7f,%.7f,%d,%.7f\n", i, q, centroid.mean(), centroid.count(), dk);
+            if (Double.isNaN(dk)) {
+                System.out.printf(">>>> %.8f, %.8f\n", q0, q1);
+            }
+            q0 = q1;
+            i++;
+        }
+    }
 }

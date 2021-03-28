@@ -132,7 +132,7 @@ public abstract class TDigest implements Serializable {
      * added to this TDigest would be less than or equal to the cutoff.
      *
      * @param q The desired fraction
-     * @return The smallest value x such that cdf(x) >= q
+     * @return The smallest value x such that cdf(x) &ge; q
      */
     public abstract double quantile(double q);
 

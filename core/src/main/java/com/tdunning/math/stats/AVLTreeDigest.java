@@ -24,6 +24,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
+import static com.tdunning.math.stats.IntAVLTree.NIL;
+
 public class AVLTreeDigest extends AbstractTDigest {
     final Random gen = new Random();
     private final double compression;
@@ -91,18 +93,18 @@ public class AVLTreeDigest extends AbstractTDigest {
             max = x;
         }
         int start = summary.floor(x);
-        if (start == IntAVLTree.NIL) {
+        if (start == NIL) {
             start = summary.first();
         }
 
-        if (start == IntAVLTree.NIL) { // empty summary
+        if (start == NIL) { // empty summary
             assert summary.size() == 0;
             summary.add(x, w, data);
             count = w;
         } else {
             double minDistance = Double.MAX_VALUE;
-            int lastNeighbor = IntAVLTree.NIL;
-            for (int neighbor = start; neighbor != IntAVLTree.NIL; neighbor = summary.next(neighbor)) {
+            int lastNeighbor = NIL;
+            for (int neighbor = start; neighbor != NIL; neighbor = summary.next(neighbor)) {
                 double z = Math.abs(summary.mean(neighbor) - x);
                 if (z < minDistance) {
                     start = neighbor;
@@ -114,7 +116,7 @@ public class AVLTreeDigest extends AbstractTDigest {
                 }
             }
 
-            int closest = IntAVLTree.NIL;
+            int closest = NIL;
             double n = 0;
             for (int neighbor = start; neighbor != lastNeighbor; neighbor = summary.next(neighbor)) {
                 assert minDistance == Math.abs(summary.mean(neighbor) - x);
@@ -132,7 +134,7 @@ public class AVLTreeDigest extends AbstractTDigest {
                 }
             }
 
-            if (closest == IntAVLTree.NIL) {
+            if (closest == NIL) {
                 summary.add(x, w, data);
             } else {
                 // if the nearest point was not unique, then we may not be modifying the first copy
@@ -174,9 +176,9 @@ public class AVLTreeDigest extends AbstractTDigest {
 
         int w1 = 0;
         double k1;
-        while (node != IntAVLTree.NIL) {
+        while (node != NIL) {
             int after = summary.next(node);
-            while (after != IntAVLTree.NIL) {
+            while (after != NIL) {
                 w1 = summary.count(after);
                 k1 = count * scale.max((n1 + w1) / count, compression, count);
                 if (w0 + w1 > Math.min(k0, k1)) {
@@ -198,7 +200,7 @@ public class AVLTreeDigest extends AbstractTDigest {
                 }
             }
             node = after;
-            if (node != IntAVLTree.NIL) {
+            if (node != NIL) {
                 n0 = n1;
                 k0 = count * scale.max(n0 / count, compression, count);
                 w0 = w1;
@@ -235,15 +237,30 @@ public class AVLTreeDigest extends AbstractTDigest {
             if (x < min) {
                 return 0;
             } else if (x == min) {
-                return 0.5 / size();
+                // we have one or more centroids == x, treat them as one
+                // dw will accumulate the weight of all of the centroids at x
+                double dw = 0;
+                for (Centroid value : values) {
+                    if (value.mean() != x) {
+                        break;
+                    }
+                    dw += value.count();
+                }
+                return dw / 2.0 / size();
             }
             assert x > min;
 
             if (x > max) {
                 return 1;
             } else if (x == max) {
+                int ix = values.last();
+                double dw = 0;
+                while (ix != NIL && values.mean(ix) == x) {
+                    dw += values.count(ix);
+                    ix = values.prev(ix);
+                }
                 long n = size();
-                return (n - 0.5) / n;
+                return (n - dw / 2.0) / n;
             }
             assert x < max;
 
