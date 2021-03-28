@@ -199,8 +199,6 @@ public class SmallCountInterpolationTest {
         // for interpolating from sample domain to quantiles or reverse
         double[] xCuts = {0, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9};
 
-
-
         // we write out two files. One is a summary of how things work, the other has the
         // coefficients for the approximations themselves. This coefficients file gets moved
         // into the source code itself when we are happy with it to be read on startup
@@ -278,9 +276,10 @@ public class SmallCountInterpolationTest {
                     double revError = piecewiseEvaluate(xCuts, rx, x1, r1);
                     assertEquals(String.format("Excess error w1=%d, w2=%d", w1, w2), 0, absError, 0.01);
                     assertEquals(String.format("Excess reverse error w1=%d, w2=%d", w1, w2), 0, revError, 0.01);
-                    System.out.printf("%d, %d, error = %.5f, gain = %.5f, ratio = %.1f, rev = %.5f\n",
-                            w1, w2, absError, gain, gain / absError, revError);
-
+                    if (System.getProperty("verbose") != null) {
+                        System.out.printf("%d, %d, error = %.5f, gain = %.5f, ratio = %.1f, rev = %.5f\n",
+                                w1, w2, absError, gain, gain / absError, revError);
+                    }
                 }
             }
         }
