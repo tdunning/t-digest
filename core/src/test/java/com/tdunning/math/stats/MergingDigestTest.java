@@ -25,13 +25,11 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 //to freeze the tests with a particular seed, put the seed on the next line
 //@Seed("84527677CF03B566:A6FF596BDDB2D59D")
@@ -198,6 +196,42 @@ public class MergingDigestTest extends TDigestTest {
             }
             q0 = q1;
             i++;
+        }
+    }
+
+    /**
+     * Test with adversarial inputs.
+     */
+    @Test
+    public void testAdversarial() throws FileNotFoundException {
+        int kilo = 1000;
+        Random gen = new Random();
+        double maxE = Math.log(10) * 308;
+        try (PrintWriter out = new PrintWriter("adversarial.csv")) {
+            out.printf("k,n,E,q,x0,x1,q0,q1\n");
+            for (int N : new int[]{100 * kilo, 1000 * kilo}) {
+                System.out.printf("%d\n", N);
+                double[] data = new double[N];
+                for (double E : new double[]{10, 100, 300, 700, maxE}) {
+                    TDigest digest = new MergingDigest(500);
+                    for (int i = 0; i < N; i++) {
+                        double u = gen.nextDouble();
+                        data[i] = (gen.nextDouble() < 0.01 ? -1 : 1) * Math.exp((2 * u - 1) * E);
+                        digest.add(data[i]);
+                    }
+                    Arrays.sort(data);
+
+                    for (int k = 0; k < 10; k++) {
+                        for (double q : new double[]{0, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 0.1, 0.5}) {
+                            double x0 = Dist.quantile(q, data);
+                            double x1 = digest.quantile(q);
+                            double q0 = Dist.cdf(x0, data);
+                            double q1 = Dist.cdf(x1, data);
+                            out.printf("%d,%d,%.0f,%.6f,%.6g,%.6g,%.6f,%.6f\n", k, N, E, q, x0, x1, q0, q1);
+                        }
+                    }
+                }
+            }
         }
     }
 }

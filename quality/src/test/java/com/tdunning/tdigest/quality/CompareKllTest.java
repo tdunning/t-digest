@@ -1,7 +1,6 @@
 package com.tdunning.tdigest.quality;
 
 import com.tdunning.math.stats.Dist;
-import com.tdunning.math.stats.InterpolatingDigest;
 import com.tdunning.math.stats.MergingDigest;
 import com.tdunning.math.stats.ScaleFunction;
 import org.apache.commons.math3.distribution.NormalDistribution;
@@ -12,7 +11,6 @@ import org.junit.Test;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -147,8 +145,8 @@ public class CompareKllTest {
      *
      * The `kll-accuracy.csv` data file contains a table with relative and absolute errors. These are
      * computed for different algorithms, relative error KLL, absolute error KLL,
-     * MergingDigest with K_2, MergingDigest with K_3 and InterpolatingDigest with K_3 (coded as `req`, `kll`,
-     * `t2`, `t3` or `i3`), values of size parameter k, number of samples (dithered), number of samples (nominal)
+     * MergingDigest with K_2, MergingDigest with K_3 with K_3 (coded as `req`, `kll`,
+     * `t2`, or `t3`), values of size parameter k, number of samples (dithered), number of samples (nominal)
      * quantile of interest, errors both absolute and relative.
      *
      * The dithering of the number of samples is done to prevent an algorithm from "cheating" if a desired quantile
@@ -186,8 +184,6 @@ public class CompareKllTest {
                             t2.setScaleFunction(ScaleFunction.K_2);
                             MergingDigest t3 = new MergingDigest(tdSizes[kx]);
                             t3.setScaleFunction(ScaleFunction.K_3);
-                            InterpolatingDigest ix = new InterpolatingDigest(tdSizes[kx]);
-                            ix.setScaleFunction(ScaleFunction.K_2);
 
                             double[] data = new double[n];
                             RepetitiveSampler s = new RepetitiveSampler();
@@ -198,7 +194,6 @@ public class CompareKllTest {
                                 kll.update((float) x);
                                 t2.add(x);
                                 t3.add(x);
-                                ix.add(x);
                             }
                             Arrays.sort(data);
 
@@ -207,7 +202,6 @@ public class CompareKllTest {
                             sizes.printf("%d,kll,%s,%d,%d,%d,%d,%d\n", i, gen, kllSizes[kx], n, n0, kll.getNumRetained(), kll.getSerializedSizeBytes());
                             sizes.printf("%d,t2,%s,%d,%d,%d,%d,%d\n", i, gen, tdSizes[kx], n, n0, t2.centroidCount(), t2.smallByteSize());
                             sizes.printf("%d,t3,%s,%d,%d,%d,%d,%d\n", i, gen, tdSizes[kx], n, n0, t3.centroidCount(), t3.smallByteSize());
-                            sizes.printf("%d,i2,%s,%d,%d,%d,%d,%d\n", i, gen, tdSizes[kx], n, n0, ix.centroidCount(), ix.smallByteSize());
                             for (double q : new double[]{1e-6, 1e-5, 1e-4, 0.001, 0.01, 0.1, 0.5}) {
                                 double ref = Dist.quantile(q, data);
 
@@ -230,11 +224,6 @@ public class CompareKllTest {
                                 tolerance = Math.max(1e-7, Math.min(x4, ref));
                                 accuracy.printf("%d,t3,%s,%d,%d,%d,%.6f,%.5f,%.5f,%.5f,%.5f\n",
                                         i, gen, tdSizes[kx], n, n0, q, x4, ref, Math.abs(x4 - ref), Math.abs(x4 - ref) / tolerance);
-
-                                double x5 = ix.quantile(q);
-                                tolerance = Math.max(1e-7, Math.min(x5, ref));
-                                accuracy.printf("%d,i2,%s,%d,%d,%d,%.6f,%.5f,%.5f,%.5f,%.5f\n",
-                                        i, gen, tdSizes[kx], n, n0, q, x5, ref, Math.abs(x5 - ref), Math.abs(x5 - ref) / tolerance);
                             }
                         }
 
