@@ -11,7 +11,10 @@ import org.junit.Test;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 /**
@@ -50,7 +53,7 @@ public class CompareKllTest {
         double count; // currently returned value
 
         int[] resultCounts;
-        long  samples;
+        long samples;
 
         public RepetitiveSampler() {
             this(0.001, 0.98);
@@ -92,7 +95,7 @@ public class CompareKllTest {
                 }
                 u -= resultCounts[i];
             }
-            int i = resultCounts.length-1;
+            int i = resultCounts.length - 1;
             while (i >= 0 && resultCounts[i] == 0) {
                 i--;
             }
@@ -142,20 +145,20 @@ public class CompareKllTest {
     /**
      * Creates data files for visualizing errors for a variety of conditions for both
      * t-digest and for the relative and absolute error versions of the KLL algorithm.
-     *
+     * <p>
      * The `kll-accuracy.csv` data file contains a table with relative and absolute errors. These are
      * computed for different algorithms, relative error KLL, absolute error KLL,
      * MergingDigest with K_2, MergingDigest with K_3 with K_3 (coded as `req`, `kll`,
      * `t2`, or `t3`), values of size parameter k, number of samples (dithered), number of samples (nominal)
      * quantile of interest, errors both absolute and relative.
-     *
+     * <p>
      * The dithering of the number of samples is done to prevent an algorithm from "cheating" if a desired quantile
      * falls on exactly the same boundary every time as it would, for instance if q=1e-2 and n=100,000. By varying
      * n over a few percent these unrealistic results are washed away.
-     *
+     * <p>
      * A second data file called `kll-sizes.csv` contains the number of retained samples (or centroids) and estimated
      * size in bytes for digests under the same conditions.
-     *
+     * <p>
      * These results can be visualized by using the `draw.kll` function from `quality/accuracy.r` which will write
      * a file `kll-comparison.pdf`
      *
@@ -231,6 +234,85 @@ public class CompareKllTest {
                 }
             }
 
+        }
+    }
+
+    /**
+     * Generates 1, 2, 5, 10, 20, 50 sorts of counts.
+     */
+    private class Tick {
+        int scale;
+        int tick;
+
+        public Tick(int n) {
+            scale = (int) Math.pow(10, Math.floor(Math.log10(n)));
+            tick = 1;
+            while (value() < n) {
+                increment();
+            }
+            if (value() > n) {
+                decrement();
+            }
+        }
+
+        void increment() {
+            tick = (int) (2.5 * tick);
+            if (tick > 10) {
+                scale *= 10;
+                tick = 1;
+            }
+        }
+
+        void decrement() {
+            tick = tick / 2;
+            if (tick == 0) {
+                tick = 1;
+                scale /= 10;
+            }
+        }
+
+        double value() {
+            return tick * scale;
+        }
+    }
+
+    /**
+     * Simple accuracy graph. This test will produce a file "median-error.csv".
+     *
+     * Process with this R snippet:
+     * <pre>
+     * x = read.csv("quality/median-error.csv")
+     * > boxplot(error*1000000 ~ n0, x %>% filter(q==0.001), ylab="error (ppm)", las=2)
+     * </pre>
+     * To produce a plot of errors with respect to number of samples for the 0.001 quantile.
+     *
+     * @throws FileNotFoundException If the output file can't be created (should never happen)
+     */
+    @Test
+    public void testMedianErrorVersusScale() throws FileNotFoundException {
+        Random gen = new Random();
+
+        try (PrintWriter out = new PrintWriter("median-error.csv")) {
+            out.println("n0,n,q,t,exact,error");
+            for (int i = 0; i < 50; i++) {
+                MergingDigest digest = new MergingDigest(200);
+                List<Double> data = new ArrayList<>();
+                for (Tick n = new Tick(1); n.value() <= 1000000; n.increment()) {
+                    double nDithered = n.value() * (1 + gen.nextGaussian() * 0.2);
+                    while (data.size() < nDithered) {
+                        double x = gen.nextDouble();
+                        data.add(x);
+                        digest.add(x);
+                    }
+                    Collections.sort(data);
+                    for (double q : new double[]{0.0001, 0.001, 0.01, 0.1, 0.5}) {
+                        out.printf("%.0f,%d,%.5f,%.5f,%.5f,%.06f\n", n.value(), data.size(), q, Dist.quantile(0.5, data), digest.quantile(q), Dist.quantile(q, data) - digest.quantile(q));
+                    }
+                }
+                if (i % 10 == 0) {
+                    System.out.printf("%d\n", i);
+                }
+            }
         }
     }
 }
