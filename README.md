@@ -241,6 +241,7 @@ The t-digest algorithm has been ported to other languages:
 ) as part of [Apache Arrow](https://arrow.apache.org/)
  - Scala: need link!
  - C: [tdigestc (w/ bindings to Go, Java, Python, JS via wasm)](https://github.com/ajwerner/tdigestc)
+ - C: [t-digest-c](https://github.com/RedisBloom/t-digest-c) as part of [RedisBloom](https://redisbloom.io/)
  - Clojure: [t-digest for Clojure](https://github.com/henrygarner/t-digest)
  - C#: [t-digest-csharp (.NET Core)](https://github.com/Cyral/t-digest-csharp)
  - Kotlin multiplatform: [tdigest_kotlin_multiplatform](https://github.com/beyondeye/tdigest_kotlin_multiplatform)
