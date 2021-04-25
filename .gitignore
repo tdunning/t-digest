@@ -21,6 +21,7 @@ log
 .classpath
 .project
 .settings/
+**/.factorypath
 
 # Latex and R related files
 _region_.prv/

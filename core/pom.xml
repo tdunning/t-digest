@@ -144,8 +144,8 @@
                 <configuration>
                     <verbose>true</verbose>
                     <compilerVersion>1.8</compilerVersion>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
                 </configuration>
             </plugin>
             <plugin>

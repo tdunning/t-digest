@@ -9,6 +9,10 @@
     <packaging>pom</packaging>
     <version>3.3-SNAPSHOT</version>
     <name>T-digest Parent</name>
+    
+    <properties>
+        <java.version>1.7</java.version>
+    </properties>
 
     <modules>
         <module>core</module>
