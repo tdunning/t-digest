@@ -26,6 +26,7 @@
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
     <artifactId>t-digest</artifactId>
+  <version>3.4-SNAPSHOT</version>
 
     <packaging>jar</packaging>
     <name>t-digest</name>
@@ -198,8 +199,4 @@
             </build>
         </profile>
     </profiles>
-
-  <scm>
-    <tag>t-digest-3.3</tag>
-  </scm>
 </project>
