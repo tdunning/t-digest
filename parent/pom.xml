@@ -3,7 +3,7 @@
 
     <groupId>com.tdunning</groupId>
     <artifactId>t-digest-parent</artifactId>
-    <version>3.3-SNAPSHOT</version>
+    <version>3.4-SNAPSHOT</version>
     <name>T-digest Parent</name>
     <packaging>pom</packaging>
 

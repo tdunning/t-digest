@@ -16,17 +16,18 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>com.tdunning</groupId>
         <artifactId>t-digest-parent</artifactId>
-        <version>3.3</version>
+        <version>3.4-SNAPSHOT</version>
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
     <artifactId>t-digest</artifactId>
-  <version>3.4-SNAPSHOT</version>
+    <version>3.4-SNAPSHOT</version>
 
     <packaging>jar</packaging>
     <name>t-digest</name>
@@ -100,11 +101,14 @@
                             <jvmOutputAction>pipe</jvmOutputAction>
                             <parallelism>1</parallelism>
                             <listeners>
-                                <report-ant-xml mavenExtensions="true" dir="${project.build.directory}/surefire-reports" />
-                                <report-text showThrowable="true" showStackTraces="true" showOutput="always" showStatusOk="false" showStatusError="true" showStatusFailure="true" showStatusIgnored="true" showSuiteSummary="true" timestamps="false" />
+                                <report-ant-xml mavenExtensions="true"
+                                                dir="${project.build.directory}/surefire-reports"/>
+                                <report-text showThrowable="true" showStackTraces="true" showOutput="always"
+                                             showStatusOk="false" showStatusError="true" showStatusFailure="true"
+                                             showStatusIgnored="true" showSuiteSummary="true" timestamps="false"/>
                             </listeners>
                             <assertions>
-                                <enable />
+                                <enable/>
                             </assertions>
                         </configuration>
                     </execution>

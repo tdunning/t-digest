@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.tdunning</groupId>
         <artifactId>t-digest-parent</artifactId>
-        <version>3.3-SNAPSHOT</version>
+        <version>3.4-SNAPSHOT</version>
         <relativePath>./parent/pom.xml</relativePath>
     </parent>
     <artifactId>t-digest-top</artifactId>
