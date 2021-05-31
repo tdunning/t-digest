@@ -176,7 +176,7 @@ public abstract class TDigestTest extends AbstractTest {
     /**
      * Check against the example given in
      * https://github.com/tdunning/t-digest/issues/143
-     *
+     * <p>
      * Don't think that there is a problem here, but keeping the test just in case.
      */
     @Test
@@ -339,6 +339,25 @@ public abstract class TDigestTest extends AbstractTest {
         assertEquals(4, digest.quantile(1 - 1.0 / digest.size() + 1e-10), 0);
         assertEquals(4, digest.quantile(1 - 1.0 / digest.size()), 0);
         assertEquals(last.mean(), 4, 0);
+    }
+
+    /**
+     * The example from issue #167
+     */
+    @Test
+    public void testIssue167() {
+        MergingDigest d = new MergingDigest(100);
+        for (int i = 0; i < 2; ++i) {
+            d.add(9000);
+        }
+        for (int i = 0; i < 11; ++i) {
+            d.add(3000);
+        }
+        for (int i = 0; i < 26; ++i) {
+            d.add(1000);
+        }
+        assertEquals(3000.0, d.quantile(0.9), 0.0);
+        assertEquals(9000.0, d.quantile(0.95), 0.0);
     }
 
     protected abstract TDigest fromBytes(ByteBuffer bytes);
