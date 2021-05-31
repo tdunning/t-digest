@@ -23,6 +23,7 @@
         <groupId>com.tdunning</groupId>
         <artifactId>t-digest-parent</artifactId>
         <version>3.3-SNAPSHOT</version>
+        <relativePath>../parent/pom.xml</relativePath>
     </parent>
     <artifactId>t-digest</artifactId>
 
@@ -31,36 +32,7 @@
     <description>Data structure which allows accurate estimation of quantiles and related rank statistics</description>
     <url>https://github.com/tdunning/t-digest</url>
 
-    <licenses>
-        <license>
-            <name>The Apache Software License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
 
-    <scm>
-        <connection>scm:git:https://github.com/tdunning/t-digest.git</connection>
-        <developerConnection>scm:git:https://github.com/tdunning/t-digest.git</developerConnection>
-        <tag>HEAD</tag>
-        <url>https://github.com/tdunning/t-digest</url>
-    </scm>
-
-    <developers>
-        <developer>
-            <id>tdunning</id>
-            <name>Ted</name>
-            <email>ted.dunning@gmail.com</email>
-            <url>https://github.com/tdunning/t-digest</url>
-            <roles>
-                <role>developer</role>
-            </roles>
-            <timezone>-8</timezone>
-            <properties>
-                <twitter>@ted_dunning</twitter>
-            </properties>
-        </developer>
-    </developers>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- pass -DrunSlowTests=true on the command line to override -->
@@ -180,10 +152,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
                 <version>2.5.1</version>
-                <configuration>
-                    <arguments>-Dgpg.keyname=${gpg.keyname}</arguments>
-                    <arguments>-Dgpg.passphrase=${gpg.passphrase}</arguments>
-                </configuration>
             </plugin>
         </plugins>
     </build>
@@ -216,10 +184,6 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
                         <version>1.6</version>
-                        <configuration>
-                            <passphrase>${gpg.passphrase}</passphrase>
-                            <keyname>${gpg.keyname}</keyname>
-                        </configuration>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>

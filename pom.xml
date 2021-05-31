@@ -4,30 +4,18 @@
                              http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.tdunning</groupId>
-    <artifactId>t-digest-parent</artifactId>
+    <parent>
+        <groupId>com.tdunning</groupId>
+        <artifactId>t-digest-parent</artifactId>
+        <version>3.3-SNAPSHOT</version>
+        <relativePath>./parent/pom.xml</relativePath>
+    </parent>
+    <artifactId>t-digest</artifactId>
     <packaging>pom</packaging>
-    <version>3.3-SNAPSHOT</version>
-    <name>T-digest Parent</name>
 
     <modules>
         <module>core</module>
         <module>quality</module>
         <module>benchmark</module>
     </modules>
-
-    <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <configuration>
-                        <source>1.8</source>
-                        <target>1.8</target>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-    </build>
 </project>

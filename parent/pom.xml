@@ -1,0 +1,56 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.tdunning</groupId>
+    <artifactId>t-digest-parent</artifactId>
+    <version>3.3-SNAPSHOT</version>
+    <name>T-digest Parent</name>
+    <packaging>pom</packaging>
+
+    <scm>
+        <connection>scm:git:https://github.com/tdunning</connection>
+        <developerConnection>scm:git:ssh://git@github.com/tdunning</developerConnection>
+        <url>https://github.com/tdunning/t-digest</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>tdunning</id>
+            <name>Ted</name>
+            <email>ted.dunning@gmail.com</email>
+            <url>https://github.com/tdunning/t-digest</url>
+            <roles>
+                <role>developer</role>
+            </roles>
+            <timezone>-8</timezone>
+            <properties>
+                <twitter>@ted_dunning</twitter>
+            </properties>
+        </developer>
+    </developers>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <source>1.8</source>
+                        <target>1.8</target>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+</project>
