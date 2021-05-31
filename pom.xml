@@ -10,7 +10,7 @@
         <version>3.3-SNAPSHOT</version>
         <relativePath>./parent/pom.xml</relativePath>
     </parent>
-    <artifactId>t-digest</artifactId>
+    <artifactId>t-digest-top</artifactId>
     <packaging>pom</packaging>
 
     <modules>

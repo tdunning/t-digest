@@ -28,7 +28,7 @@
     <artifactId>t-digest</artifactId>
 
     <packaging>jar</packaging>
-    <name>T-Digest</name>
+    <name>t-digest</name>
     <description>Data structure which allows accurate estimation of quantiles and related rank statistics</description>
     <url>https://github.com/tdunning/t-digest</url>
 
