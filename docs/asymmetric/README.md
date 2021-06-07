@@ -31,6 +31,6 @@ Now run the script [generate_plots.py](./generate_plots.py). For convenience, on
 
 This script expects to be present the results of running the tests as above.
 It will write plots (as PNG files).
-The figures so generated are already present in this repository, see [here](../asymmetric/plots/merging/t_digest_figs_K_0q.png)
-and [here](../asymmetric/plots/tree/t_digest_figs_K_0q.png) for example.
+The figures so generated are already present in this repository, see [here](../asymmetric/plots/merging/BOTH/t_digest_figs_K_0q.png)
+and [here](../asymmetric/plots/tree/BOTH/t_digest_figs_K_0q.png) for example.
 

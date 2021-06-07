@@ -34,7 +34,7 @@ axis_labels = {'.99': 2, '0.99': 2,
 
 
 def generate_figures(prefixes=scale_function_prefixes, save=False, outfilename="",
-                     location="", implementation=""):
+                     location="", implementation="", dpi=None):
     data = {}
 
     for prefix in prefixes:
@@ -85,13 +85,13 @@ def generate_figures(prefixes=scale_function_prefixes, save=False, outfilename="
                         hspace=0.4, wspace=0.3)
 
     if save is True:
-        plt.savefig(outfilename)
+        plt.savefig(outfilename, dpi=dpi)
     elif save is False:
         plt.show()
 
 
 def generate_size_figures(prefix="K_0_USUAL", save=False, outfilename="", value='0.01',
-                          location="", centroid_index=0):
+                          location="", centroid_index=0, dpi=None):
     data = {}
     centroid_sizes_data = {}
 
@@ -135,13 +135,14 @@ def generate_size_figures(prefix="K_0_USUAL", save=False, outfilename="", value=
                         hspace=0.4, wspace=0.3)
 
     if save is True:
-        plt.savefig(outfilename)
+        plt.savefig(outfilename, dpi=dpi)
     elif save is False:
         plt.show()
+    plt.close('all')
 
 
 def generate_figures_both_distr(prefixes=scale_function_prefixes, save=False, outfilename="",
-                                locations=[""], implementation=""):
+                                locations=[""], implementation="", dpi=None):
     data = {}
 
     for prefix in prefixes:
@@ -243,10 +244,10 @@ def generate_figures_both_distr(prefixes=scale_function_prefixes, save=False, ou
     fig.subplots_adjust(left=0.08, right=0.98, bottom=0.05, top=0.9,
                         hspace=0.4, wspace=0.3)
     if save is True:
-        plt.savefig(outfilename)
+        plt.savefig(outfilename, dpi=dpi)
     elif save is False:
         plt.show()
-    plt.show()
+    plt.close('all')
 
 
 # for separate plots for the two distributions
@@ -264,29 +265,38 @@ def main():
     for a, b, c in params:
         generate_figures_both_distr(prefixes=["K_0_USUAL", "K_QUADRATIC"], save=True,
                                     outfilename="{}t_digest_figs_K_0q".format(a), locations=b,
-                                    implementation=c)
+                                    implementation=c, dpi=350)
         generate_figures_both_distr(prefixes=["K_1_{}".format(y) for y in ["USUAL", "GLUED"]],
                                     save=True,
                                     outfilename="{}t_digest_figs_K_1".format(a), locations=b,
-                                    implementation=c)
+                                    implementation=c, dpi=350)
         generate_figures_both_distr(prefixes=["K_2_{}".format(y) for y in ["USUAL", "GLUED"]],
                                     save=True,
                                     outfilename="{}t_digest_figs_K_2".format(a), locations=b,
-                                    implementation=c)
+                                    implementation=c, dpi=350)
         generate_figures_both_distr(prefixes=["K_3_{}".format(y) for y in ["USUAL", "GLUED"]],
                                     save=True,
                                     outfilename="{}t_digest_figs_K_3".format(a), locations=b,
-                                    implementation=c)
+                                    implementation=c, dpi=350)
+
     for v in ['0.99', '0.999']:
         fcn = 'K_0_USUAL'
         centroid_index = -1
         outfile = out_prefix + '/' + 'size/' + fcn + '_' + v + '_' + str(centroid_index) + '.png'
         generate_size_figures(location=in_prefix + '/', prefix=fcn, value=v,
                               centroid_index=centroid_index,
-                              outfilename=outfile, save=True)
+                              outfilename=outfile, save=True, dpi=350)
         generate_size_figures(location=in_prefix + '/', prefix=fcn, value=v,
                               centroid_index=centroid_index,
-                              outfilename=outfile, save=True)
+                              outfilename=outfile, save=True, dpi=350)
+
+    _v = '0.01'
+    _fcn = 'K_0_USUAL'
+    centroid_index = 0
+    outfile = out_prefix + '/' + 'size/' + _fcn + '_' + _v + '_' + str(centroid_index) + '.png'
+    generate_size_figures(location=in_prefix + '/', prefix=_fcn, value=_v,
+                          centroid_index=centroid_index,
+                          outfilename=outfile, save=True, dpi=350)
 
     # these plots are no longer used in the paper
     for a, b, c in _params:
