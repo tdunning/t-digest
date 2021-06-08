@@ -8,7 +8,7 @@
         <groupId>com.tdunning</groupId>
         <artifactId>t-digest-parent</artifactId>
         <version>3.4-SNAPSHOT</version>
-        <relativePath>../parent/pom.xml</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>t-digest-benchmark</artifactId>
 
