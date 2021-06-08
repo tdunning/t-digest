@@ -1,21 +1,65 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                             http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>com.tdunning</groupId>
-        <artifactId>t-digest-parent</artifactId>
-        <version>3.4-SNAPSHOT</version>
-        <relativePath>./parent/pom.xml</relativePath>
-    </parent>
-    <artifactId>t-digest-top</artifactId>
+    <groupId>com.tdunning</groupId>
+    <artifactId>t-digest-parent</artifactId>
+    <version>3.4-SNAPSHOT</version>
+    <name>T-digest Parent</name>
     <packaging>pom</packaging>
 
-    <modules>
-        <module>core</module>
-        <module>quality</module>
-        <module>benchmark</module>
-    </modules>
+    <scm>
+        <connection>scm:git:git@github.com:tdunning/t-digest.git</connection>
+        <developerConnection>scm:git:git@github.com:tdunning/t-digest.git</developerConnection>
+        <url>https://github.com/tdunning/t-digest</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>tdunning</id>
+            <name>Ted</name>
+            <email>ted.dunning@gmail.com</email>
+            <url>https://github.com/tdunning/t-digest</url>
+            <roles>
+                <role>developer</role>
+            </roles>
+            <timezone>-8</timezone>
+            <properties>
+                <twitter>@ted_dunning</twitter>
+            </properties>
+        </developer>
+    </developers>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <properties>
+        <source.property>1.8</source.property>
+        <target.property>1.8</target.property>
+    </properties>
+
+    <profiles>
+        <profile>
+            <id>all</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <modules>
+                <module>core</module>
+                <module>quality</module>
+                <module>benchmark</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>core-only</id>
+            <modules>
+                <module>core</module>
+            </modules>
+        </profile>
+    </profiles>
 </project>
