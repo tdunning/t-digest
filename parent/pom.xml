@@ -8,8 +8,8 @@
     <packaging>pom</packaging>
 
     <scm>
-        <connection>scm:git:https://github.com/tdunning</connection>
-        <developerConnection>scm:git:ssh://git@github.com/tdunning</developerConnection>
+        <connection>scm:git:git@github.com:tdunning/t-digest.git</connection>
+        <developerConnection>scm:git:git@github.com:tdunning/t-digest.git</developerConnection>
         <url>https://github.com/tdunning/t-digest</url>
         <tag>HEAD</tag>
     </scm>
@@ -39,7 +39,7 @@
     </licenses>
 
     <modules>
-        <module>core</module>
+        <module>../core</module>
     </modules>
 
     <build>
