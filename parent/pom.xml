@@ -38,6 +38,10 @@
         </license>
     </licenses>
 
+    <modules>
+        <module>core</module>
+    </modules>
+
     <build>
         <pluginManagement>
             <plugins>
