@@ -22,7 +22,7 @@
     <parent>
         <groupId>com.tdunning</groupId>
         <artifactId>t-digest-parent</artifactId>
-        <version>3.3-SNAPSHOT</version>
+        <version>3.3</version>
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
     <artifactId>t-digest</artifactId>
