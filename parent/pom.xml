@@ -6,10 +6,11 @@
     <version>3.3-SNAPSHOT</version>
     <name>T-digest Parent</name>
     <packaging>pom</packaging>
+    <description>Data structure which allows accurate estimation of quantiles and related rank statistics</description>
+    <url>https://github.com/tdunning/t-digest</url>
 
     <scm>
-        <connection>scm:git:git@github.com:tdunning/t-digest.git</connection>
-        <developerConnection>scm:git:git@github.com:tdunning/t-digest.git</developerConnection>
+        <developerConnection>scm:git:origin</developerConnection>
         <url>https://github.com/tdunning/t-digest</url>
         <tag>HEAD</tag>
     </scm>
@@ -42,19 +43,69 @@
         <module>../core</module>
     </modules>
 
+    <distributionManagement>
+        <snapshotRepository>
+            <id>sonatype-nexus-snapshots</id>
+            <name>Sonatype Nexus snapshot repository</name>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>sonatype-nexus-staging</id>
+            <name>Sonatype Nexus release repository</name>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
+
     <build>
         <pluginManagement>
             <plugins>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <configuration>
+                        <source>8</source>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <configuration>
-                        <source>1.8</source>
-                        <target>1.8</target>
+                        <compilerVersion>1.8</compilerVersion>
+                        <source>8</source>
+                        <target>8</target>
                     </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
     </build>
 
+    <profiles>
+        <profile>
+            <id>sign-artifacts</id>
+            <activation>
+                <property>
+                    <name>performRelease</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.6</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
