@@ -3,7 +3,7 @@
 
     <groupId>com.tdunning</groupId>
     <artifactId>t-digest-parent</artifactId>
-    <version>3.3</version>
+    <version>3.4-SNAPSHOT</version>
     <name>T-digest Parent</name>
     <packaging>pom</packaging>
     <description>Data structure which allows accurate estimation of quantiles and related rank statistics</description>
@@ -12,7 +12,7 @@
     <scm>
         <developerConnection>scm:git:origin</developerConnection>
         <url>https://github.com/tdunning/t-digest</url>
-        <tag>t-digest-parent-3.3</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <developers>
