@@ -261,13 +261,13 @@ Installation
 ===============
 
 The t-Digest library Jars are released via [Maven Central Repository](http://repo1.maven.org/maven2/com/tdunning/).
-The current version is 3.2.
+The current version is 3.3.
 
  ```xml
       <dependency>
           <groupId>com.tdunning</groupId>
           <artifactId>t-digest</artifactId>
-          <version>3.2</version>
+          <version>3.3</version>
       </dependency>
  ```     
       
