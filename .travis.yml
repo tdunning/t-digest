@@ -8,6 +8,6 @@ cache:
   directories:
     - '$HOME/.m2/repository'
 
-script: mvn -pl core test
+script: mvn test
 
 install: /bin/true
