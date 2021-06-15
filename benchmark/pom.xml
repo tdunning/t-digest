@@ -46,6 +46,17 @@
                     <mainClass>com.tdunning.Benchmark</mainClass>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.3</version>
+                <configuration>
+                    <verbose>true</verbose>
+                    <compilerVersion>1.8</compilerVersion>
+                    <source>1.7</source>
+                    <target>1.7</target>
+                </configuration>
+            </plugin>
 
             <!-- this next generates the target/benchmarks.jar file -->
             <plugin>

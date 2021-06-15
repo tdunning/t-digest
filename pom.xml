@@ -46,9 +46,6 @@
     <profiles>
         <profile>
             <id>all</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
             <modules>
                 <module>core</module>
                 <module>quality</module>
@@ -57,6 +54,9 @@
         </profile>
         <profile>
             <id>core-only</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <modules>
                 <module>core</module>
             </modules>
