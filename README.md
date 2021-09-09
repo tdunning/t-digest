@@ -253,7 +253,7 @@ The t-digest project makes use of Travis integration with Github for testing whe
 
 You can see the reports at:
 
-    https://travis-ci.org/tdunning/t-digest
+    https://app.travis-ci.com/github/tdunning/t-digest
 
 travis update
 
