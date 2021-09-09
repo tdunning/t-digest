@@ -234,7 +234,7 @@ Implementations in Other Languages
 =================
 The t-digest algorithm has been ported to other languages:
  - Python: [tdigest](https://github.com/CamDavidsonPilon/tdigest)
- - Go: [github.com/spenczar/tdigest](https://github.com/spenczar/tdigest) [https://github.com/influxdata/tdigest](https://github.com/influxdata/tdigest)
+ - Go: [github.com/spenczar/tdigest](https://github.com/spenczar/tdigest) [github.com/influxdata/tdigest](https://github.com/influxdata/tdigest)
  - JavaScript: [tdigest](https://github.com/welch/tdigest)
  - C++: [CPP TDigest](https://github.com/gpichot/cpp-tdigest), [FB's Folly Implementation (high performance)](https://github.com/facebook/folly/blob/master/folly/stats/TDigest.h)
  - C++: [TDigest](https://github.com/apache/arrow/blob/master/cpp/src/arrow/util/tdigest.h
