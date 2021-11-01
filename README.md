@@ -245,6 +245,7 @@ The t-digest algorithm has been ported to other languages:
  - Clojure: [t-digest for Clojure](https://github.com/henrygarner/t-digest)
  - C#: [t-digest-csharp (.NET Core)](https://github.com/Cyral/t-digest-csharp)
  - Kotlin multiplatform: [tdigest_kotlin_multiplatform](https://github.com/beyondeye/tdigest_kotlin_multiplatform)
+ - OCaml: [tdigest](https://github.com/SGrondin/tdigest). Purely functional, can also compile to JS via js_of_ocaml.
  
 Continuous Integration
 =================
