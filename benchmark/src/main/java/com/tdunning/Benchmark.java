@@ -43,7 +43,7 @@ public class Benchmark {
     private Random gen = new Random();
     private double[] data;
 
-    @Param({"merge", "tree"})
+    @Param({"merge", "tree", "seededTree"})
     public String method;
 
     @Param({"20", "50", "100", "200", "500"})
@@ -59,8 +59,12 @@ public class Benchmark {
         }
         if (method.equals("tree")) {
             td = new AVLTreeDigest(compression);
-        } else {
+        } else if (method.equals("merge")){
             td = new MergingDigest(500);
+        } else if (method.equals("seededTree")) {
+            td = new AVLTreeDigest(compression, gen);
+        } else {
+            throw new IllegalArgumentException("Method " + method + " is not supported");
         }
 
         // First values are very cheap to add, we are more interested in the steady state,

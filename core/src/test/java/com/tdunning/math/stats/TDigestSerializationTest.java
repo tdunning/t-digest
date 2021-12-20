@@ -38,14 +38,21 @@ import static org.junit.Assert.assertNotNull;
  * Serializability is important, for example, if we want to use t-digests with Spark.
  */
 public class TDigestSerializationTest {
+    private final static double COMPRESSION = 100.0;
+
     @Test
     public void testMergingDigest() throws IOException {
-        assertSerializesAndDeserializes(new MergingDigest(100));
+        assertSerializesAndDeserializes(new MergingDigest(COMPRESSION));
     }
 
     @Test
     public void testAVLTreeDigest() throws IOException {
-        assertSerializesAndDeserializes(new AVLTreeDigest(100));
+        assertSerializesAndDeserializes(new AVLTreeDigest(COMPRESSION));
+    }
+
+    @Test
+    public void testAVLTreeDigestWithSeed() throws IOException {
+        assertSerializesAndDeserializes(new AVLTreeDigest(COMPRESSION, new Random()));
     }
 
     private <T extends TDigest> void assertSerializesAndDeserializes(T tdigest) throws IOException {
@@ -86,6 +93,13 @@ public class TDigestSerializationTest {
             assertEquals(c1.count(), c2.count());
             assertEquals(c1.mean(), c2.mean(), 1e-10);
         }
+        assertEquals(t1.persistRandomValue(), t2.persistRandomValue());
+        if (t1.persistRandomValue()) {
+            //cheeky way to check if the random objects were properly persisted
+            assertEquals(t1.getRandomNumberGenerator().nextLong(),
+            t2.getRandomNumberGenerator().nextLong());
+        }
+        assertEquals(t1.compression(), t2.compression(), 0.0);
         assertFalse(cx.hasNext());
         assertNotNull(t2);
     }
