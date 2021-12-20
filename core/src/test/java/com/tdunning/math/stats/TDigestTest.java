@@ -747,6 +747,11 @@ public abstract class TDigestTest extends AbstractTest {
         assertEquals(dist.centroids().size(), dist2.centroids().size());
         assertEquals(dist.compression(), dist2.compression(), 1e-4);
         assertEquals(dist.size(), dist2.size());
+        assertEquals(dist.persistRandomValue(), dist2.persistRandomValue());
+        if (dist.persistRandomValue()) {
+            assertEquals(dist.getRandomNumberGenerator().nextLong(),
+            dist2.getRandomNumberGenerator().nextLong());
+        }
 
         for (double q = 0; q < 1; q += 0.01) {
             assertEquals(dist.quantile(q), dist2.quantile(q), 1e-5);

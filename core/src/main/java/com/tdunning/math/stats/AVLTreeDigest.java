@@ -17,6 +17,11 @@
 
 package com.tdunning.math.stats;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
@@ -27,11 +32,18 @@ import java.util.Random;
 import static com.tdunning.math.stats.IntAVLTree.NIL;
 
 public class AVLTreeDigest extends AbstractTDigest {
-    final Random gen = new Random();
+    private final Random rng;
     private final double compression;
     private AVLGroupTree summary;
 
     private long count = 0; // package private for testing
+
+    /**
+     * If {@link rng} should be persisted
+     */
+    private boolean persistRandomObject;
+
+    private final static int NUM_BYTES_FOR_RANDOM_OBJECT = 104;
 
     /**
      * A histogram structure that will record a sketch of a distribution.
@@ -45,6 +57,26 @@ public class AVLTreeDigest extends AbstractTDigest {
     public AVLTreeDigest(double compression) {
         this.compression = compression;
         summary = new AVLGroupTree(false);
+        rng = new Random();
+        persistRandomObject = false;
+    }
+
+    /**
+     * Creates an AVL tree digest with a random object whose state will be maintained when serialized/deserialized.
+     * This has uses where the stream of random numbers should be consistent across restarts.
+     *
+     * @param compression How should accuracy be traded for size?  A value of N here will give quantile errors
+     *                    almost always less than 3/N with considerably smaller errors expected for extreme
+     *                    quantiles.  Conversely, you should expect to track about 5 N centroids for this
+     *                    accuracy.
+     * @param random The random object to use for this AVLTreeDigest
+     */
+    @SuppressWarnings("WeakerAccess")
+    public AVLTreeDigest(double compression, Random random) {
+        this.compression = compression;
+        summary = new AVLGroupTree(false);
+        rng = random;
+        persistRandomObject = true;
     }
 
     @Override
@@ -128,7 +160,7 @@ public class AVLTreeDigest extends AbstractTDigest {
                 // what it does is sample uniformly from all clusters that have room
                 if (summary.count(neighbor) + w <= k) {
                     n++;
-                    if (gen.nextDouble() < 1 / n) {
+                    if (rng.nextDouble() < 1 / n) {
                         closest = neighbor;
                     }
                 }
@@ -500,7 +532,7 @@ public class AVLTreeDigest extends AbstractTDigest {
     @Override
     public int byteSize() {
         compress();
-        return 32 + summary.size() * 12;
+        return 36 + NUM_BYTES_FOR_RANDOM_OBJECT + summary.size() * 12;
     }
 
     /**
@@ -527,7 +559,10 @@ public class AVLTreeDigest extends AbstractTDigest {
         buf.putDouble(min);
         buf.putDouble(max);
         buf.putDouble((float) compression());
+        buf.putInt(persistRandomObject ? 1 : 0);
+        buf.put(serializeRandomObj(rng));
         buf.putInt(summary.size());
+
         for (Centroid centroid : summary) {
             buf.putDouble(centroid.mean());
         }
@@ -543,6 +578,8 @@ public class AVLTreeDigest extends AbstractTDigest {
         buf.putDouble(min);
         buf.putDouble(max);
         buf.putDouble(compression());
+        buf.putInt(persistRandomObject ? 1 : 0);
+        buf.put(serializeRandomObj(rng));
         buf.putInt(summary.size());
 
         double x = 0;
@@ -567,14 +604,21 @@ public class AVLTreeDigest extends AbstractTDigest {
     @SuppressWarnings("WeakerAccess")
     public static AVLTreeDigest fromBytes(ByteBuffer buf) {
         int encoding = buf.getInt();
+        double min = buf.getDouble();
+        double max = buf.getDouble();
+        double compression = buf.getDouble();
+        boolean persistRandomObj = buf.getInt() == 0 ? false : true;
+        byte [] randomObjBytes = new byte[NUM_BYTES_FOR_RANDOM_OBJECT];
+        buf.get(randomObjBytes);
+        Random rand = deserializeRandomObj(randomObjBytes);
+        AVLTreeDigest r = persistRandomObj ?
+            new AVLTreeDigest(compression, rand) :
+            new AVLTreeDigest(compression);
+        r.setMinMax(min, max);
+        int n = buf.getInt();
+        double[] means = new double[n];
+
         if (encoding == VERBOSE_ENCODING) {
-            double min = buf.getDouble();
-            double max = buf.getDouble();
-            double compression = buf.getDouble();
-            AVLTreeDigest r = new AVLTreeDigest(compression);
-            r.setMinMax(min, max);
-            int n = buf.getInt();
-            double[] means = new double[n];
             for (int i = 0; i < n; i++) {
                 means[i] = buf.getDouble();
             }
@@ -583,13 +627,6 @@ public class AVLTreeDigest extends AbstractTDigest {
             }
             return r;
         } else if (encoding == SMALL_ENCODING) {
-            double min = buf.getDouble();
-            double max = buf.getDouble();
-            double compression = buf.getDouble();
-            AVLTreeDigest r = new AVLTreeDigest(compression);
-            r.setMinMax(min, max);
-            int n = buf.getInt();
-            double[] means = new double[n];
             double x = 0;
             for (int i = 0; i < n; i++) {
                 double delta = buf.getFloat();
@@ -605,6 +642,48 @@ public class AVLTreeDigest extends AbstractTDigest {
         } else {
             throw new IllegalStateException("Invalid format for serialized histogram");
         }
+    }
+
+
+    private byte[] serializeRandomObj(Random r) {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try {
+            ObjectOutputStream oos = new ObjectOutputStream(bos);
+            oos.writeObject(r);
+            oos.flush();
+            byte [] data = bos.toByteArray();
+            bos.close();
+            oos.close();
+            return data;
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Cannot serialize random object");
+        }
+    }
+
+    private static Random deserializeRandomObj(byte [] bytes) {
+        ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+        try {
+            ObjectInputStream ois = new ObjectInputStream(bais);
+            Random r = (Random)ois.readObject();
+            return r;
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Cannot deserialize random object");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Unable to find Random class");
+        }
+    }
+
+    @Override
+    public boolean persistRandomValue() {
+        return persistRandomObject;
+    }
+
+    @Override
+    public Random getRandomNumberGenerator() {
+        return rng;
     }
 
 }

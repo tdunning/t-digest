@@ -60,6 +60,15 @@ class Util {
             TDigest create() {
                 return create(20);
             }
+        },
+
+        SEEDED_AVL_TREE {
+            TDigest create(double compression) {
+                return new AVLTreeDigest(compression, new Random());
+            }
+            TDigest create() {
+                return create(20);
+            }
         };
 
         abstract TDigest create(double compression);

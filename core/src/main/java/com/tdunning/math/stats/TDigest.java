@@ -21,6 +21,7 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Adaptive histogram based on something like streaming k-means crossed with Q-digest.
@@ -68,6 +69,22 @@ public abstract class TDigest implements Serializable {
     @SuppressWarnings("WeakerAccess")
     public static TDigest createAvlTreeDigest(double compression) {
         return new AVLTreeDigest(compression);
+    }
+
+    /**
+     * Creates an AVLTreeDigest with a specific random seed.
+     *
+     * This behaves very similarly to the standard AVLTreeDigest, but with the added ability to start with a specific seed.
+     * This has uses with allowing historic tree values to remain unchanged
+     *
+     * @param compression The compression parameter.  100 is a common value for normal uses.  1000 is extremely large.
+     *                    The number of centroids retained will be a smallish (usually less than 10) multiple of this number.
+     * @param random The random object to user for this TDigest
+     * @return the AvlTreeDigest
+     */
+    @SuppressWarnings("WeakerAccess")
+    public static TDigest createAvlTreeDigestWithSeed(double compression, Random random) {
+        return new AVLTreeDigest(compression, random);
     }
 
     /**
@@ -236,5 +253,25 @@ public abstract class TDigest implements Serializable {
     void setMinMax(double min, double max) {
         this.min = min;
         this.max = max;
+    }
+
+    /**
+     * In certain TDigest implementations, there are cases where a random object might be
+     * serialized. This flag indicates if the TDigest is persisting the random object
+     *
+     * @return true if the TDigest has a random object that will be serialized
+     */
+    public boolean persistRandomValue() {
+        return false;
+    }
+
+    /**
+     * In certain TDigest implementations, there are cases where a random object might play a significant
+     * role. This method returns the Random instance being used to generate these numbers
+     *
+     * @return the random instance in the TDigest if one exists, null otherwise.
+     */
+    public Random getRandomNumberGenerator() {
+        return null;
     }
 }
