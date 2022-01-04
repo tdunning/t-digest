@@ -47,6 +47,17 @@ public class AVLTreeDigest extends AbstractTDigest {
         summary = new AVLGroupTree(false);
     }
 
+    /**
+     * Sets the seed for the RNG.
+     * In cases where a predicatable tree should be created, this function may be used to make the
+     * randomness in this AVLTree become more deterministic.
+     *
+     * @param seed The random seed to use for RNG purposes
+     */
+    public void setRandomSeed(long seed) {
+        gen.setSeed(seed);
+    }
+
     @Override
     public TDigest recordAllData() {
         if (summary.size() != 0) {
