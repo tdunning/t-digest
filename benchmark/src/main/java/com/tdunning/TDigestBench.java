@@ -49,17 +49,6 @@ public class TDigestBench {
             TDigest create() {
                 return create(20);
             }
-        },
-        SEEDED_AVL_TREE {
-            @Override
-            TDigest create(double compression) {
-                return new AVLTreeDigest(compression, new Random());
-            }
-
-            @Override
-            TDigest create() {
-                return create(20);
-            }
         };
 
         abstract TDigest create(double compression);
@@ -117,7 +106,7 @@ public class TDigestBench {
     @Param({"100", "300"})
     double compression;
 
-    @Param({"MERGE", "AVL_TREE", "SEEDED_AVL_TREE"})
+    @Param({"MERGE", "AVL_TREE"})
     TDigestFactory tdigestFactory;
 
     @Param({"NORMAL", "GAMMA"})

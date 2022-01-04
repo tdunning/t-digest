@@ -46,7 +46,6 @@ public class AlternativeMergeTest {
                 for (double compression : new double[]{50, 100, 200, 400}) {
                     MergingDigest digest1 = new MergingDigest(compression);
                     AVLTreeDigest digest2 = new AVLTreeDigest(compression);
-                    AVLTreeDigest digest3 = new AVLTreeDigest(compression, new Random());
                     List<Double> data = new ArrayList<>();
                     Random gen = new Random();
                     for (int i = 0; i < n; i++) {
@@ -54,7 +53,6 @@ public class AlternativeMergeTest {
                         data.add(x);
                         digest1.add(x);
                         digest2.add(x);
-                        digest3.add(x);
                     }
                     Collections.sort(data);
                     List<Double> counts = new ArrayList<>();
@@ -75,7 +73,6 @@ public class AlternativeMergeTest {
                     }
                     sizes.printf("%s, %d, %d, %.0f, %d\n", "merge", counts.size(), digest1.centroids().size(), compression, n);
                     sizes.printf("%s, %d, %d, %.0f, %d\n", "tree", counts.size(), digest2.centroids().size(), compression, n);
-                    sizes.printf("%s, %d, %d, %.0f, %d\n", "tree with seed", counts.size(), digest3.centroids().size(), compression, n);
                     sizes.printf("%s, %d, %d, %.0f, %d\n", "ideal", counts.size(), counts.size(), compression, n);
                     soFar = 0;
                     for (Double count : counts) {
@@ -91,12 +88,6 @@ public class AlternativeMergeTest {
                     assertEquals(n, soFar, 0);
                     soFar = 0;
                     for (Centroid c : digest2.centroids()) {
-                        out.printf("%s, %.0f, %d, %.3f, %d\n", "tree", compression, n, (soFar + c.count() / 2) / n, c.count());
-                        soFar += c.count();
-                    }
-                    assertEquals(n, soFar, 0);
-                    soFar = 0;
-                    for (Centroid c : digest3.centroids()) {
                         out.printf("%s, %.0f, %d, %.3f, %d\n", "tree", compression, n, (soFar + c.count() / 2) / n, c.count());
                         soFar += c.count();
                     }
