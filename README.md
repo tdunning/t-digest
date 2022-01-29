@@ -1,7 +1,7 @@
 t-digest
 ========
 
-A new data structure for accurate on-line accumulation of rank-based statistics such as quantiles
+A new data structure for accurate online accumulation of rank-based statistics such as quantiles
 and trimmed means.  The t-digest algorithm is also very friendly to parallel programs making it 
 useful in map-reduce and parallel streaming applications implemented using, say, Apache Spark.
 
@@ -18,8 +18,8 @@ compact, particularly when serialized.
 In summary, the particularly interesting characteristics of the t-digest are that it
 
 * has smaller summaries when serialized
-* works on double precision floating point as well as integers.
-* provides part per million accuracy for extreme quantiles and typically <1000 ppm accuracy for middle quantiles
+* works on double-precision floating points as well as integers.
+* provides part per million accuracies for extreme quantiles and typically <1000 ppm accuracy for middle quantiles
 * is very fast (~ 140 ns per add)
 * is very simple (~ 5000 lines of code total, <1000 for the most advanced implementation alone)
 * has a reference implementation that has > 90% test coverage
@@ -32,7 +32,7 @@ Recent News
 There is a [new article (open access!)](https://www.sciencedirect.com/science/article/pii/S2665963820300403) in Software Impacts on 
 the t-digest, focussed particularly on this reference implementation.
  
-Lots has happened in t-digest lately. Most recently, with the help of people
+Lots have happened in t-digest lately. Most recently, with the help of people
 posting their observations of subtle misbehavior over the last 2 years, I figured
 out that the sort in the `MergingDigest` really needed to be stable. This helps
 particularly with repeated values. Stabilizing the sort appears to have no 
@@ -41,7 +41,7 @@ continuing. As part of introducing this change to the sort, I made the core
 implementation pickier about enforcing the size invariants which forced updates
 to a number of tests.
 
-The basic gist of other recent changes are that the core algorithms have been 
+The basic gist of other recent changes is that the core algorithms have been 
 made much more rigorous and the associated papers in the docs directory have 
 been updated to match the reality of the most advanced implementations. 
 The general areas of improvement include substantial speedups, a new 
@@ -85,7 +85,7 @@ sizes near the tails. We now have 4 scale functions supported for both
 major digest forms (`MergingDigest` and `AVLTreeDigest`) to allow
 different trade-offs in terms of accuracy.
 
-These scale functions now have associated proofs that they all
+These scale functions now have associated proof that they all
 [preserve the key invariants](https://github.com/tdunning/t-digest/blob/master/docs/proofs/invariant-preservation.pdf) 
 necessary to build an accurate digest and that they all give
 [tight bounds on the size of a digest](https://github.com/tdunning/t-digest/blob/master/docs/proofs/sizing.pdf).
@@ -143,9 +143,9 @@ artifacts.
 The major areas are
  
  * core - this is where the t-digest and unit tests live
- * docs - the main paper and auxillary proofs live here
+ * docs - the main paper and auxiliary proofs live here
  * benchmarks - this is the code that tests the speed of the digest algos
- * quality - this is the code that generates and analyzes accuracy information
+ * quality - this is the code that generates and analyzes accuracy of information
  
  Within the docs sub-directory, proofs of invariant preservation and size
  bounds are moved to `docs/proofs` and all figures in `docs/t-digest-paper`
