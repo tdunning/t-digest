@@ -1,7 +1,7 @@
 t-digest
 ========
 
-A new data structure for accurate on-line accumulation of rank-based statistics such as quantiles
+A new data structure for accurate online accumulation of rank-based statistics such as quantiles
 and trimmed means.  The t-digest algorithm is also very friendly to parallel programs making it 
 useful in map-reduce and parallel streaming applications implemented using, say, Apache Spark.
 
@@ -41,7 +41,7 @@ continuing. As part of introducing this change to the sort, I made the core
 implementation pickier about enforcing the size invariants which forced updates
 to a number of tests.
 
-The basic gist of other recent changes are that the core algorithms have been 
+The basic gist of other recent changes is that the core algorithms have been 
 made much more rigorous and the associated papers in the docs directory have 
 been updated to match the reality of the most advanced implementations. 
 The general areas of improvement include substantial speedups, a new 
@@ -143,7 +143,7 @@ artifacts.
 The major areas are
  
  * core - this is where the t-digest and unit tests live
- * docs - the main paper and auxillary proofs live here
+ * docs - the main paper and auxiliary proofs live here
  * benchmarks - this is the code that tests the speed of the digest algos
  * quality - this is the code that generates and analyzes accuracy information
  
