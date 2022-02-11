@@ -69,6 +69,9 @@ public class QuantileEstimator {
     }
 
     private void collapse(List<Double> a, List<Double> b, List<Double> out) {
+        if (a == null || b == null || out == null) {
+            return;
+        }
         int indexA = 0, indexB = 0, count = 0;
         Double smaller;
         while (indexA < maxElementsPerBuffer || indexB < maxElementsPerBuffer) {
