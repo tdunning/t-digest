@@ -239,6 +239,7 @@ The t-digest algorithm has been ported to other languages:
  - C++: [CPP TDigest](https://github.com/gpichot/cpp-tdigest), [FB's Folly Implementation (high performance)](https://github.com/facebook/folly/blob/master/folly/stats/TDigest.h)
  - C++: [TDigest](https://github.com/apache/arrow/blob/master/cpp/src/arrow/util/tdigest.h
 ) as part of [Apache Arrow](https://arrow.apache.org/)
+ - Rust: [t-digest](https://github.com/MnO2/t-digest) and its modified version in [Apache Arrow Datafusion](https://github.com/apache/arrow-datafusion/blob/ca952bd33402816dbb1550debb9b8cac3b13e8f2/datafusion-physical-expr/src/tdigest/mod.rs#L19-L28)
  - Scala: [TDigest.scala](https://github.com/stripe-archive/brushfire/blob/master/brushfire-training/src/main/scala/com/stripe/brushfire/TDigest.scala)
  - C: [tdigestc (w/ bindings to Go, Java, Python, JS via wasm)](https://github.com/ajwerner/tdigestc)
  - C: [t-digest-c](https://github.com/RedisBloom/t-digest-c) as part of [RedisBloom](https://redisbloom.io/)
