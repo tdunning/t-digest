@@ -1,4 +1,4 @@
-t-digest
+t-digest  &middot;  ![Travis-Ci Status](https://api.travis-ci.org/tdunning/t-digest.svg?branch=main&status=passed)
 ========
 
 A new data structure for accurate online accumulation of rank-based statistics such as quantiles
