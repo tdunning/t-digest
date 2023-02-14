@@ -1,4 +1,4 @@
-t-digest  &middot;  ![Travis-Ci Status](https://api.travis-ci.org/tdunning/t-digest.svg?branch=main&status=passed)
+t-digest  &middot;  [![Java CI](https://github.com/tdunning/t-digest/actions/workflows/maven.yml/badge.svg?branch=main)](https://github.com/tdunning/t-digest/actions/workflows/maven.yml)
 ========
 
 A new data structure for accurate online accumulation of rank-based statistics such as quantiles
