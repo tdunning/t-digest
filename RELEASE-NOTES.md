@@ -2,9 +2,9 @@ Release 3.2
 ===========
 In release 3.2, the goal is to produce an update to the code given the large number of improvements since the previous release.
 
-There are a few bugs that will survive this release, most notably in the AVLTreeDigest. These have to do with large nubmers of repeated data points and are not new bugs.
+There are a few bugs that will survive this release, most notably in the AVLTreeDigest. These have to do with large numbers of repeated data points and are not new bugs.
  
-There is a also lot of work going on with serialization. I need to hear from people about  what they are doing with serialization so that we can build some test cases to allow an appropriate migration strategy to future serialization.
+There is also a lot of work going on with serialization. I need to hear from people about  what they are doing with serialization so that we can build some test cases to allow an appropriate migration strategy to future serialization.
 
 The paper continues to be updated. The algorithmic descriptions are getting reasonably clear, but the speed and accuracy sections need a complete revamp with current implementations.
 
@@ -41,7 +41,7 @@ decay to t-digest
 factory method for "fromBytes"
 
 [Issue #90](https://github.com/tdunning/t-digest/issues/90)
-Deserialization of MergingDigest BuferUnderflowException in 3.1
+Deserialization of MergingDigest BufferUnderflowException in 3.1
 
 [Issue #92](https://github.com/tdunning/t-digest/issues/92) Error in
 AVLTreeDigest.fromBytes
