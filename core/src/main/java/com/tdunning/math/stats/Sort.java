@@ -207,7 +207,7 @@ public class Sort {
                 swap(order, from++, to--);
             }
             if (from == low) {
-                // ran out of things to copy.  This means that the the last destination is the boundary
+                // ran out of things to copy.  This means that the last destination is the boundary
                 low = to + 1;
             } else {
                 // ran out of places to copy to.  This means that there are uncopied pivots and the
@@ -237,7 +237,7 @@ public class Sort {
     }
 
     /**
-     * Stablized quick sort on an index array. This is a normal quick sort that uses the
+     * Stabilized quick sort on an index array. This is a normal quick sort that uses the
      * original index as a secondary key. Since we are really just sorting an index array
      * we can do this nearly for free.
      *
@@ -303,7 +303,7 @@ public class Sort {
                 swap(order, from++, to--);
             }
             if (from == low) {
-                // ran out of things to copy.  This means that the the last destination is the boundary
+                // ran out of things to copy.  This means that the last destination is the boundary
                 low = to + 1;
             } else {
                 // ran out of places to copy to.  This means that there are uncopied pivots and the
@@ -338,7 +338,7 @@ public class Sort {
      * reordered as well in the same way.
      *
      * @param key    Values to sort on
-     * @param values The auxilliary values to sort.
+     * @param values The auxiliary values to sort.
      */
     @SuppressWarnings("WeakerAccess")
     public static void sort(double[] key, double[] ... values) {
@@ -351,7 +351,7 @@ public class Sort {
      *  @param key    Values to sort on
      * @param start  The first element to sort
      * @param n      The number of values to sort
-     * @param values The auxilliary values to sort.
+     * @param values The auxiliary values to sort.
      */
     @SuppressWarnings("WeakerAccess")
     public static void sort(double[] key, int start, int n, double[]... values) {
@@ -363,7 +363,7 @@ public class Sort {
      * Standard quick sort except that sorting rearranges parallel arrays
      *
      * @param key    Values to sort on
-     * @param values The auxilliary values to sort.
+     * @param values The auxiliary values to sort.
      * @param start  The beginning of the values to sort
      * @param end    The value after the last value to sort
      * @param limit  The minimum size to recurse down to.
@@ -466,7 +466,7 @@ public class Sort {
                 swap(from++, to--, key, values);
             }
             if (from == low) {
-                // ran out of things to copy.  This means that the the last destination is the boundary
+                // ran out of things to copy.  This means that the last destination is the boundary
                 low = to + 1;
             } else {
                 // ran out of places to copy to.  This means that there are uncopied pivots and the
