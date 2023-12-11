@@ -548,6 +548,15 @@ public abstract class TDigestTest extends AbstractTest {
         }
     }
 
+    /**
+     * Issue: https://github.com/tdunning/t-digest/issues/169
+     */
+    public void testCentroidAdd() {
+        double x = 0.8046947099707735;
+        Centroid centroid = new Centroid(x, 3);
+        assertEquals(x, centroid.mean(), 0.0);
+    }
+
     @Test
     public void testNaN() {
         final TDigest digest = factory().create();

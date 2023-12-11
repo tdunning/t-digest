@@ -81,7 +81,15 @@ public class Centroid implements Comparable<Centroid>, Serializable {
             actualData.add(x);
         }
         count += w;
-        centroid += w * (x - centroid) / count;
+        // NOTE: The previous calculation was computed with `w * (x - centroid) / count;`.
+        //       Now we calculate a factor here for cases where `count` might be a
+        //       number like 3 that could lead to a repeating decimal and possible
+        //       rounding issues. e.g. `count` starts as `0` (zero) and `w` as `3`.
+        //       That could cause a calculation like `3 * (0.8046947099707735 - 0.0) / 3`.
+        //       Calculating this we would get `0.8046947099707736` (same error for `w`
+        //       equals to `6`, `11`, etc.)
+        double factor = (double) w / count;
+        centroid += factor * (x - centroid);
     }
 
     public double mean() {
