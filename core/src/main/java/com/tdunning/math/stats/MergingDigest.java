@@ -255,7 +255,7 @@ public class MergingDigest extends AbstractTDigest {
         if (Double.isNaN(x)) {
             throw new IllegalArgumentException("Cannot add NaN to t-digest");
         }
-        if (tempUsed >= tempWeight.length - lastUsedCell - 1) {
+        if (tempUsed >= tempWeight.length - lastUsedCell) {
             mergeNewValues();
         }
         int where = tempUsed++;
