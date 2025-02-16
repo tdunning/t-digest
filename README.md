@@ -233,14 +233,14 @@ these images are used as figures in the
 Implementations in Other Languages
 =================
 The t-digest algorithm has been ported to other languages:
- - Python: [tdigest](https://github.com/CamDavidsonPilon/tdigest)
+ - Python: [tdigest](https://github.com/CamDavidsonPilon/tdigest), [fastdigest](https://github.com/moritzmucha/fastdigest)
  - Go: [github.com/spenczar/tdigest](https://github.com/spenczar/tdigest) [github.com/influxdata/tdigest](https://github.com/influxdata/tdigest)
  - JavaScript: [tdigest](https://github.com/welch/tdigest)
  - C++: [CPP TDigest](https://github.com/gpichot/cpp-tdigest), [FB's Folly Implementation (high performance)](https://github.com/facebook/folly/blob/master/folly/stats/TDigest.h)
  - C++: [TDigest](https://github.com/apache/arrow/blob/master/cpp/src/arrow/util/tdigest.h
 ) as part of [Apache Arrow](https://arrow.apache.org/)
  - CUDA C++: [tdigest.cu](https://github.com/rapidsai/cudf/blob/branch-22.10/cpp/src/quantiles/tdigest/tdigest.cu) as part of `libcudf` in [RAPIDS](https://rapids.ai/) powering the [`approx_percentile` and `percentile_approx`](https://github.com/NVIDIA/spark-rapids/blob/b35311f7c6950fd5d8f7f6ed66aeffa87c480850/sql-plugin/src/main/scala/com/nvidia/spark/rapids/GpuApproximatePercentile.scala#L123-L130) expressions in Spark SQL with [RAPIDS Accelerator for Apache Spark](https://nvidia.github.io/spark-rapids/) 
- - Rust: [t-digest](https://github.com/MnO2/t-digest) and its modified version in [Apache Arrow Datafusion](https://github.com/apache/arrow-datafusion/blob/ca952bd33402816dbb1550debb9b8cac3b13e8f2/datafusion-physical-expr/src/tdigest/mod.rs#L19-L28)
+ - Rust: [t-digest](https://github.com/MnO2/t-digest) and its modified version in [Apache Arrow Datafusion](https://github.com/apache/arrow-datafusion/blob/ca952bd33402816dbb1550debb9b8cac3b13e8f2/datafusion-physical-expr/src/tdigest/mod.rs#L19-L28), [tdigests](https://github.com/andylokandy/tdigests)
  - Scala: [TDigest.scala](https://github.com/stripe-archive/brushfire/blob/master/brushfire-training/src/main/scala/com/stripe/brushfire/TDigest.scala)
  - C: [tdigestc (w/ bindings to Go, Java, Python, JS via wasm)](https://github.com/ajwerner/tdigestc)
  - C: [t-digest-c](https://github.com/RedisBloom/t-digest-c) as part of [RedisBloom](https://redisbloom.io/)
