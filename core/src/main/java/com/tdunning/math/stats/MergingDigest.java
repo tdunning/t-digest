@@ -896,10 +896,40 @@ public class MergingDigest extends AbstractTDigest {
     }
 
     /**
-     * Upper bound on compression parameter to prevent integer overflow when computing
-     * internal array sizes. The value 2 * ceil(compression) + sizeFudge must fit in a positive int.
+     * Upper bound on compression parameter to prevent excessive memory allocation.
+     * With compression = 1_000_000, the internal arrays are roughly 2M entries (~16MB),
+     * which is generous for any real use case. Values beyond this are almost certainly
+     * from corrupted or malicious input.
      */
-    static final double MAX_COMPRESSION = 1_000_000_000.0;
+    static final double MAX_COMPRESSION = 1_000_000.0;
+
+    /**
+     * Checks that a weight value is finite and positive.
+     * Uses negated form {@code !(w > 0)} so that NaN is correctly rejected
+     * (since NaN > 0 is false, the negation catches it).
+     */
+    private static void checkWeight(double w, int index) {
+        if (!(w > 0) || Double.isInfinite(w)) {
+            throw new IllegalArgumentException(
+                    "Invalid weight " + w + " at centroid " + index + " (must be finite and positive)");
+        }
+    }
+
+    /**
+     * Checks that a mean value is finite and in non-decreasing order.
+     * Uses negated form {@code !(m >= prevMean)} so that NaN is correctly rejected.
+     */
+    private static void checkMean(double m, double prevMean, int index) {
+        if (Double.isNaN(m) || Double.isInfinite(m)) {
+            throw new IllegalArgumentException(
+                    "Invalid mean " + m + " at centroid " + index + " (must be finite)");
+        }
+        if (!(m >= prevMean)) {
+            throw new IllegalArgumentException(
+                    "Centroids not in non-decreasing order at index " + index +
+                            ": " + prevMean + " > " + m);
+        }
+    }
 
     @SuppressWarnings("WeakerAccess")
     public static MergingDigest fromBytes(ByteBuffer buf) {
@@ -909,9 +939,9 @@ public class MergingDigest extends AbstractTDigest {
             double max = buf.getDouble();
             double compression = buf.getDouble();
             int n = buf.getInt();
-            if (compression <= 0 || compression > MAX_COMPRESSION) {
+            if (!(compression > 0) || compression > MAX_COMPRESSION) {
                 throw new IllegalArgumentException(
-                        "Invalid compression: " + compression + " (must be in (0, " + MAX_COMPRESSION + "])");
+                        "Invalid compression: " + compression + " (must be finite and in (0, " + MAX_COMPRESSION + "])");
             }
             if (n < 0) {
                 throw new IllegalArgumentException("Invalid centroid count: " + n);
@@ -931,15 +961,8 @@ public class MergingDigest extends AbstractTDigest {
             for (int i = 0; i < n; i++) {
                 r.weight[i] = buf.getDouble();
                 r.mean[i] = buf.getDouble();
-                if (r.weight[i] <= 0) {
-                    throw new IllegalArgumentException(
-                            "Non-positive weight " + r.weight[i] + " at centroid " + i);
-                }
-                if (r.mean[i] < prevMean) {
-                    throw new IllegalArgumentException(
-                            "Centroids not in non-decreasing order at index " + i +
-                                    ": " + prevMean + " > " + r.mean[i]);
-                }
+                checkWeight(r.weight[i], i);
+                checkMean(r.mean[i], prevMean, i);
                 prevMean = r.mean[i];
                 r.totalWeight += r.weight[i];
             }
@@ -954,9 +977,9 @@ public class MergingDigest extends AbstractTDigest {
             double compression = buf.getFloat();
             int n = buf.getShort();
             int bufferSize = buf.getShort();
-            if (compression <= 0 || compression > MAX_COMPRESSION) {
+            if (!(compression > 0) || compression > MAX_COMPRESSION) {
                 throw new IllegalArgumentException(
-                        "Invalid compression: " + compression + " (must be in (0, " + MAX_COMPRESSION + "])");
+                        "Invalid compression: " + compression + " (must be finite and in (0, " + MAX_COMPRESSION + "])");
             }
             if (n <= 0) {
                 throw new IllegalArgumentException("Invalid main buffer size: " + n);
@@ -980,15 +1003,8 @@ public class MergingDigest extends AbstractTDigest {
             for (int i = 0; i < r.lastUsedCell; i++) {
                 r.weight[i] = buf.getFloat();
                 r.mean[i] = buf.getFloat();
-                if (r.weight[i] <= 0) {
-                    throw new IllegalArgumentException(
-                            "Non-positive weight " + r.weight[i] + " at centroid " + i);
-                }
-                if (r.mean[i] < prevMean) {
-                    throw new IllegalArgumentException(
-                            "Centroids not in non-decreasing order at index " + i +
-                                    ": " + prevMean + " > " + r.mean[i]);
-                }
+                checkWeight(r.weight[i], i);
+                checkMean(r.mean[i], prevMean, i);
                 prevMean = r.mean[i];
                 r.totalWeight += r.weight[i];
             }
