@@ -29,6 +29,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.*;
 
 //to freeze the tests with a particular seed, put the seed on the next line
@@ -233,5 +234,172 @@ public class MergingDigestTest extends TDigestTest {
                 }
             }
         }
+    }
+
+    // ---- Validation tests for fromBytes (issue #227) ----
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testFromBytesSmallEncodingNegativeN() {
+        ByteBuffer buf = ByteBuffer.allocate(64).order(ByteOrder.BIG_ENDIAN);
+        buf.putInt(2);              // SMALL_ENCODING
+        buf.putDouble(0.0);         // min
+        buf.putDouble(1.0);         // max
+        buf.putFloat(100.0f);       // compression
+        buf.putShort((short) -5);   // n (negative)
+        buf.putShort((short) 10);   // bufferSize
+        buf.putShort((short) 0);    // lastUsedCell
+        buf.flip();
+        MergingDigest.fromBytes(buf);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testFromBytesVerboseEncodingNExceedsCapacity() {
+        ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 100 * 16).order(ByteOrder.BIG_ENDIAN);
+        buf.putInt(1);              // VERBOSE_ENCODING
+        buf.putDouble(0.0);         // min
+        buf.putDouble(1.0);         // max
+        buf.putDouble(1.0);         // compression -> small capacity
+        buf.putInt(100);            // n = 100, way more than capacity
+        for (int i = 0; i < 100; i++) {
+            buf.putDouble(1.0);     // weight
+            buf.putDouble(i);       // mean (non-decreasing)
+        }
+        buf.flip();
+        MergingDigest.fromBytes(buf);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testFromBytesVerboseEncodingOverflowCompression() {
+        ByteBuffer buf = ByteBuffer.allocate(32).order(ByteOrder.BIG_ENDIAN);
+        buf.putInt(1);              // VERBOSE_ENCODING
+        buf.putDouble(0.0);         // min
+        buf.putDouble(1.0);         // max
+        buf.putDouble(1.0e10);      // compression (exceeds MAX_COMPRESSION)
+        buf.putInt(0);              // n
+        buf.flip();
+        MergingDigest.fromBytes(buf);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testFromBytesVerboseEncodingNegativeCompression() {
+        ByteBuffer buf = ByteBuffer.allocate(32).order(ByteOrder.BIG_ENDIAN);
+        buf.putInt(1);              // VERBOSE_ENCODING
+        buf.putDouble(0.0);
+        buf.putDouble(1.0);
+        buf.putDouble(-50.0);       // negative compression
+        buf.putInt(0);
+        buf.flip();
+        MergingDigest.fromBytes(buf);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testFromBytesVerboseEncodingNegativeWeight() {
+        ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 16).order(ByteOrder.BIG_ENDIAN);
+        buf.putInt(1);              // VERBOSE_ENCODING
+        buf.putDouble(0.0);
+        buf.putDouble(1.0);
+        buf.putDouble(100.0);       // compression
+        buf.putInt(1);              // n = 1
+        buf.putDouble(-1.0);        // negative weight
+        buf.putDouble(5.0);         // mean
+        buf.flip();
+        MergingDigest.fromBytes(buf);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testFromBytesVerboseEncodingDecreasingMeans() {
+        ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 2 * 16).order(ByteOrder.BIG_ENDIAN);
+        buf.putInt(1);              // VERBOSE_ENCODING
+        buf.putDouble(0.0);
+        buf.putDouble(10.0);
+        buf.putDouble(100.0);       // compression
+        buf.putInt(2);              // n = 2
+        buf.putDouble(1.0);         // weight[0]
+        buf.putDouble(5.0);         // mean[0] = 5
+        buf.putDouble(1.0);         // weight[1]
+        buf.putDouble(3.0);         // mean[1] = 3, out of order
+        buf.flip();
+        MergingDigest.fromBytes(buf);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testFromBytesSmallEncodingLastUsedCellExceedsN() {
+        ByteBuffer buf = ByteBuffer.allocate(64).order(ByteOrder.BIG_ENDIAN);
+        buf.putInt(2);              // SMALL_ENCODING
+        buf.putDouble(0.0);
+        buf.putDouble(1.0);
+        buf.putFloat(100.0f);       // compression
+        buf.putShort((short) 10);   // n
+        buf.putShort((short) 50);   // bufferSize
+        buf.putShort((short) 20);   // lastUsedCell > n
+        buf.flip();
+        MergingDigest.fromBytes(buf);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testFromBytesSmallEncodingNegativeWeight() {
+        ByteBuffer buf = ByteBuffer.allocate(64).order(ByteOrder.BIG_ENDIAN);
+        buf.putInt(2);              // SMALL_ENCODING
+        buf.putDouble(0.0);
+        buf.putDouble(1.0);
+        buf.putFloat(100.0f);       // compression
+        buf.putShort((short) 220);  // n
+        buf.putShort((short) 500);  // bufferSize
+        buf.putShort((short) 1);    // lastUsedCell
+        buf.putFloat(-1.0f);        // negative weight
+        buf.putFloat(5.0f);         // mean
+        buf.flip();
+        MergingDigest.fromBytes(buf);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testFromBytesSmallEncodingDecreasingMeans() {
+        ByteBuffer buf = ByteBuffer.allocate(128).order(ByteOrder.BIG_ENDIAN);
+        buf.putInt(2);              // SMALL_ENCODING
+        buf.putDouble(0.0);
+        buf.putDouble(10.0);
+        buf.putFloat(100.0f);       // compression
+        buf.putShort((short) 220);  // n
+        buf.putShort((short) 500);  // bufferSize
+        buf.putShort((short) 2);    // lastUsedCell
+        buf.putFloat(1.0f);         // weight[0]
+        buf.putFloat(5.0f);         // mean[0] = 5
+        buf.putFloat(1.0f);         // weight[1]
+        buf.putFloat(3.0f);         // mean[1] = 3, out of order
+        buf.flip();
+        MergingDigest.fromBytes(buf);
+    }
+
+    @Test
+    public void testFromBytesRoundTrip() {
+        // Valid digest should still round-trip correctly
+        MergingDigest original = new MergingDigest(100);
+        Random gen = new Random(42);
+        for (int i = 0; i < 1000; i++) {
+            original.add(gen.nextGaussian());
+        }
+        ByteBuffer buf = ByteBuffer.allocate(original.byteSize());
+        original.asBytes(buf);
+        buf.flip();
+        MergingDigest restored = MergingDigest.fromBytes(buf);
+        assertEquals(original.size(), restored.size(), 0);
+        assertEquals(original.getMin(), restored.getMin(), 0);
+        assertEquals(original.getMax(), restored.getMax(), 0);
+    }
+
+    @Test
+    public void testFromBytesSmallRoundTrip() {
+        MergingDigest original = new MergingDigest(100);
+        Random gen = new Random(42);
+        for (int i = 0; i < 1000; i++) {
+            original.add(gen.nextGaussian());
+        }
+        ByteBuffer buf = ByteBuffer.allocate(original.smallByteSize());
+        original.asSmallBytes(buf);
+        buf.flip();
+        MergingDigest restored = MergingDigest.fromBytes(buf);
+        assertEquals(original.size(), restored.size(), 1);  // float precision
+        assertEquals(original.getMin(), restored.getMin(), 0);
+        assertEquals(original.getMax(), restored.getMax(), 0);
     }
 }
