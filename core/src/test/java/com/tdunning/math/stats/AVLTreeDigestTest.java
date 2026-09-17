@@ -18,6 +18,7 @@
 package com.tdunning.math.stats;
 
 import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -47,13 +48,21 @@ public class AVLTreeDigestTest extends TDigestTest {
         // disabled for AVLTreeDigest for now
     }
 
-    @Override
-    public void testSingletonInACrowd() {
-        // disabled for AVLTreeDigest for now
-    }
-
-    @Override
-    public void singleSingleRange() {
-        // disabled for AVLTreeDigest for now
+    @Test
+    public void testRepeatedValuesDoNotBridgeAnEmptyRange() {
+        // see https://github.com/tdunning/t-digest/issues/230
+        // ranks 94..100 all hold 1000, so there is nothing to interpolate
+        for (int trial = 0; trial < 20; trial++) {
+            TDigest digest = factory(100).create();
+            for (int i = 0; i < 93; i++) {
+                digest.add(1);
+            }
+            for (int i = 0; i < 7; i++) {
+                digest.add(1000);
+            }
+            assertEquals(1, digest.quantile(0.9), 0);
+            assertEquals(1000, digest.quantile(0.95), 0);
+            assertEquals(1000, digest.quantile(0.99), 0);
+        }
     }
 }
