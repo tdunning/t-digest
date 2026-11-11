@@ -502,4 +502,34 @@ public class MergingDigestTest extends TDigestTest {
         assertEquals(original.getMin(), restored.getMin(), 0);
         assertEquals(original.getMax(), restored.getMax(), 0);
     }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testFromBytesRejectsInvertedVerboseBounds() {
+        ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 16).order(ByteOrder.BIG_ENDIAN);
+        buf.putInt(1);              // VERBOSE_ENCODING
+        buf.putDouble(10.0);        // min > max
+        buf.putDouble(5.0);         // max
+        buf.putDouble(100.0);       // compression
+        buf.putInt(1);              // n = 1
+        buf.putDouble(1.0);         // weight
+        buf.putDouble(7.0);         // mean
+        buf.flip();
+        MergingDigest.fromBytes(buf);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testFromBytesRejectsInvertedSmallBounds() {
+        ByteBuffer buf = ByteBuffer.allocate(30 + 8).order(ByteOrder.BIG_ENDIAN);
+        buf.putInt(2);              // SMALL_ENCODING
+        buf.putDouble(10.0);        // min > max
+        buf.putDouble(5.0);         // max
+        buf.putFloat(100.0f);       // compression
+        buf.putShort((short) 220);  // main buffer size
+        buf.putShort((short) 500);  // temporary buffer size
+        buf.putShort((short) 1);    // lastUsedCell
+        buf.putFloat(1.0f);         // weight
+        buf.putFloat(7.0f);         // mean
+        buf.flip();
+        MergingDigest.fromBytes(buf);
+    }
 }

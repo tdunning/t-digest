@@ -931,6 +931,21 @@ public class MergingDigest extends AbstractTDigest {
         }
     }
 
+    private static void checkMinMax(double min, double max, int centroidCount) {
+        if (Double.isNaN(min) || Double.isNaN(max)) {
+            throw new IllegalArgumentException("Digest min/max must not be NaN");
+        }
+        if (centroidCount == 0) {
+            if (min != Double.POSITIVE_INFINITY || max != Double.NEGATIVE_INFINITY) {
+                throw new IllegalArgumentException(
+                        "Invalid empty digest bounds: min=" + min + ", max=" + max);
+            }
+        } else if (min > max) {
+            throw new IllegalArgumentException(
+                    "Invalid digest bounds: min=" + min + " is greater than max=" + max);
+        }
+    }
+
     @SuppressWarnings("WeakerAccess")
     public static MergingDigest fromBytes(ByteBuffer buf) {
         int encoding = buf.getInt();
@@ -955,6 +970,7 @@ public class MergingDigest extends AbstractTDigest {
                 throw new IllegalArgumentException(
                         "Centroid count " + n + " exceeds digest capacity " + r.weight.length);
             }
+            checkMinMax(min, max, n);
             r.setMinMax(min, max);
             r.lastUsedCell = n;
             double prevMean = Double.NEGATIVE_INFINITY;
@@ -988,7 +1004,6 @@ public class MergingDigest extends AbstractTDigest {
                 throw new IllegalArgumentException("Invalid buffer size: " + bufferSize);
             }
             MergingDigest r = new MergingDigest(compression, bufferSize, n);
-            r.setMinMax(min, max);
             int lastUsedCell = buf.getShort();
             if (lastUsedCell < 0 || lastUsedCell > n) {
                 throw new IllegalArgumentException(
@@ -998,6 +1013,8 @@ public class MergingDigest extends AbstractTDigest {
                 throw new IllegalArgumentException(
                         "lastUsedCell " + lastUsedCell + " requires more data than available in buffer");
             }
+            checkMinMax(min, max, lastUsedCell);
+            r.setMinMax(min, max);
             r.lastUsedCell = lastUsedCell;
             double prevMean = Double.NEGATIVE_INFINITY;
             for (int i = 0; i < r.lastUsedCell; i++) {
