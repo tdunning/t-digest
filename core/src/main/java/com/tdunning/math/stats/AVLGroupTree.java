@@ -171,10 +171,19 @@ final class AVLGroupTree extends AbstractCollection<Centroid> implements Seriali
     public void update(int node, double centroid, int count, List<Double> data, boolean forceInPlace) {
         if (centroid == centroids[node]||forceInPlace) {
             // we prefer to update in place so repeated values don't shuffle around and for merging
+            final int delta = count - counts[node];
             centroids[node] = centroid;
             counts[node] = count;
             if (datas != null) {
                 datas[node] = data;
+            }
+            // The node keeps its place, so the tree is not touched and nobody calls fixAggregates.
+            // Every aggregate that includes this node changes by the same amount, so that is all
+            // we need to propagate. Without it sum(), headSum() and floorSum() drift.
+            if (delta != 0) {
+                for (int n = node; n != IntAVLTree.NIL; n = tree.parent(n)) {
+                    aggregatedCounts[n] += delta;
+                }
             }
         } else {
             // have to do full scale update

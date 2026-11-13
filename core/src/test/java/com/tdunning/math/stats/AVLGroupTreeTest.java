@@ -21,6 +21,8 @@ import org.apache.mahout.common.RandomUtils;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Random;
+
 public class AVLGroupTreeTest extends AbstractTest {
 
     @Before
@@ -111,4 +113,65 @@ public class AVLGroupTreeTest extends AbstractTest {
         }
     }
 
+
+    @Test
+    public void testInPlaceUpdateKeepsAggregates() {
+        // see https://github.com/tdunning/t-digest/issues/230
+        AVLGroupTree x = new AVLGroupTree(false);
+        x.add(new Centroid(2));
+        x.add(new Centroid(1));
+        x.add(new Centroid(3));
+
+        // the mean is unchanged, so update() works in place
+        x.update(x.first(), 1, 2, null, false);
+
+        assertEquals(4, x.sum());
+        assertEquals(3, x.headSum(x.last()));
+        x.checkAggregates();
+    }
+
+    @Test
+    public void testAggregatesSurviveInPlaceUpdatesAndMerges() {
+        Random gen = getRandom();
+        AVLGroupTree x = new AVLGroupTree(false);
+        for (int i = 0; i < 1000; i++) {
+            // few distinct values, so most nodes have neighbors with the same mean
+            x.add(new Centroid(gen.nextInt(50)));
+        }
+        checkHeadSums(x);
+
+        for (int i = 0; i < 10000; i++) {
+            int node = x.floor(gen.nextInt(50) + 0.5);
+            if (node == IntAVLTree.NIL) {
+                node = x.first();
+            }
+            int after = x.next(node);
+            if (after != IntAVLTree.NIL && gen.nextInt(10) == 0 && x.size() > 100) {
+                // what AVLTreeDigest.compress() does: fold the next node into this one, in place
+                int w0 = x.count(node);
+                int w1 = x.count(after);
+                double mean = (x.mean(node) * w0 + x.mean(after) * w1) / (w0 + w1);
+                x.update(node, mean, w0 + w1, null, true);
+                x.remove(after);
+            } else {
+                // what AVLTreeDigest.add() does with a repeated value: same mean, more weight
+                x.update(node, x.mean(node), x.count(node) + 1 + gen.nextInt(3), null, false);
+            }
+            if (i % 250 == 0) {
+                checkHeadSums(x);
+            }
+        }
+        checkHeadSums(x);
+        x.checkAggregates();
+        x.checkBalance();
+    }
+
+    private void checkHeadSums(AVLGroupTree x) {
+        long expected = 0;
+        for (int node = x.first(); node != IntAVLTree.NIL; node = x.next(node)) {
+            assertEquals(expected, x.headSum(node));
+            expected += x.count(node);
+        }
+        assertEquals(expected, x.sum());
+    }
 }
