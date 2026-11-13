@@ -1,3 +1,55 @@
+Next
+====
+
+Features and improvements
+
+[c670bbac](https://github.com/tdunning/t-digest/commit/c670bbac34261aeb0a2749d6c501ffa720847164): Adding setter method for AVLTreeDigest gen object.
+
+[ecccbe7b](https://github.com/tdunning/t-digest/commit/ecccbe7bccff901c4e2e2bc2b9992eb4ef4136f9): Add an Automatic-Module-Name to play nice with Java modules.
+
+Release 3.3
+===========
+
+Features and improvements
+
+[Pull 115](https://github.com/tdunning/t-digest/pull/115) Add benchmark for Sort on ordered input.
+
+[4ce7faa6](https://github.com/tdunning/t-digest/commit/4ce7faa6e9cd09c269823d7681513dd1f533634a) Update AVLTreeDigest to handle some repeated centroids better.
+
+[07edffc2](https://github.com/tdunning/t-digest/commit/07edffc2df4934ae0afbca6ef09c4674fd9ff30e) Added limits so that inverse scale function is always non-decreasing.
+
+[3a65397a](https://github.com/tdunning/t-digest/commit/3a65397a73c664112f50590b813ab8b097af421b) Remove limitation on K_3 scale function for MergingDigest.
+
+[20fcedce](https://github.com/tdunning/t-digest/commit/20fcedce75a1958537ce527b4ee153d692572e03) Avoid K_3 scale function with conservative weight limiting in MergingDigest.
+
+[8f080168](https://github.com/tdunning/t-digest/commit/8f080168e78d1da722c44981fcdbced330503151) Simplified merge process in AVLTreeDigest.
+
+[41b15eb6](https://github.com/tdunning/t-digest/commit/41b15eb64fc2b32d6ba890a8bf4b3cf447bf0898) Preserve order of centroids with identical values.
+
+[72a1d6](https://github.com/tdunning/t-digest/commit/72a1d6fc85523b046246fd16bcd3f3df5c689d3b) Added two level merging to combat centroid smearing.
+
+Bugs, fixed and known
+---
+
+#### Fixed
+The following important issues are fixed in this release
+
+[Issue 153](https://github.com/tdunning/t-digest/issues/153) Skip sorting inputs.
+
+[Issue 114](https://github.com/tdunning/t-digest/issues/114): Adding an empty tdigest to a non-empty t-digest results in inconsistent quantiles.
+
+[Issue 113](https://github.com/tdunning/t-digest/issues/113): Quantile estimation algo does not enforce some basic invariants.
+
+[Issue 102](https://github.com/tdunning/t-digest/issues/102): Question on sorted merge step of mergingDigest algorithm.
+
+[Issue 143](https://github.com/tdunning/t-digest/issues/143): Highly skewed data results in wrong percentile.
+
+[Issue 151](https://github.com/tdunning/t-digest/issues/151): Fixed normalization of K_3.
+
+[Issue #145](https://github.com/tdunning/t-digest/issues/145) Fix NaN quantiles when merging Lists of MergingDigests.
+
+[8687bb54](https://github.com/tdunning/t-digest/commit/8687bb5410694a80dc28ad650ab2eb24cb9d0649) Fixed bug in quantile for AVLTreeDigest
+
 Release 3.2
 ===========
 In release 3.2, the goal is to produce an update to the code given the large number of improvements since the previous release.
