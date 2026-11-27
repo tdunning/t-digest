@@ -58,6 +58,21 @@ public class MergingDigestTest extends TDigestTest {
         return MergingDigest.fromBytes(bytes);
     }
 
+    // Test related to issue #219
+    @Test
+    public void testSingletonAfterMerge() {
+        TDigest t1 = factory(100).create();
+        TDigest t2 = factory(100).create();
+        for (int i = 0; i < 4000; i++) {
+            if (i < 1000) {
+                t1.add(i / 3999.0);
+            } else {
+                t2.add(i / 3999.0);
+            }
+        }
+        t1.add(t2);
+    }
+
     // This test came from PR#145 by github user pulver
     @Test
     public void testNanDueToBadInitialization() {

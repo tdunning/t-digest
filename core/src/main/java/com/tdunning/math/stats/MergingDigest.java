@@ -287,6 +287,8 @@ public class MergingDigest extends AbstractTDigest {
         if (m.length != w.length) {
             throw new IllegalArgumentException("Arrays not same length");
         }
+        // Flush pending samples before a merge changes the number of stored centroids.
+        mergeNewValues();
         if (m.length < count + lastUsedCell) {
             // make room to add existing centroids
             double[] m1 = new double[count + lastUsedCell];
@@ -304,6 +306,11 @@ public class MergingDigest extends AbstractTDigest {
     }
 
     @Override
+    public void add(TDigest other) {
+        add(Collections.singletonList(other));
+    }
+
+    @Override
     public void add(List<? extends TDigest> others) {
         if (others.size() == 0) {
             return;
@@ -312,6 +319,9 @@ public class MergingDigest extends AbstractTDigest {
         for (TDigest other : others) {
             other.compress();
             size += other.centroidCount();
+        }
+        if (size == 0) {
+            return;
         }
 
         double[] m = new double[size];
@@ -330,7 +340,7 @@ public class MergingDigest extends AbstractTDigest {
                 System.arraycopy(md.weight, 0, w, offset, md.lastUsedCell);
                 if (data != null) {
                     for (Centroid centroid : other.centroids()) {
-                        data.add(centroid.data());
+                        data.add(copyData(centroid));
                     }
                 }
                 offset += md.lastUsedCell;
@@ -340,13 +350,18 @@ public class MergingDigest extends AbstractTDigest {
                     w[offset] = centroid.count();
                     if (recordAllData) {
                         assert data != null;
-                        data.add(centroid.data());
+                        data.add(copyData(centroid));
                     }
                     offset++;
                 }
             }
         }
         add(m, w, size, data);
+    }
+
+    private static List<Double> copyData(Centroid centroid) {
+        List<Double> data = centroid.data();
+        return new ArrayList<>(data == null ? Collections.singletonList(centroid.mean()) : data);
     }
 
     private void mergeNewValues() {
