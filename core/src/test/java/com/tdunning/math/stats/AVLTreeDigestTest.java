@@ -17,13 +17,14 @@
 
 package com.tdunning.math.stats;
 
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class AVLTreeDigestTest extends TDigestTest {
-    @BeforeClass
+    @BeforeAll
     public static void setup() throws IOException {
         TDigestTest.setup("avl-tree");
     }
@@ -43,16 +44,19 @@ public class AVLTreeDigestTest extends TDigestTest {
     }
 
     @Override
+    @Test
     public void testRepeatedValues() {
         // disabled for AVLTreeDigest for now
     }
 
     @Override
+    @Test
     public void testSingletonInACrowd() {
         // disabled for AVLTreeDigest for now
     }
 
     @Override
+    @Test
     public void singleSingleRange() {
         // disabled for AVLTreeDigest for now
     }

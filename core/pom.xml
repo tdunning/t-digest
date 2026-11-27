@@ -44,21 +44,15 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.13.4</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.mahout</groupId>
             <artifactId>mahout-math</artifactId>
             <version>0.9</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.carrotsearch.randomizedtesting</groupId>
-            <artifactId>randomizedtesting-runner</artifactId>
-            <version>2.1.11</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.carrotsearch</groupId>
-            <artifactId>java-sizeof</artifactId>
-            <version>0.0.5</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -85,55 +79,22 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.18.1</version>
+                <version>3.5.4</version>
                 <configuration>
-                    <skipTests>true</skipTests>
+                    <includes>
+                        <include>${tests}</include>
+                    </includes>
+                    <systemPropertyVariables>
+                        <runSlowTests>${runSlowTests}</runSlowTests>
+                    </systemPropertyVariables>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>com.carrotsearch.randomizedtesting</groupId>
-                <artifactId>junit4-maven-plugin</artifactId>
-                <version>2.1.11</version>
-                <executions>
-                    <execution>
-                        <id>tests</id>
-                        <phase>test</phase>
-                        <goals>
-                            <goal>junit4</goal>
-                        </goals>
-                        <configuration>
-                            <includes>
-                                <include>${tests}</include>
-                            </includes>
-                            <systemProperties>
-                                <runSlowTests>${runSlowTests}</runSlowTests>
-                            </systemProperties>
-                            <seed>${tests.seed}</seed>
-                            <jvmOutputAction>pipe</jvmOutputAction>
-                            <parallelism>1</parallelism>
-                            <listeners>
-                                <report-ant-xml mavenExtensions="true"
-                                                dir="${project.build.directory}/surefire-reports"/>
-                                <report-text showThrowable="true" showStackTraces="true" showOutput="always"
-                                             showStatusOk="false" showStatusError="true" showStatusFailure="true"
-                                             showStatusIgnored="true" showSuiteSummary="true" timestamps="false"/>
-                            </listeners>
-                            <assertions>
-                                <enable/>
-                            </assertions>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.3</version>
+                <version>3.14.1</version>
                 <configuration>
-                    <verbose>true</verbose>
-                    <compilerVersion>1.8</compilerVersion>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <release>8</release>
                 </configuration>
             </plugin>
             <plugin>

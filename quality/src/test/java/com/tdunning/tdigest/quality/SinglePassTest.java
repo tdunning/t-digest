@@ -17,11 +17,13 @@
 
 package com.tdunning.tdigest.quality;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.tdunning.math.stats.Centroid;
 import com.tdunning.math.stats.Dist;
 import com.tdunning.math.stats.MergingDigest;
 import com.tdunning.math.stats.ScaleFunction;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;

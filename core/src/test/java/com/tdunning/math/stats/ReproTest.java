@@ -1,7 +1,9 @@
 package com.tdunning.math.stats;
 
-import org.junit.Assert;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
@@ -38,12 +40,12 @@ public class ReproTest {
                 distMedian.add(d1.quantile(0.5));
                 distHigh.add(d1.quantile(0.999));
             }
-            Assert.assertEquals(0, distLow.quantile(0.0), 0);
-            Assert.assertEquals(0, distLow.quantile(0.5), 0);
-            Assert.assertEquals(0, distLow.quantile(1.0), 0);
-            Assert.assertEquals(9, distHigh.quantile(0.0), 0);
-            Assert.assertEquals(9, distHigh.quantile(0.5), 0);
-            Assert.assertEquals(9, distHigh.quantile(1.0), 0);
+            Assertions.assertEquals(0, distLow.quantile(0.0), 0);
+            Assertions.assertEquals(0, distLow.quantile(0.5), 0);
+            Assertions.assertEquals(0, distLow.quantile(1.0), 0);
+            Assertions.assertEquals(9, distHigh.quantile(0.0), 0);
+            Assertions.assertEquals(9, distHigh.quantile(0.5), 0);
+            Assertions.assertEquals(9, distHigh.quantile(1.0), 0);
             System.out.printf("%s,%.3f,%.5f,%.5f,%.5f\n",
                     sf, 0.5,
                     distMedian.quantile(0.01), distMedian.quantile(0.5), distMedian.quantile(0.99));

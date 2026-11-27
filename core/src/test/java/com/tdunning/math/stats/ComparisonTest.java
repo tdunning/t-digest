@@ -18,14 +18,14 @@
 package com.tdunning.math.stats;
 
 import com.google.common.collect.Lists;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.util.List;
 import java.util.Random;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ComparisonTest {
     /**
@@ -39,7 +39,7 @@ public class ComparisonTest {
         Random gen = new Random();
 
         try (PrintStream out = new PrintStream("detector.csv")) {
-            out.printf("name,rate,t,failure,llr\n");
+            out.print("name,rate,t,failure,llr\n");
             runSimulation(gen, new TdigestDetector(), out, 1000);
             runSimulation(gen, new TdigestDetector(), out, 100);
             runSimulation(gen, new TdigestDetector(), out, 10);

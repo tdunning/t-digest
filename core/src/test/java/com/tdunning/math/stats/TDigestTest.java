@@ -17,13 +17,15 @@
 
 package com.tdunning.math.stats;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.google.common.collect.Lists;
 import org.apache.mahout.common.RandomUtils;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
 import org.apache.mahout.math.jet.random.Normal;
 import org.apache.mahout.math.jet.random.Uniform;
-import org.junit.*;
+import org.junit.jupiter.api.*;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -35,7 +37,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Base test case for TDigests, just extend this class and implement the abstract methods.
  */
-@Ignore
 public abstract class TDigestTest extends AbstractTest {
     private static final Integer lock = 3;
     private static PrintWriter sizeDump = null;
@@ -44,7 +45,7 @@ public abstract class TDigestTest extends AbstractTest {
 
     private static String digestName;
 
-    @BeforeClass
+    @BeforeAll
     public static void freezeSeed() {
         RandomUtils.useTestSeed();
     }
@@ -63,7 +64,7 @@ public abstract class TDigestTest extends AbstractTest {
         }
     }
 
-    @After
+    @AfterEach
     public void flush() {
         synchronized (lock) {
             if (sizeDump != null) {
@@ -78,7 +79,7 @@ public abstract class TDigestTest extends AbstractTest {
         }
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
         if (sizeDump != null) {
             sizeDump.close();
@@ -103,7 +104,7 @@ public abstract class TDigestTest extends AbstractTest {
 
     @Test
     public void offsetUniform() {
-        System.out.printf("delta, q, x1, x2, q1, q2, error_x, error_q\n");
+        System.out.print("delta, q, x1, x2, q1, q2, error_x, error_q\n");
         for (double compression : new double[]{20, 50, 100, 200}) {
             TDigest digest = factory(compression).create();
             digest.setScaleFunction(ScaleFunction.K_0);
@@ -398,7 +399,7 @@ public abstract class TDigestTest extends AbstractTest {
         for (double q : new double[]{0, 1e-10, r.nextDouble(), 0.5, 1 - 1e-10, 1}) {
             double q1 = Dist.quantile(q, values);
             double q2 = digest.quantile(q);
-            assertEquals(String.format("At q=%g, expected %.2f vs %.2f", q, q1, q2), q1, q2, 0.03);
+            assertEquals(q1, q2, 0.03, String.format("At q=%g, expected %.2f vs %.2f", q, q1, q2));
         }
     }
 
@@ -457,7 +458,8 @@ public abstract class TDigestTest extends AbstractTest {
         dist.compress();
         assertEquals(qz, dist.size(), 1e-10);
 
-        assertTrue(String.format("Summary is too large (got %d, wanted <= %.1f)", dist.centroids().size(), dist.compression()), dist.centroids().size() <= dist.compression());
+        String message = String.format("Summary is too large (got %d, wanted <= %.1f)", dist.centroids().size(), dist.compression());
+        assertTrue(dist.centroids().size() <= dist.compression(), message);
         int softErrors = 0;
         for (int i = 0; i < xValues.length; i++) {
             double x = xValues[i];
@@ -471,7 +473,7 @@ public abstract class TDigestTest extends AbstractTest {
             if (Math.abs(q - estimate) > 0.005) {
                 softErrors++;
             }
-            assertEquals(String.format("discrepancy %.5f vs %.5f @ %.5f", q, estimate, x), q, estimate, 0.012);
+            assertEquals(q, estimate, 0.012, String.format("discrepancy %.5f vs %.5f @ %.5f", q, estimate, x));
         }
         assertTrue(softErrors < 3);
 
@@ -523,7 +525,7 @@ public abstract class TDigestTest extends AbstractTest {
         double prev = Double.NEGATIVE_INFINITY;
         for (double q : quantiles) {
             final double v = digest.quantile(q);
-            assertTrue(String.format("q=%.1f, v=%.4f, pref=%.4f", q, v, prev), v >= prev);
+            assertTrue(v >= prev, String.format("q=%.1f, v=%.4f, pref=%.4f", q, v, prev));
             prev = v;
         }
     }
@@ -634,12 +636,18 @@ public abstract class TDigestTest extends AbstractTest {
             dist.add(2);
             if (i % 8 == 0) {
                 String message = String.format("i = %d", i);
-                assertEquals(message, 0, dist.cdf(1 - 1e-9), 0);
-                assertEquals(message, 0.25, dist.cdf(1), 0.01 * scale);
-                assertEquals(message, 0.5, dist.cdf(1 + 1e-9), 0.03 * scale);
-                assertEquals(message, 0.5, dist.cdf(2 - 1e-9), 0.03 * scale);
-                assertEquals(message, 0.75, dist.cdf(2), 0.01 * scale);
-                assertEquals(message, 1, dist.cdf(2 + 1e-9), 0);
+                double actual5 = dist.cdf(1 - 1e-9);
+                assertEquals(0, actual5, 0, message);
+                double actual4 = dist.cdf(1);
+                assertEquals(0.25, actual4, 0.01 * scale, message);
+                double actual3 = dist.cdf(1 + 1e-9);
+                assertEquals(0.5, actual3, 0.03 * scale, message);
+                double actual2 = dist.cdf(2 - 1e-9);
+                assertEquals(0.5, actual2, 0.03 * scale, message);
+                double actual1 = dist.cdf(2);
+                assertEquals(0.75, actual1, 0.01 * scale, message);
+                double actual = dist.cdf(2 + 1e-9);
+                assertEquals(1, actual, 0, message);
 
                 assertEquals(1, dist.quantile(0), 0);
                 assertEquals(1, dist.quantile(0.1), 0);
@@ -689,7 +697,7 @@ public abstract class TDigestTest extends AbstractTest {
         System.out.printf("# %fus per point\n", (System.nanoTime() - t0) * 1e-3 / 1000000);
         System.out.printf("# %d centroids\n", dist.centroids().size());
 
-        assertTrue("Summary is too large: " + dist.centroids().size(), dist.centroids().size() < dist.compression());
+        assertTrue(dist.centroids().size() < dist.compression(), "Summary is too large: " + dist.centroids().size());
 
         // all quantiles should round to nearest actual value
         for (int i = 0; i < 10; i++) {
@@ -699,11 +707,10 @@ public abstract class TDigestTest extends AbstractTest {
                 double q = z + delta;
                 double cdf = dist.cdf(q);
                 // we also relax the tolerances for repeated values
-                assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f", z, q, cdf), z + 0.05, cdf, 0.03);
+                assertEquals(z + 0.05, cdf, 0.03, String.format("z=%.1f, q = %.3f, cdf = %.3f", z, q, cdf));
 
                 double estimate = dist.quantile(q);
-                assertEquals(String.format("z=%.1f, q = %.3f, cdf = %.3f, estimate = %.3f", z, q, cdf, estimate),
-                        Math.rint(q * 10) / 10.0, estimate, 0.02);
+                assertEquals(Math.rint(q * 10) / 10.0, estimate, 0.02, String.format("z=%.1f, q = %.3f, cdf = %.3f, estimate = %.3f", z, q, cdf, estimate));
             }
         }
     }
@@ -737,7 +744,7 @@ public abstract class TDigestTest extends AbstractTest {
 
         ByteBuffer buf = ByteBuffer.allocate(20000);
         dist.asBytes(buf);
-        assertTrue(String.format("size is %d\n", buf.position()), buf.position() < 12000);
+        assertTrue(buf.position() < 12000, String.format("size is %d\n", buf.position()));
         assertEquals(dist.byteSize(), buf.position());
 
         System.out.printf("# big %d bytes\n", buf.position());
@@ -803,13 +810,13 @@ public abstract class TDigestTest extends AbstractTest {
         double p95 = tdigest.quantile(0.95);
         double p99 = tdigest.quantile(0.99);
 
-        assertTrue("ordering of quantiles", p10 <= p50);
-        assertTrue("ordering of quantiles", p50 <= p90);
-        assertTrue("ordering of quantiles", p90 <= p95);
-        assertTrue("ordering of quantiles", p95 <= p99);
+        assertTrue(p10 <= p50, "ordering of quantiles");
+        assertTrue(p50 <= p90, "ordering of quantiles");
+        assertTrue(p90 <= p95, "ordering of quantiles");
+        assertTrue(p95 <= p99, "ordering of quantiles");
 
-        assertEquals("Extreme quantiles", x0, p10, 0);
-        assertEquals("Extreme quantiles", x2, p99, 0);
+        assertEquals(x0, p10, 0, "Extreme quantiles");
+        assertEquals(x2, p99, 0, "Extreme quantiles");
 
 //        System.out.println("digest: " + tdigest.getClass());
 //        System.out.println("p10: " + tdigest.quantile(0.1));
@@ -854,7 +861,7 @@ public abstract class TDigestTest extends AbstractTest {
 
         for (int i = 0; i < 3000; i++) {
             int n = AbstractTDigest.decode(buf);
-            assertEquals(String.format("%d:", i), ref.get(i).intValue(), n);
+            assertEquals(ref.get(i).intValue(), n, String.format("%d:", i));
         }
     }
 
@@ -894,7 +901,7 @@ public abstract class TDigestTest extends AbstractTest {
                                         out.printf("%d\t%d\t%.0f\t%d\t%d\t%d\n", currentK, size, compression, dist.centroidCount(), dist.smallByteSize(), dist.byteSize());
                                         out.flush();
                                     } catch (Throwable e) {
-                                        System.out.printf("                         Exception %s, %d, %.0f, %d\n", e.toString(), currentK, compression, size);
+                                        System.out.printf("                         Exception %s, %d, %.0f, %d\n", e, currentK, compression, size);
                                         throw e;
                                     }
                                 }
@@ -920,7 +927,7 @@ public abstract class TDigestTest extends AbstractTest {
                 }
             }
             executor.shutdownNow();
-            assertTrue("Dangling executor thread", executor.awaitTermination(5, TimeUnit.SECONDS));
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS), "Dangling executor thread");
         }
     }
 

@@ -17,16 +17,14 @@
 
 package com.tdunning.math.stats;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.*;
 import java.nio.LongBuffer;
 import java.util.Arrays;
 import java.util.Random;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public abstract class HistogramTestCases {
     boolean useLinearBuckets;
@@ -98,9 +96,9 @@ public abstract class HistogramTestCases {
                         sum += err;
 
                         if (i > 0) {
-                            assertTrue(String.format("%d: %.5f > %.5f", i, cuts[i], min[i]), cuts[i] <= min[i]);
+                            assertTrue(cuts[i] <= min[i], String.format("%d: %.5f > %.5f", i, cuts[i], min[i]));
                         }
-                        assertTrue(String.format("%d: %.5f > %.5f", i, max[i], cuts[i + 1]), cuts[i + 1] >= max[i]);
+                        assertTrue(cuts[i + 1] >= max[i], String.format("%d: %.5f > %.5f", i, max[i], cuts[i + 1]));
                     }
                     out.printf("%d,%.4f,%.4f,%.4f,%d,%.4f,%.1f\n", j, cuts[i], lowBound, highBound, counts[i], expected, err);
                     maxErr = Math.max(maxErr, err);
@@ -130,12 +128,12 @@ public abstract class HistogramTestCases {
             System.out.printf("Checking χ^2 = %.4f ± %.1f against expected %.4f ± %.1f\n",
                     mean, Math.sqrt(sd / trials), idealChi2, chi2SD);
             // verify that the chi^2 score for counts is as expected
-            assertEquals("χ^2 > expect + 2*sd too often", 0, n1above, 0.05 * trials);
+            assertEquals(0, n1above, 0.05 * trials, "χ^2 > expect + 2*sd too often");
             // 3*sigma above for a chi^2 distribution happens more than you might think
-            assertEquals("χ^2 > expect + 3*sd too often", 0, n2above, 0.01 * trials);
+            assertEquals(0, n2above, 0.01 * trials, "χ^2 > expect + 3*sd too often");
             // the bottom side of the chi^2 distribution is a bit tighter
-            assertEquals("χ^2 < expect - 2*sd too often", 0, n1below, 0.03 * trials);
-            assertEquals("χ^2 < expect - 3*sd too often", 0, n2below, 0.06 * trials);
+            assertEquals(0, n1below, 0.03 * trials, "χ^2 < expect - 2*sd too often");
+            assertEquals(0, n2below, 0.06 * trials, "χ^2 < expect - 3*sd too often");
         }
     }
 

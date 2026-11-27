@@ -4,7 +4,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.tdunning.math.stats.*;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.*;
 import java.util.*;
@@ -12,7 +12,10 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Produce measurements of accuracy versus compression factor for fixed data size
@@ -35,7 +38,7 @@ public class AccuracyTest {
             List<Callable<String>> tasks = Lists.newArrayList();
             for (int k = 0; k < 20; k++) {
                 final int currentK = k;
-                tasks.add(new Callable<String>() {
+                assertTrue(tasks.add(new Callable<String>() {
                     final Random gen = new Random(seedGenerator.nextLong());
 
                     @Override
@@ -79,21 +82,21 @@ public class AccuracyTest {
                             int k = 0;
                             int totalByCount = 0;
                             for (TDigest digest : subs) {
-                                assertEquals("Sub-digest size check", cnt[i], digest.size());
+                                assertEquals(cnt[i], digest.size(), "Sub-digest size check");
                                 int k2 = 0;
                                 for (Centroid centroid : digest.centroids()) {
                                     Iterables.addAll(data2, centroid.data());
-                                    assertEquals("Centroid consistency", centroid.count(), centroid.data().size());
+                                    assertEquals(centroid.count(), centroid.data().size(), "Centroid consistency");
                                     k2 += centroid.data().size();
                                 }
                                 totalByCount += cnt[i];
                                 k += k2;
-                                assertEquals("Sub-digest centroid sum check", cnt[i], k2);
-                                assertEquals("Sub-digest centroid sum check", cnt[i], subs.get(i).size());
+                                assertEquals(cnt[i], k2, "Sub-digest centroid sum check");
+                                assertEquals(cnt[i], subs.get(i).size(), "Sub-digest centroid sum check");
                                 i++;
                             }
-                            assertEquals("Sub-digests don't add up to the right size", data.size(), k);
-                            assertEquals("Counts don't match up", data.size(), totalByCount);
+                            assertEquals(data.size(), k, "Sub-digests don't add up to the right size");
+                            assertEquals(data.size(), totalByCount, "Counts don't match up");
 
                             // verify that the raw data all got recorded
                             Collections.sort(data2);
@@ -106,7 +109,8 @@ public class AccuracyTest {
                             // now merge the sub-digests
                             TDigest dist2 = new MergingDigest(100).recordAllData();
                             dist2.add(subs);
-                            assertEquals(String.format("Digest count is wrong %d vs %d", totalByCount, dist2.size()), totalByCount, dist2.size());
+                            String message = String.format("Digest count is wrong %d vs %d", totalByCount, dist2.size());
+                            assertEquals(totalByCount, dist2.size(), message);
 
                             // verify the merged result has the right data
                             List<Double> data3 = Lists.newArrayList();
@@ -114,7 +118,7 @@ public class AccuracyTest {
                                 Iterables.addAll(data3, centroid.data());
                             }
                             Collections.sort(data3);
-                            assertEquals(String.format("Total data size %d vs %d", data.size(), data3.size()), data.size(), data3.size());
+                            assertEquals(data.size(), data3.size(), String.format("Total data size %d vs %d", data.size(), data3.size()));
                             ix = data.iterator();
                             for (Double x : data3) {
                                 assertEquals(ix.next(), x);
@@ -135,8 +139,8 @@ public class AccuracyTest {
                                 double e2Relative = Math.abs(e2) / q;
                                 double e3 = dist3.quantile(q) - z;
                                 out.printf("quantile,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n", parts, q, z - q, e1, e2, e2Relative, e3);
-                                assertTrue(String.format("Relative error: parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f, e3=%.4f", parts, q, e1, e2, e2Relative, e3), e2Relative < 0.4);
-                                assertTrue(String.format("Absolute error: parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f, e3=%.4f", parts, q, e1, e2, e2Relative, e3), Math.abs(e2) < 0.015);
+                                assertTrue(e2Relative < 0.4, String.format("Relative error: parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f, e3=%.4f", parts, q, e1, e2, e2Relative, e3));
+                                assertTrue(Math.abs(e2) < 0.015, String.format("Absolute error: parts=%d, q=%.4f, e1=%.5f, e2=%.5f, rel=%.4f, e3=%.4f", parts, q, e1, e2, e2Relative, e3));
                             }
 
                             for (double x : new double[]{0.001, 0.01, 0.1, 0.2, 0.3, 0.5}) {
@@ -146,8 +150,8 @@ public class AccuracyTest {
                                 double e3 = dist3.cdf(z) - z;
 
                                 out.printf("cdf,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n", parts, x, z - x, e1, e2, Math.abs(e2) / x, e3);
-                                assertTrue(String.format("Absolute cdf: parts=%d, x=%.4f, e1=%.5f, e2=%.5f", parts, x, e1, e2), Math.abs(e2) < 0.015);
-                                assertTrue(String.format("Relative cdf: parts=%d, x=%.4f, e1=%.5f, e2=%.5f, rel=%.3f", parts, x, e1, e2, Math.abs(e2) / x), Math.abs(e2) / x < 0.4);
+                                assertTrue(Math.abs(e2) < 0.015, String.format("Absolute cdf: parts=%d, x=%.4f, e1=%.5f, e2=%.5f", parts, x, e1, e2));
+                                assertTrue(Math.abs(e2) / x < 0.4, String.format("Relative cdf: parts=%d, x=%.4f, e1=%.5f, e2=%.5f, rel=%.3f", parts, x, e1, e2, Math.abs(e2) / x));
                             }
                             out.flush();
                         }
@@ -156,7 +160,7 @@ public class AccuracyTest {
                         out.close();
                         return s.toString();
                     }
-                });
+                }));
             }
 
             ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 2);
@@ -320,7 +324,7 @@ public class AccuracyTest {
                 });
             }
             pool.invokeAll(tasks);
-            assertFalse("Tasks aborted in test", abort.get());
+            assertFalse(abort.get(), "Tasks aborted in test");
         }
     }
 
@@ -445,3 +449,23 @@ public class AccuracyTest {
     }
 }
 
+final class JUnit4CompatibleAssertions {
+    private JUnit4CompatibleAssertions() {
+    }
+
+    public static void assertEquals(String message, int expected, int actual) {
+        org.junit.jupiter.api.Assertions.assertEquals(expected, actual, message);
+    }
+
+    public static void assertEquals(String message, long expected, long actual) {
+        org.junit.jupiter.api.Assertions.assertEquals(expected, actual, message);
+    }
+
+    public static void assertTrue(String message, boolean condition) {
+        org.junit.jupiter.api.Assertions.assertTrue(condition, message);
+    }
+
+    public static void assertFalse(String message, boolean condition) {
+        org.junit.jupiter.api.Assertions.assertFalse(condition, message);
+    }
+}

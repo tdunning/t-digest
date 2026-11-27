@@ -17,15 +17,17 @@
 
 package com.tdunning.math.stats;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.google.common.collect.Lists;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.*;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class MegaMergeTest {
 
@@ -49,7 +51,7 @@ public class MegaMergeTest {
             }
         }
         double t1 = System.nanoTime() * 1e-9;
-        System.out.printf("Data has been generated\n");
+        System.out.print("Data has been generated\n");
         // record the basic summaries
         final MergingDigest[][] td = new MergingDigest[DAY][WIDTH];
         int m = 0;
@@ -66,7 +68,7 @@ public class MegaMergeTest {
             }
         }
         double t2 = System.nanoTime() * 1e-9;
-        System.out.printf("Micro-summaries filled\n");
+        System.out.print("Micro-summaries filled\n");
         System.out.printf("%.3f,%.3f\n", t1 - t0, t2 - t1);
         int cores = Runtime.getRuntime().availableProcessors();
         System.out.printf("using %d cores\n", cores);
@@ -117,7 +119,7 @@ public class MegaMergeTest {
             data[i] = gen.nextGaussian();
         }
         double t1 = System.nanoTime() * 1e-9;
-        System.out.printf("Data has been generated\n");
+        System.out.print("Data has been generated\n");
 
         // record the basic summaries
         final MergingDigest[] td = new MergingDigest[SUMMARIES];
@@ -132,7 +134,7 @@ public class MegaMergeTest {
                 k = (k + 1) % data.length;
             }
         }
-        System.out.printf("Partials built\n");
+        System.out.print("Partials built\n");
         double t2 = System.nanoTime() * 1e-9;
 
         MergingDigest tAll = new MergingDigest(200);

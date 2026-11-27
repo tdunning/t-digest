@@ -17,17 +17,15 @@
 
 package com.tdunning.math.stats;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class LogHistogramTest extends HistogramTestCases {
-    @Before
+    @BeforeEach
     public void setup() {
         useLinearBuckets = false;
         factory = new HistogramFactory() {
@@ -46,7 +44,7 @@ public class LogHistogramTest extends HistogramTestCases {
             assertEquals(Math.log(x) / Math.log(2), LogHistogram.approxLog2(x), 0.01);
             x *= 1.0 + Math.PI / 100.0;
         }
-        assertTrue("Insufficient range", x > 1e6);
+        assertTrue(x > 1e6, "Insufficient range");
     }
 
     @Test
@@ -70,11 +68,13 @@ public class LogHistogramTest extends HistogramTestCases {
     }
 
     @Override
+    @Test
     public void testCompression() {
         //ignore
     }
 
     @Override
+    @Test
     public void testSerialization() {
         //ignore
     }

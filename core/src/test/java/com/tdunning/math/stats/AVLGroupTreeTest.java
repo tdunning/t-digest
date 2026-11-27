@@ -17,13 +17,17 @@
 
 package com.tdunning.math.stats;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import org.apache.mahout.common.RandomUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.util.Random;
 
 public class AVLGroupTreeTest extends AbstractTest {
 
-    @Before
+    @BeforeEach
     public void setUp() {
         RandomUtils.useTestSeed();
     }
@@ -80,8 +84,9 @@ public class AVLGroupTreeTest extends AbstractTest {
     @Test
     public void testHeadSum() {
         AVLGroupTree x = new AVLGroupTree(false);
+        Random random = new Random(0);
         for (int i = 0; i < 1000; ++i) {
-            x.add(randomDouble(), randomIntBetween(1, 10), null);
+            x.add(random.nextDouble(), random.nextInt(10) + 1, null);
         }
         long sum = 0;
         long last = -1;
@@ -96,10 +101,11 @@ public class AVLGroupTreeTest extends AbstractTest {
     @Test
     public void testFloorSum() {
         AVLGroupTree x = new AVLGroupTree(false);
+        Random random = new Random(0);
         int total = 0;
         for (int i = 0; i < 1000; ++i) {
-            int count = randomIntBetween(1, 10);
-            x.add(randomDouble(), count, null);
+            int count = random.nextInt(10) + 1;
+            x.add(random.nextDouble(), count, null);
             total += count;
         }
         assertEquals(IntAVLTree.NIL, x.floorSum(-1));
