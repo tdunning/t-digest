@@ -17,7 +17,7 @@
 
 package com.tdunning.math.stats;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
@@ -27,8 +27,7 @@ import java.util.Map;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Validate internal consistency of scale functions.
@@ -78,8 +77,7 @@ public class ScaleFunctionTests {
                             double right = i + cnt - (n - 1) / 2;
                             boolean sameSide = left * right > 0;
                             if (!k.toString().endsWith("NO_NORM") && sameSide) {
-                                assertTrue(String.format("%s %.0f %.0f %.3f vs %.3f @ %.3f", k, compression, n, cnt, size, i / (n - 1)),
-                                        cnt == 1 || cnt <= max(1.1 * size, size + 1));
+                                assertTrue(cnt == 1 || cnt <= max(1.1 * size, size + 1), String.format("%s %.0f %.0f %.3f vs %.3f @ %.3f", k, compression, n, cnt, size, i / (n - 1)));
                             }
                             i += cnt;
                             k0 = k.k(i / (n - 1), compression, n);
@@ -89,8 +87,7 @@ public class ScaleFunctionTests {
                         out.printf("%s,%.0f,%.0f,%d,%d,%.4f\n", k, compression, n, m, singles, k.normalizer(compression, n));
 
                         if (!k.toString().endsWith("NO_NORM")) {
-                            assertTrue(String.format("%s %d, %.0f", k, m, compression),
-                                    n < 3 * compression || (m >= compression / 3 && m <= compression));
+                            assertTrue(n < 3 * compression || (m >= compression / 3 && m <= compression), String.format("%s %d, %.0f", k, m, compression));
                         }
                     }
                     // make sure that the approximate version gets same results
@@ -122,10 +119,12 @@ public class ScaleFunctionTests {
                     double norm = k.normalizer(compression, n);
                     for (double q : new double[]{0.0001, 0.001, 0.01, 0.1, 0.2, 0.5}) {
                         if (q * n > 1) {
-                            assertEquals(String.format("%s q: %.4f, compression: %.0f, n: %d", k, q, compression, n),
-                                    k.k(q, compression, n), k.k(q, norm), 1e-10);
-                            assertEquals(String.format("%s q: %.4f, compression: %.0f, n: %d", k, q, compression, n),
-                                    k.k(1 - q, compression, n), k.k(1 - q, norm), 1e-10);
+                            double expected1 = k.k(q, compression, n);
+                            double actual1 = k.k(q, norm);
+                            assertEquals(expected1, actual1, 1e-10, String.format("%s q: %.4f, compression: %.0f, n: %d", k, q, compression, n));
+                            double expected = k.k(1 - q, compression, n);
+                            double actual = k.k(1 - q, norm);
+                            assertEquals(expected, actual, 1e-10, String.format("%s q: %.4f, compression: %.0f, n: %d", k, q, compression, n));
                         }
                     }
 
@@ -157,11 +156,11 @@ public class ScaleFunctionTests {
 
                     // mustn't have too many
                     String label = String.format("max diff: %.3f, scale: %s, compression: %.0f, n: %d", diff, k, compression, n);
-                    assertTrue(label, diff <= Math.min(n, compression / 2 + 10));
+                    assertTrue(diff <= Math.min(n, compression / 2 + 10), label);
 
                     // nor too few. This is where issue #151 shows up
                     label = String.format("min diff: %.3f, scale: %s, compression: %.0f, n: %d", diff, k, compression, n);
-                    assertTrue(label, diff >= Math.min(n, compression / 4));
+                    assertTrue(diff >= Math.min(n, compression / 4), label);
                     out.printf("%s, %.0f, %d, %.0f, %.3f, %.3f\n",
                             k, compression, n, singletons, mink, maxk);
                 }
@@ -182,9 +181,8 @@ public class ScaleFunctionTests {
                         String remark = String.format("Different ways to compute scale function %s should agree, " +
                                         "compression=%.0f, n=%d, q=%.2f",
                                 scale, compression, n, q);
-                        assertEquals(remark, k1, k2, 1e-10);
-                        assertTrue(String.format("Scale %s function should not decrease", scale),
-                                k1 >= last);
+                        assertEquals(k1, k2, 1e-10, remark);
+                        assertTrue(k1 >= last, String.format("Scale %s function should not decrease", scale));
                         last = k1;
                     }
                     last = Double.NEGATIVE_INFINITY;
@@ -194,9 +192,8 @@ public class ScaleFunctionTests {
                         String remark = String.format("Different ways to compute inverse scale function %s should agree, " +
                                         "compression=%.0f, n=%d, q=%.2f",
                                 scale, compression, n, k);
-                        assertEquals(remark, q1, q2, 1e-10);
-                        assertTrue(String.format("Inverse scale %s function should not decrease", scale),
-                                q1 >= last);
+                        assertEquals(q1, q2, 1e-10, remark);
+                        assertTrue(q1 >= last, String.format("Inverse scale %s function should not decrease", scale));
                         last = q1;
                     }
                 }
@@ -216,8 +213,8 @@ public class ScaleFunctionTests {
             double actual = ScaleFunction.fastAsin(x);
             double error = ex - actual;
 //            System.out.printf("%.8f, %.8f, %.8f, %.12f\n", x, ex, actual, error * 1e6);
-            assertEquals("Bad approximation", 0, error, 1e-6);
-            assertTrue("Not monotonic", actual >= old);
+            assertEquals(0, error, 1e-6, "Bad approximation");
+            assertTrue(actual >= old, "Not monotonic");
             worst = Math.max(worst, Math.abs(error));
             old = actual;
         }
@@ -241,19 +238,18 @@ public class ScaleFunctionTests {
                     for (int i = 1; i < n; i++) {
                         double q = i / n;
                         double k = f.k(q, compression, n);
-                        assertTrue(String.format("monoticity %s(%.0f, %.0f) @ %.5f", f, compression, n, q),
-                                k > oldK);
+                        assertTrue(k > oldK, String.format("monoticity %s(%.0f, %.0f) @ %.5f", f, compression, n, q));
                         oldK = k;
 
                         double qx = f.q(k, compression, n);
                         double kx = f.k(qx, compression, n);
-                        assertEquals(String.format("Q: %s(%.0f, %.0f) @ %.5f", f, compression, n, q), q, qx, 1e-6);
+                        assertEquals(q, qx, 1e-6, String.format("Q: %s(%.0f, %.0f) @ %.5f", f, compression, n, q));
                         double absError = abs(k - kx);
                         double relError = absError / max(0.01, max(abs(k), abs(kx)));
                         String info = String.format("K: %s(%.0f, %.0f) @ %.5f [%.5g, %.5g]",
                                 f, compression, n, q, absError, relError);
-                        assertEquals(info, 0, absError, tolerance);
-                        assertEquals(info, 0, relError, tolerance);
+                        assertEquals(0, absError, tolerance, info);
+                        assertEquals(0, relError, tolerance, info);
                     }
                     assertTrue(f.k(0, compression, n) < f.k(epsilon, compression, n));
                     assertTrue(f.k(1, compression, n) > f.k(1 - epsilon, compression, n));

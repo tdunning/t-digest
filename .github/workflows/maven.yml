@@ -10,16 +10,10 @@ permissions:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.experimental }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
-        java: [ 8, 11 ]
-        experimental: [ false ]
-#        include:
-#          - java: 18-ea
-#            os: ubuntu-latest
-#            experimental: true
+        os: [ ubuntu-latest ]
+        java: [ 8, 11, 27 ]
 
     steps:
       - uses: actions/checkout@v3.3.0

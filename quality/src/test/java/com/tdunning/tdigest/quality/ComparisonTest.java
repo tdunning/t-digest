@@ -17,6 +17,8 @@
 
 package com.tdunning.tdigest.quality;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.clearspring.analytics.stream.quantile.QDigest;
 import com.tdunning.math.stats.Dist;
 import com.tdunning.math.stats.MergingDigest;
@@ -25,7 +27,7 @@ import com.tdunning.math.stats.TDigest;
 import org.apache.mahout.math.jet.random.AbstractContinousDistribution;
 import org.apache.mahout.math.jet.random.Gamma;
 import org.apache.mahout.math.jet.random.Uniform;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -38,7 +40,7 @@ import java.util.Random;
  * Compares t-digest to q-digest and traditional streaming quantile algorithms.
  */
 public class ComparisonTest {
-    private static double M = 20;
+    private static final double M = 20;
 
     @Test
     public void compareToQDigest() throws FileNotFoundException {

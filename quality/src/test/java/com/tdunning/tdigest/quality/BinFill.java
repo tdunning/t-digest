@@ -24,7 +24,7 @@ import com.tdunning.math.stats.MergingDigest;
 import com.tdunning.math.stats.ScaleFunction;
 import com.tdunning.math.stats.TDigest;
 import org.apache.mahout.math.jet.random.AbstractDistribution;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
@@ -39,7 +39,7 @@ import java.util.Random;
 public class BinFill {
     @Test
     public void sampleFill() {
-        System.out.printf("scale,delta,centroid,mean,count\n");
+        System.out.print("scale,delta,centroid,mean,count\n");
         for (double delta : new double[]{5, 10}) {
             double[] data = {0, 0, 3, 4, 1, 6, 0, 5, 2, 0, 3, 3, 2, 3, 0, 2, 5, 0, 3, 1};
 

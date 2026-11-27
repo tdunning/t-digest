@@ -17,13 +17,14 @@
 
 package com.tdunning.math.stats;
 
-import com.carrotsearch.randomizedtesting.annotations.Seed;
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.google.common.collect.Lists;
 import org.apache.mahout.common.RandomUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -32,11 +33,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
 
-//to freeze the tests with a particular seed, put the seed on the next line
-//@Seed("84527677CF03B566:A6FF596BDDB2D59D")
-@Seed("1CD6F48E8CA53BD1:379C5BDEB3A02ACB")
 public class MergingDigestTest extends TDigestTest {
-    @BeforeClass
+    @BeforeAll
     public static void setup() throws IOException {
         TDigestTest.setup("merge");
     }
@@ -50,7 +48,7 @@ public class MergingDigestTest extends TDigestTest {
         };
     }
 
-    @Before
+    @BeforeEach
     public void testSetUp() {
         RandomUtils.useTestSeed();
     }
@@ -94,7 +92,7 @@ public class MergingDigestTest extends TDigestTest {
         }
 //        md.add(mds);
 
-//        Assert.assertFalse(Double.isNaN(md.quantile(0.01)));
+//        Assertions.assertFalse(Double.isNaN(md.quantile(0.01)));
         // Output
         System.out.printf("%4s\t%10s\t%10s\t%10s\t%10s\n", "q", "estimated", "actual", "error_cdf", "error_q");
         String dashes = "==========";
@@ -104,8 +102,8 @@ public class MergingDigestTest extends TDigestTest {
             double est = md.quantile(q);
             double actual = Dist.quantile(q, raw);
             double qx = md.cdf(actual);
-            Assert.assertEquals(q, qx, 0.08);
-            Assert.assertEquals(est, actual, 3.5);
+            Assertions.assertEquals(q, qx, 0.08);
+            Assertions.assertEquals(est, actual, 3.5);
             System.out.printf("%4.2f\t%10.2f\t%10.2f\t%10.2f\t%10.2f\n", q, est, actual, Math.abs(est - actual), Math.abs(qx - q));
         }
     }
@@ -187,7 +185,8 @@ public class MergingDigestTest extends TDigestTest {
             double q1 = q0 + (double) centroid.count() / x.size();
             double dk = scale.k(q1, compression, x.size()) - scale.k(q0, compression, x.size());
             if (centroid.count() > 1) {
-                assertTrue(String.format("K-size for centroid %d at %.3f is %.3f", i, centroid.mean(), dk), dk <= 1);
+                String message = String.format("K-size for centroid %d at %.3f is %.3f", i, centroid.mean(), dk);
+                assertTrue(dk <= 1, message);
             } else {
                 dk = 1;
             }
@@ -238,236 +237,268 @@ public class MergingDigestTest extends TDigestTest {
 
     // ---- Validation tests for fromBytes (issue #227) ----
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesSmallEncodingNegativeN() {
-        ByteBuffer buf = ByteBuffer.allocate(64).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(2);              // SMALL_ENCODING
-        buf.putDouble(0.0);         // min
-        buf.putDouble(1.0);         // max
-        buf.putFloat(100.0f);       // compression
-        buf.putShort((short) -5);   // n (negative)
-        buf.putShort((short) 10);   // bufferSize
-        buf.putShort((short) 0);    // lastUsedCell
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(64).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(2);              // SMALL_ENCODING
+            buf.putDouble(0.0);         // min
+            buf.putDouble(1.0);         // max
+            buf.putFloat(100.0f);       // compression
+            buf.putShort((short) -5);   // n (negative)
+            buf.putShort((short) 10);   // bufferSize
+            buf.putShort((short) 0);    // lastUsedCell
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesVerboseEncodingNExceedsCapacity() {
-        ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 100 * 16).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(1);              // VERBOSE_ENCODING
-        buf.putDouble(0.0);         // min
-        buf.putDouble(1.0);         // max
-        buf.putDouble(1.0);         // compression -> small capacity
-        buf.putInt(100);            // n = 100, way more than capacity
-        for (int i = 0; i < 100; i++) {
-            buf.putDouble(1.0);     // weight
-            buf.putDouble(i);       // mean (non-decreasing)
-        }
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 100 * 16).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(1);              // VERBOSE_ENCODING
+            buf.putDouble(0.0);         // min
+            buf.putDouble(1.0);         // max
+            buf.putDouble(1.0);         // compression -> small capacity
+            buf.putInt(100);            // n = 100, way more than capacity
+            for (int i = 0; i < 100; i++) {
+                buf.putDouble(1.0);     // weight
+                buf.putDouble(i);       // mean (non-decreasing)
+            }
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesVerboseEncodingOverflowCompression() {
-        ByteBuffer buf = ByteBuffer.allocate(32).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(1);              // VERBOSE_ENCODING
-        buf.putDouble(0.0);         // min
-        buf.putDouble(1.0);         // max
-        buf.putDouble(1.0e10);      // compression (exceeds MAX_COMPRESSION of 1e6)
-        buf.putInt(0);              // n
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(32).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(1);              // VERBOSE_ENCODING
+            buf.putDouble(0.0);         // min
+            buf.putDouble(1.0);         // max
+            buf.putDouble(1.0e10);      // compression (exceeds MAX_COMPRESSION of 1e6)
+            buf.putInt(0);              // n
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesVerboseEncodingNegativeCompression() {
-        ByteBuffer buf = ByteBuffer.allocate(32).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(1);              // VERBOSE_ENCODING
-        buf.putDouble(0.0);
-        buf.putDouble(1.0);
-        buf.putDouble(-50.0);       // negative compression
-        buf.putInt(0);
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(32).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(1);              // VERBOSE_ENCODING
+            buf.putDouble(0.0);
+            buf.putDouble(1.0);
+            buf.putDouble(-50.0);       // negative compression
+            buf.putInt(0);
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesVerboseEncodingNegativeWeight() {
-        ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 16).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(1);              // VERBOSE_ENCODING
-        buf.putDouble(0.0);
-        buf.putDouble(1.0);
-        buf.putDouble(100.0);       // compression
-        buf.putInt(1);              // n = 1
-        buf.putDouble(-1.0);        // negative weight
-        buf.putDouble(5.0);         // mean
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 16).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(1);              // VERBOSE_ENCODING
+            buf.putDouble(0.0);
+            buf.putDouble(1.0);
+            buf.putDouble(100.0);       // compression
+            buf.putInt(1);              // n = 1
+            buf.putDouble(-1.0);        // negative weight
+            buf.putDouble(5.0);         // mean
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesVerboseEncodingDecreasingMeans() {
-        ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 2 * 16).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(1);              // VERBOSE_ENCODING
-        buf.putDouble(0.0);
-        buf.putDouble(10.0);
-        buf.putDouble(100.0);       // compression
-        buf.putInt(2);              // n = 2
-        buf.putDouble(1.0);         // weight[0]
-        buf.putDouble(5.0);         // mean[0] = 5
-        buf.putDouble(1.0);         // weight[1]
-        buf.putDouble(3.0);         // mean[1] = 3, out of order
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 2 * 16).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(1);              // VERBOSE_ENCODING
+            buf.putDouble(0.0);
+            buf.putDouble(10.0);
+            buf.putDouble(100.0);       // compression
+            buf.putInt(2);              // n = 2
+            buf.putDouble(1.0);         // weight[0]
+            buf.putDouble(5.0);         // mean[0] = 5
+            buf.putDouble(1.0);         // weight[1]
+            buf.putDouble(3.0);         // mean[1] = 3, out of order
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesSmallEncodingLastUsedCellExceedsN() {
-        ByteBuffer buf = ByteBuffer.allocate(64).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(2);              // SMALL_ENCODING
-        buf.putDouble(0.0);
-        buf.putDouble(1.0);
-        buf.putFloat(100.0f);       // compression
-        buf.putShort((short) 10);   // n
-        buf.putShort((short) 50);   // bufferSize
-        buf.putShort((short) 20);   // lastUsedCell > n
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(64).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(2);              // SMALL_ENCODING
+            buf.putDouble(0.0);
+            buf.putDouble(1.0);
+            buf.putFloat(100.0f);       // compression
+            buf.putShort((short) 10);   // n
+            buf.putShort((short) 50);   // bufferSize
+            buf.putShort((short) 20);   // lastUsedCell > n
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesSmallEncodingNegativeWeight() {
-        ByteBuffer buf = ByteBuffer.allocate(64).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(2);              // SMALL_ENCODING
-        buf.putDouble(0.0);
-        buf.putDouble(1.0);
-        buf.putFloat(100.0f);       // compression
-        buf.putShort((short) 220);  // n
-        buf.putShort((short) 500);  // bufferSize
-        buf.putShort((short) 1);    // lastUsedCell
-        buf.putFloat(-1.0f);        // negative weight
-        buf.putFloat(5.0f);         // mean
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(64).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(2);              // SMALL_ENCODING
+            buf.putDouble(0.0);
+            buf.putDouble(1.0);
+            buf.putFloat(100.0f);       // compression
+            buf.putShort((short) 220);  // n
+            buf.putShort((short) 500);  // bufferSize
+            buf.putShort((short) 1);    // lastUsedCell
+            buf.putFloat(-1.0f);        // negative weight
+            buf.putFloat(5.0f);         // mean
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesSmallEncodingDecreasingMeans() {
-        ByteBuffer buf = ByteBuffer.allocate(128).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(2);              // SMALL_ENCODING
-        buf.putDouble(0.0);
-        buf.putDouble(10.0);
-        buf.putFloat(100.0f);       // compression
-        buf.putShort((short) 220);  // n
-        buf.putShort((short) 500);  // bufferSize
-        buf.putShort((short) 2);    // lastUsedCell
-        buf.putFloat(1.0f);         // weight[0]
-        buf.putFloat(5.0f);         // mean[0] = 5
-        buf.putFloat(1.0f);         // weight[1]
-        buf.putFloat(3.0f);         // mean[1] = 3, out of order
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(128).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(2);              // SMALL_ENCODING
+            buf.putDouble(0.0);
+            buf.putDouble(10.0);
+            buf.putFloat(100.0f);       // compression
+            buf.putShort((short) 220);  // n
+            buf.putShort((short) 500);  // bufferSize
+            buf.putShort((short) 2);    // lastUsedCell
+            buf.putFloat(1.0f);         // weight[0]
+            buf.putFloat(5.0f);         // mean[0] = 5
+            buf.putFloat(1.0f);         // weight[1]
+            buf.putFloat(3.0f);         // mean[1] = 3, out of order
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesVerboseEncodingNaNMean() {
-        ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 16).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(1);              // VERBOSE_ENCODING
-        buf.putDouble(0.0);
-        buf.putDouble(1.0);
-        buf.putDouble(100.0);       // compression
-        buf.putInt(1);              // n = 1
-        buf.putDouble(1.0);         // valid weight
-        buf.putDouble(Double.NaN);  // NaN mean
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 16).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(1);              // VERBOSE_ENCODING
+            buf.putDouble(0.0);
+            buf.putDouble(1.0);
+            buf.putDouble(100.0);       // compression
+            buf.putInt(1);              // n = 1
+            buf.putDouble(1.0);         // valid weight
+            buf.putDouble(Double.NaN);  // NaN mean
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesVerboseEncodingNaNWeight() {
-        ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 16).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(1);              // VERBOSE_ENCODING
-        buf.putDouble(0.0);
-        buf.putDouble(1.0);
-        buf.putDouble(100.0);       // compression
-        buf.putInt(1);              // n = 1
-        buf.putDouble(Double.NaN);  // NaN weight
-        buf.putDouble(5.0);         // mean
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 16).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(1);              // VERBOSE_ENCODING
+            buf.putDouble(0.0);
+            buf.putDouble(1.0);
+            buf.putDouble(100.0);       // compression
+            buf.putInt(1);              // n = 1
+            buf.putDouble(Double.NaN);  // NaN weight
+            buf.putDouble(5.0);         // mean
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesVerboseEncodingInfinityWeight() {
-        ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 16).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(1);              // VERBOSE_ENCODING
-        buf.putDouble(0.0);
-        buf.putDouble(1.0);
-        buf.putDouble(100.0);       // compression
-        buf.putInt(1);              // n = 1
-        buf.putDouble(Double.POSITIVE_INFINITY); // Infinity weight
-        buf.putDouble(5.0);         // mean
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 16).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(1);              // VERBOSE_ENCODING
+            buf.putDouble(0.0);
+            buf.putDouble(1.0);
+            buf.putDouble(100.0);       // compression
+            buf.putInt(1);              // n = 1
+            buf.putDouble(Double.POSITIVE_INFINITY); // Infinity weight
+            buf.putDouble(5.0);         // mean
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesVerboseEncodingInfinityMean() {
-        ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 16).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(1);              // VERBOSE_ENCODING
-        buf.putDouble(0.0);
-        buf.putDouble(1.0);
-        buf.putDouble(100.0);       // compression
-        buf.putInt(1);              // n = 1
-        buf.putDouble(1.0);         // valid weight
-        buf.putDouble(Double.POSITIVE_INFINITY); // Infinity mean
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 16).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(1);              // VERBOSE_ENCODING
+            buf.putDouble(0.0);
+            buf.putDouble(1.0);
+            buf.putDouble(100.0);       // compression
+            buf.putInt(1);              // n = 1
+            buf.putDouble(1.0);         // valid weight
+            buf.putDouble(Double.POSITIVE_INFINITY); // Infinity mean
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesVerboseEncodingNaNCompression() {
-        ByteBuffer buf = ByteBuffer.allocate(32).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(1);              // VERBOSE_ENCODING
-        buf.putDouble(0.0);
-        buf.putDouble(1.0);
-        buf.putDouble(Double.NaN);  // NaN compression
-        buf.putInt(0);
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(32).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(1);              // VERBOSE_ENCODING
+            buf.putDouble(0.0);
+            buf.putDouble(1.0);
+            buf.putDouble(Double.NaN);  // NaN compression
+            buf.putInt(0);
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesSmallEncodingNaNWeight() {
-        ByteBuffer buf = ByteBuffer.allocate(64).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(2);              // SMALL_ENCODING
-        buf.putDouble(0.0);
-        buf.putDouble(1.0);
-        buf.putFloat(100.0f);       // compression
-        buf.putShort((short) 220);  // n
-        buf.putShort((short) 500);  // bufferSize
-        buf.putShort((short) 1);    // lastUsedCell
-        buf.putFloat(Float.NaN);    // NaN weight
-        buf.putFloat(5.0f);         // mean
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(64).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(2);              // SMALL_ENCODING
+            buf.putDouble(0.0);
+            buf.putDouble(1.0);
+            buf.putFloat(100.0f);       // compression
+            buf.putShort((short) 220);  // n
+            buf.putShort((short) 500);  // bufferSize
+            buf.putShort((short) 1);    // lastUsedCell
+            buf.putFloat(Float.NaN);    // NaN weight
+            buf.putFloat(5.0f);         // mean
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesSmallEncodingNaNMean() {
-        ByteBuffer buf = ByteBuffer.allocate(64).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(2);              // SMALL_ENCODING
-        buf.putDouble(0.0);
-        buf.putDouble(1.0);
-        buf.putFloat(100.0f);       // compression
-        buf.putShort((short) 220);  // n
-        buf.putShort((short) 500);  // bufferSize
-        buf.putShort((short) 1);    // lastUsedCell
-        buf.putFloat(1.0f);         // valid weight
-        buf.putFloat(Float.NaN);    // NaN mean
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(64).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(2);              // SMALL_ENCODING
+            buf.putDouble(0.0);
+            buf.putDouble(1.0);
+            buf.putFloat(100.0f);       // compression
+            buf.putShort((short) 220);  // n
+            buf.putShort((short) 500);  // bufferSize
+            buf.putShort((short) 1);    // lastUsedCell
+            buf.putFloat(1.0f);         // valid weight
+            buf.putFloat(Float.NaN);    // NaN mean
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
     @Test
@@ -503,33 +534,37 @@ public class MergingDigestTest extends TDigestTest {
         assertEquals(original.getMax(), restored.getMax(), 0);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesRejectsInvertedVerboseBounds() {
-        ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 16).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(1);              // VERBOSE_ENCODING
-        buf.putDouble(10.0);        // min > max
-        buf.putDouble(5.0);         // max
-        buf.putDouble(100.0);       // compression
-        buf.putInt(1);              // n = 1
-        buf.putDouble(1.0);         // weight
-        buf.putDouble(7.0);         // mean
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(4 + 8 + 8 + 8 + 4 + 16).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(1);              // VERBOSE_ENCODING
+            buf.putDouble(10.0);        // min > max
+            buf.putDouble(5.0);         // max
+            buf.putDouble(100.0);       // compression
+            buf.putInt(1);              // n = 1
+            buf.putDouble(1.0);         // weight
+            buf.putDouble(7.0);         // mean
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testFromBytesRejectsInvertedSmallBounds() {
-        ByteBuffer buf = ByteBuffer.allocate(30 + 8).order(ByteOrder.BIG_ENDIAN);
-        buf.putInt(2);              // SMALL_ENCODING
-        buf.putDouble(10.0);        // min > max
-        buf.putDouble(5.0);         // max
-        buf.putFloat(100.0f);       // compression
-        buf.putShort((short) 220);  // main buffer size
-        buf.putShort((short) 500);  // temporary buffer size
-        buf.putShort((short) 1);    // lastUsedCell
-        buf.putFloat(1.0f);         // weight
-        buf.putFloat(7.0f);         // mean
-        buf.flip();
-        MergingDigest.fromBytes(buf);
+        assertThrows(IllegalArgumentException.class, () -> {
+            ByteBuffer buf = ByteBuffer.allocate(30 + 8).order(ByteOrder.BIG_ENDIAN);
+            buf.putInt(2);              // SMALL_ENCODING
+            buf.putDouble(10.0);        // min > max
+            buf.putDouble(5.0);         // max
+            buf.putFloat(100.0f);       // compression
+            buf.putShort((short) 220);  // main buffer size
+            buf.putShort((short) 500);  // temporary buffer size
+            buf.putShort((short) 1);    // lastUsedCell
+            buf.putFloat(1.0f);         // weight
+            buf.putFloat(7.0f);         // mean
+            buf.flip();
+            MergingDigest.fromBytes(buf);
+        });
     }
 }

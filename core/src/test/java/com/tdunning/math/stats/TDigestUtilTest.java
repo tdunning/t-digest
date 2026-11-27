@@ -17,11 +17,13 @@
 
 package com.tdunning.math.stats;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Random;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.Lists;
 
@@ -43,7 +45,7 @@ public class TDigestUtilTest extends AbstractTest {
 
         for (int i = 0; i < 3000; i++) {
             int n = AbstractTDigest.decode(buf);
-            assertEquals(String.format("%d:", i), ref.get(i).intValue(), n);
+            assertEquals(ref.get(i).intValue(), n, String.format("%d:", i));
         }
     }
 }

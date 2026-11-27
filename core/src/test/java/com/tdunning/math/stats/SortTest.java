@@ -19,12 +19,11 @@ package com.tdunning.math.stats;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SortTest {
     @Test
@@ -384,7 +383,7 @@ public class SortTest {
         assert start + length <= key.length;
 
         for (int i = start; i < start + length - 1; i++) {
-            assertTrue(String.format("bad ordering at %d, %f > %f", i, key[i], key[i + 1]), key[i] <= key[i + 1]);
+            assertTrue(key[i] <= key[i + 1], String.format("bad ordering at %d, %f > %f", i, key[i], key[i + 1]));
         }
 
         checkValues(key, start, length, values);
@@ -396,8 +395,7 @@ public class SortTest {
             double[] v = values[k];
             assertEquals(key.length, v.length);
             for (int i = start; i < length; i++) {
-                assertEquals(String.format("value %d not correlated, key=%.5f, k=%d, v=%.5f", i, key[i], k, values[k][i]),
-                        fractionalPart(key[i] * scale), values[k][i], 0);
+                assertEquals(fractionalPart(key[i] * scale), values[k][i], 0, String.format("value %d not correlated, key=%.5f, k=%d, v=%.5f", i, key[i], k, values[k][i]));
             }
             scale = scale * 5;
         }

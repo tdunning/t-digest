@@ -49,12 +49,9 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.3</version>
+                <version>3.14.1</version>
                 <configuration>
-                    <verbose>true</verbose>
-                    <compilerVersion>1.8</compilerVersion>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <release>8</release>
                 </configuration>
             </plugin>
 

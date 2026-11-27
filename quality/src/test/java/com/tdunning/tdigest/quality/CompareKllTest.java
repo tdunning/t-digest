@@ -7,7 +7,7 @@ import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.datasketches.kll.KllFloatsSketch;
 import org.apache.datasketches.req.ReqSketch;
 import org.apache.datasketches.req.ReqSketchBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;

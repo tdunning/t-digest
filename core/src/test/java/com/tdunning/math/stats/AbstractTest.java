@@ -17,27 +17,43 @@
 
 package com.tdunning.math.stats;
 
-import org.junit.Ignore;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
 
-import com.carrotsearch.randomizedtesting.JUnit3MethodProvider;
-import com.carrotsearch.randomizedtesting.JUnit4MethodProvider;
-import com.carrotsearch.randomizedtesting.RandomizedTest;
-import com.carrotsearch.randomizedtesting.annotations.Listeners;
-import com.carrotsearch.randomizedtesting.annotations.TestMethodProviders;
+import java.util.Random;
 
-@Ignore
-@Listeners({
-        ReproduceInfoPrinterRunListener.class
-})
-@TestMethodProviders({
-        JUnit3MethodProvider.class, // test names starting with test*
-        JUnit4MethodProvider.class  // test methods annotated with @Test
-})
-@RunWith(value = com.carrotsearch.randomizedtesting.RandomizedRunner.class)
 /**
  * Base test case, all other test cases must inherit this one.
  */
-public abstract class AbstractTest extends RandomizedTest {
+public abstract class AbstractTest {
+    private final Random random = new Random(0);
 
+    protected Random getRandom() {
+        return random;
+    }
+
+    protected double randomDouble() {
+        return random.nextDouble();
+    }
+
+}
+
+final class JUnit4CompatibleAssertions {
+    private JUnit4CompatibleAssertions() {
+    }
+
+    public static void assertTrue(String message, boolean condition) {
+        Assertions.assertTrue(condition, message);
+    }
+
+    public static void assertEquals(String message, double expected, double actual, double delta) {
+        Assertions.assertEquals(expected, actual, delta, message);
+    }
+
+    public static void assertEquals(String message, int expected, int actual, double delta) {
+        Assertions.assertEquals(expected, actual, delta, message);
+    }
+
+    public static void assertEquals(String message, int expected, int actual) {
+        Assertions.assertEquals(expected, actual, message);
+    }
 }

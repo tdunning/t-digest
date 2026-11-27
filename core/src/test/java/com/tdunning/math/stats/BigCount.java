@@ -1,6 +1,8 @@
 package com.tdunning.math.stats;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
 
 public abstract class BigCount extends AbstractTest {
 
@@ -10,8 +12,7 @@ public abstract class BigCount extends AbstractTest {
         for (int i = 0; i < 5; i++) {
             digest.add(getDigest());
             double actual = digest.quantile(0.5);
-            assertEquals("Count = " + digest.size(), 3000,
-                    actual, 0.001);
+            assertEquals(3000, actual, 0.001, "Count = " + digest.size());
         }
     }
 
